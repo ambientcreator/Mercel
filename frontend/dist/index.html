@@ -1,0 +1,302 @@
+﻿<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mercel</title>
+    <link rel="stylesheet" href="./assets/app.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <div class="orb orb-left"></div>
+      <div class="orb orb-right"></div>
+
+      <section id="login-screen" class="login-screen glass">
+        <div class="login-card">
+          <div class="panel-kicker">Mercel</div>
+          <h1>Вход в систему</h1>
+          <label class="field">
+            <span>Логин</span>
+            <input id="login-username" type="text" placeholder="Введите логин" />
+          </label>
+          <label class="field">
+            <span>Пароль</span>
+            <input id="login-password" type="password" placeholder="Введите пароль" />
+          </label>
+          <button id="login-button" class="primary wide">Войти</button>
+          <div id="login-message" class="message muted">Введите логин и пароль, чтобы войти в систему.</div>
+        </div>
+      </section>
+
+      <section id="app-shell" class="app-shell hidden">
+        <header class="topbar glass">
+          <div>
+            <div class="panel-kicker">Mercel</div>
+            <h2>Панель работы с расчётами</h2>
+          </div>
+          <div class="topbar-actions">
+            <div class="session-chip">
+              <span id="session-username">Гость</span>
+              <strong id="session-role">Не авторизован</strong>
+            </div>
+            <button id="logout-button" type="button" class="secondary">Выйти</button>
+          </div>
+        </header>
+
+        <div class="tabs" id="main-tabs">
+          <button type="button" class="tab-button active" data-tab="calculator">Расчёт</button>
+          <button type="button" class="tab-button" data-tab="archive">Архив</button>
+          <button type="button" class="tab-button hidden" data-tab="settings" id="settings-tab-button">Настройки</button>
+        </div>
+
+        <main id="calculator-tab" class="layout tab-panel active">
+          <section class="glass panel control-panel">
+            <div class="panel-head">
+              <div>
+                <span class="panel-kicker">Расчёт</span>
+                <h2>Подбор услуг</h2>
+              </div>
+            </div>
+            <label class="field">
+              <span>Сумма, р</span>
+              <input id="amount-input" type="number" min="1" step="1" placeholder="Например, 78920" />
+            </label>
+
+            <label class="field">
+              <span>Название сохранения</span>
+              <input id="title-input" type="text" maxlength="120" placeholder="Например, Апрель 2026 / расчёт для клиента" />
+            </label>
+
+            <div class="actions">
+              <button id="calculate-button" class="primary">Рассчитать</button>
+              <button id="save-button" class="secondary" disabled>Сохранить</button>
+            </div>
+
+            <div id="message" class="message muted">Введите сумму и задайте веса для нужных услуг.</div>
+
+            <div class="summary-grid">
+              <div class="glass mini-card"><span>Итог</span><strong id="summary-total">0 р</strong></div>
+              <div class="glass mini-card"><span>Активно</span><strong id="summary-items">0/0</strong></div>
+              <div class="glass mini-card"><span>Архив</span><strong id="summary-history">0</strong></div>
+            </div>
+
+            <div class="exact-inline glass">
+              <span>Точное совпадение</span>
+              <strong id="exact-status">Ожидание расчёта</strong>
+            </div>
+
+            <div class="service-list-block">
+              <div class="service-list-head">
+                <div>
+                  <div class="block-title">Приоритеты, проценты и веса</div>
+                  <div id="default-percentages" class="legend">Загрузка настроек процентов...</div>
+                </div>
+                <button id="reset-weights-button" type="button" class="ghost-button">Сбросить веса</button>
+              </div>
+              <div id="services-list" class="service-grid"></div>
+            </div>
+          </section>
+
+          <section class="glass panel result-panel">
+            <div class="panel-head">
+              <div>
+                <span class="panel-kicker">Результат</span>
+                <h2>Структура расчёта</h2>
+              </div>
+              <div id="result-total" class="total-pill">0 р</div>
+            </div>
+
+            <div class="table-wrap no-grow">
+              <table>
+                <thead>
+                  <tr>
+                    <th>№</th>
+                    <th>Наименование услуги</th>
+                    <th>Группа</th>
+                    <th>%</th>
+                    <th>Вес</th>
+                    <th>Количество</th>
+                    <th>Стоимость</th>
+                  </tr>
+                </thead>
+                <tbody id="result-body">
+                  <tr><td colspan="7" class="placeholder">Результаты появятся здесь после расчёта.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </main>
+
+        <section id="archive-tab" class="archive-layout tab-panel">
+          <aside class="glass panel archive-list-panel">
+            <div class="panel-head">
+              <div>
+                <span class="panel-kicker">SQLite</span>
+                <h2>Архив расчётов</h2>
+              </div>
+            </div>
+            <label class="field hidden" id="archive-owner-field">
+              <span>Архив сотрудника</span>
+              <select id="archive-owner-filter" class="input-select"></select>
+            </label>
+            <div id="history-list" class="history-list"></div>
+          </aside>
+
+          <section class="glass panel archive-detail-panel">
+            <div class="panel-head">
+              <div>
+                <span class="panel-kicker">Детали</span>
+                <h2 id="archive-title">Выберите расчёт из архива</h2>
+              </div>
+              <div class="archive-actions">
+                <button id="delete-archive-button" type="button" class="danger-button" disabled>Удалить</button>
+                <div id="archive-total" class="total-pill">0 р</div>
+              </div>
+            </div>
+
+            <div id="archive-meta" class="archive-meta">Здесь появятся дата, автор и состав выбранного расчёта.</div>
+
+            <div class="table-wrap no-grow">
+              <table>
+                <thead>
+                  <tr>
+                    <th>№</th>
+                    <th>Услуга</th>
+                    <th>Группа</th>
+                    <th>%</th>
+                    <th>Вес</th>
+                    <th>Количество</th>
+                    <th>Стоимость</th>
+                  </tr>
+                </thead>
+                <tbody id="archive-body">
+                  <tr><td colspan="7" class="placeholder">Архив пока пуст или расчёт ещё не выбран.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section id="settings-tab" class="settings-layout tab-panel">
+          <section class="glass panel settings-panel">
+            <div class="panel-head">
+              <div>
+                <span class="panel-kicker">Настройки</span>
+                <h2>Услуги</h2>
+              </div>
+            </div>
+
+            <div class="settings-grid">
+              <div>
+                <div id="services-admin-list" class="settings-list"></div>
+              </div>
+              <div class="editor-card glass">
+                <div class="editor-title">Создать или изменить услугу</div>
+                <label class="field">
+                  <span>Название услуги</span>
+                  <input id="service-name" type="text" placeholder="Например, Монтаж оборудования" />
+                </label>
+                <label class="field">
+                  <span>Единица</span>
+                  <select id="service-unit" class="input-select">
+                    <option value="ч.">Часы</option>
+                    <option value="шт.">Штуки</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Стоимость, р</span>
+                  <input id="service-rate" type="number" min="1" step="1" placeholder="500" />
+                </label>
+                <label class="field">
+                  <span>Группа</span>
+                  <select id="service-category" class="input-select">
+                    <option value="primary">Основная</option>
+                    <option value="secondary">Вторичная</option>
+                    <option value="closing">Закрывающая</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Процент услуги, %</span>
+                  <input id="service-percent" type="number" min="0" max="100" step="0.1" placeholder="Пусто = по умолчанию группы" />
+                </label>
+                <div id="service-percent-hint" class="legend">Текущий процент для этой услуги будет рассчитан по выбранной группе.</div>
+                <div class="actions">
+                  <button id="save-service-button" type="button" class="primary">Сохранить услугу</button>
+                  <button id="reset-service-form-button" type="button" class="secondary">Очистить форму</button>
+                </div>
+                <div id="service-form-message" class="message muted">Услуги влияют на расчёт сразу после сохранения.</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="glass panel settings-panel" id="users-panel">
+            <div class="panel-head">
+              <div>
+                <span class="panel-kicker">Команда</span>
+                <h2>Пользователи и роли</h2>
+              </div>
+            </div>
+
+            <div class="settings-grid users-grid">
+              <div>
+                <div id="users-list" class="settings-list"></div>
+              </div>
+              <div class="editor-card glass">
+                <div class="editor-title">Создать пользователя</div>
+                <label class="field">
+                  <span>Логин</span>
+                  <input id="user-username" type="text" placeholder="newuser" />
+                </label>
+                <label class="field">
+                  <span>Пароль</span>
+                  <input id="user-password" type="password" placeholder="пароль" />
+                </label>
+                <label class="field">
+                  <span>Роль</span>
+                  <select id="user-role" class="input-select">
+                    <option value="employee">Специалист Тех. Поддержки</option>
+                    <option value="senior_specialist">Старший специалист ТП</option>
+                    <option value="manager">Руководитель</option>
+                  </select>
+                </label>
+                <div class="actions">
+                  <button id="create-user-button" type="button" class="primary">Создать пользователя</button>
+                </div>
+                <div id="user-form-message" class="message muted">Создавать пользователей могут старший специалист ТП, руководитель и администратор. Доступные роли зависят от текущего уровня доступа.</div>
+              </div>
+            </div>
+          </section>
+        </section>
+      </section>
+    </div>
+
+      <div id="confirm-modal" class="confirm-modal hidden" aria-hidden="true">
+        <div id="confirm-backdrop" class="confirm-backdrop"></div>
+
+        <section class="confirm-dialog glass" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+
+          <div class="panel-kicker">Подтверждение</div>
+
+          <h3 id="confirm-title">Подтвердите удаление</h3>
+
+          <p id="confirm-text" class="confirm-text">Вы действительно хотите удалить этот элемент?</p>
+
+          <div class="confirm-actions">
+
+            <button id="confirm-cancel" type="button" class="secondary">Отмена</button>
+
+            <button id="confirm-submit" type="button" class="danger-button">Удалить</button>
+
+          </div>
+
+        </section>
+      </div>
+
+    <script src="./assets/app.js"></script>
+  </body>
+</html>
+
+
+
+
+

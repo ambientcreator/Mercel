@@ -1,0 +1,26 @@
+.gocache/
+
+# Go coverage and temporary diagnostics
+coverage.out
+coverage
+*.coverprofile
+
+# Local build artifacts
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+
+# Wails build output
+build/bin/
+
+# Generated frontend bindings
+frontend/wailsjs/
+
+# Editor and OS files
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/
