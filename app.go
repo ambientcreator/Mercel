@@ -33,10 +33,23 @@ const (
 	CategorySecondary = "secondary"
 	CategoryClosing   = "closing"
 
-	RoleAdmin            = "admin"
-	RoleManager          = "manager"
-	RoleSeniorSpecialist = "senior_specialist"
-	RoleEmployee         = "employee"
+	RoleAdmin = "admin"
+
+	RoleSupportManager          = "support_manager"
+	RoleSupportSeniorSpecialist = "support_senior_specialist"
+	RoleSupportEmployee         = "support_employee"
+
+	RoleTechManager = "tech_manager"
+	RoleSeniorTech  = "senior_technician"
+	RoleTechnician  = "technician"
+
+	RoleMRKManager  = "mrk_manager"
+	RoleSeniorMRK   = "senior_mrk"
+	RoleMRKEmployee = "mrk_employee"
+
+	RoleManager          = RoleSupportManager
+	RoleSeniorSpecialist = RoleSupportSeniorSpecialist
+	RoleEmployee         = RoleSupportEmployee
 )
 
 // RU: Тип данных `Service`.
@@ -219,6 +232,7 @@ type SavedCalculation struct {
 	Items        []CalculationItem `json:"items"`
 	CreatedAt    string            `json:"createdAt"`
 	CreatedBy    string            `json:"createdBy"`
+	CreatedRole  string            `json:"createdRole,omitempty"`
 }
 
 // RU: Тип данных `AppBootstrap`.
@@ -587,7 +601,8 @@ func (a *App) initDatabase() error {
 			total_amount INTEGER NOT NULL,
 			items_json TEXT NOT NULL,
 			created_at TEXT NOT NULL,
-			created_by TEXT NOT NULL DEFAULT ''
+			created_by TEXT NOT NULL DEFAULT '',
+			created_role TEXT NOT NULL DEFAULT ''
 		);`,
 	}
 	for _, query := range queries {
@@ -613,23 +628,38 @@ func (a *App) migrateDatabase() error {
 	if err := ensureColumnExists(a.db, "calculations", "created_by", `ALTER TABLE calculations ADD COLUMN created_by TEXT NOT NULL DEFAULT ''`); err != nil {
 		return fmt.Errorf("migrate calculations.created_by: %w", err)
 	}
+	if err := ensureColumnExists(a.db, "calculations", "created_role", `ALTER TABLE calculations ADD COLUMN created_role TEXT NOT NULL DEFAULT ''`); err != nil {
+		return fmt.Errorf("migrate calculations.created_role: %w", err)
+	}
 	if err := ensureColumnExists(a.db, "services", "created_by", `ALTER TABLE services ADD COLUMN created_by TEXT NOT NULL DEFAULT 'admin'`); err != nil {
 		return fmt.Errorf("migrate services.created_by: %w", err)
 	}
 	if _, err := a.db.Exec(`UPDATE services SET created_by = 'admin' WHERE created_by = '' OR created_by IS NULL`); err != nil {
 		return fmt.Errorf("backfill services.created_by: %w", err)
 	}
+	if _, err := a.db.Exec(`UPDATE users SET role = ? WHERE role = 'manager'`, RoleSupportManager); err != nil {
+		return fmt.Errorf("normalize users.manager role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE users SET role = ? WHERE role = 'senior_specialist'`, RoleSupportSeniorSpecialist); err != nil {
+		return fmt.Errorf("normalize users.senior_specialist role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE users SET role = ? WHERE role = 'employee'`, RoleSupportEmployee); err != nil {
+		return fmt.Errorf("normalize users.employee role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE calculations SET created_role = COALESCE((SELECT role FROM users WHERE username = calculations.created_by), created_role, '') WHERE created_role = '' OR created_role IS NULL`); err != nil {
+		return fmt.Errorf("backfill calculations.created_role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE calculations SET created_role = ? WHERE created_role = 'manager'`, RoleSupportManager); err != nil {
+		return fmt.Errorf("normalize calculations.manager role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE calculations SET created_role = ? WHERE created_role = 'senior_specialist'`, RoleSupportSeniorSpecialist); err != nil {
+		return fmt.Errorf("normalize calculations.senior_specialist role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE calculations SET created_role = ? WHERE created_role = 'employee'`, RoleSupportEmployee); err != nil {
+		return fmt.Errorf("normalize calculations.employee role: %w", err)
+	}
 	return nil
 }
-
-// RU: Функция `ensureColumnExists`.
-// EN: Function `ensureColumnExists`.
-//
-// RU: Что делает: помогает работать с файлами, SQLite и миграциями.
-// EN: What it does: ensureColumnExists executes a defensive one-column migration only when the target column is absent.
-//
-// RU: Ключевые моменты: важен для устойчивости логики; может использоваться сразу в нескольких местах; изменения стоит делать осознанно.
-// EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
 func ensureColumnExists(db *sql.DB, table string, column string, alterSQL string) error {
 	rows, err := db.Query(fmt.Sprintf("PRAGMA table_info(%s)", table))
 	if err != nil {
@@ -857,115 +887,137 @@ func defaultGroupPercent() map[string]float64 {
 //
 // RU: Ключевые моменты: важен для устойчивости логики; может использоваться сразу в нескольких местах; изменения стоит делать осознанно.
 // EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
-func rolePower(role string) int {
-	switch role {
-	case RoleAdmin:
-		return 4
-	case RoleManager:
-		return 3
-	case RoleSeniorSpecialist:
-		return 2
+func roleDepartment(role string) string {
+	switch normalizeRole(role) {
+	case RoleSupportManager, RoleSupportSeniorSpecialist, RoleSupportEmployee:
+		return "support"
+	case RoleTechManager, RoleSeniorTech, RoleTechnician:
+		return "tech"
+	case RoleMRKManager, RoleSeniorMRK, RoleMRKEmployee:
+		return "mrk"
 	default:
-		return 1
+		return "admin"
 	}
 }
 
-// RU: Функция `userSortPriority`.
-// EN: Function `userSortPriority`.
-//
-// RU: Что делает: выполняет вспомогательное преобразование, проверку или подготовку данных.
-// EN: What it does: userSortPriority defines how users should be ordered in settings lists: managers, seniors, then employees.
-//
-// RU: Ключевые моменты: важен для устойчивости логики; может использоваться сразу в нескольких местах; изменения стоит делать осознанно.
-// EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
-func userSortPriority(role string) int {
-	switch role {
-	case RoleManager:
-		return 1
-	case RoleSeniorSpecialist:
+func roleLevel(role string) int {
+	switch normalizeRole(role) {
+	case RoleAdmin:
+		return 4
+	case RoleSupportManager, RoleTechManager, RoleMRKManager:
+		return 3
+	case RoleSupportSeniorSpecialist, RoleSeniorTech, RoleSeniorMRK:
 		return 2
-	case RoleEmployee:
+	case RoleSupportEmployee, RoleTechnician, RoleMRKEmployee:
+		return 1
+	default:
+		return 0
+	}
+}
+
+func rolePower(role string) int {
+	return roleLevel(role)
+}
+
+func userSortPriority(role string) int {
+	switch roleLevel(role) {
+	case 3:
+		return 1
+	case 2:
+		return 2
+	case 1:
 		return 3
 	default:
 		return 9
 	}
 }
 
-// RU: Функция `normalizeRole`.
-// EN: Function `normalizeRole`.
-//
-// RU: Что делает: выполняет вспомогательное преобразование, проверку или подготовку данных.
-// EN: What it does: normalizeRole accepts only known stored roles and falls back to employee for invalid data.
-//
-// RU: Ключевые моменты: важен для устойчивости логики; может использоваться сразу в нескольких местах; изменения стоит делать осознанно.
-// EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
 func normalizeRole(role string) string {
 	switch role {
-	case RoleAdmin, RoleManager, RoleSeniorSpecialist, RoleEmployee:
+	case "manager", RoleSupportManager:
+		return RoleSupportManager
+	case "senior_specialist", RoleSupportSeniorSpecialist:
+		return RoleSupportSeniorSpecialist
+	case "employee", RoleSupportEmployee:
+		return RoleSupportEmployee
+	case RoleTechManager, RoleSeniorTech, RoleTechnician, RoleMRKManager, RoleSeniorMRK, RoleMRKEmployee, RoleAdmin:
 		return role
 	default:
-		return RoleEmployee
+		return RoleSupportEmployee
 	}
 }
 
-// RU: Функция `normalizeAssignableRole`.
-// EN: Function `normalizeAssignableRole`.
-//
-// RU: Что делает: выполняет вспомогательное преобразование, проверку или подготовку данных.
-// EN: What it does: normalizeAssignableRole narrows role input from the UI to the set assignable to ordinary managed users.
-//
-// RU: Ключевые моменты: важен для устойчивости логики; может использоваться сразу в нескольких местах; изменения стоит делать осознанно.
-// EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
 func normalizeAssignableRole(role string) string {
-	switch role {
-	case RoleManager, RoleSeniorSpecialist, RoleEmployee:
-		return role
+	switch normalizeRole(role) {
+	case RoleSupportManager, RoleSupportSeniorSpecialist, RoleSupportEmployee, RoleTechManager, RoleSeniorTech, RoleTechnician, RoleMRKManager, RoleSeniorMRK, RoleMRKEmployee:
+		return normalizeRole(role)
 	default:
-		return RoleEmployee
+		return RoleSupportEmployee
 	}
 }
 
-// RU: Функция `canCreateUsers`.
-// EN: Function `canCreateUsers`.
-//
-// RU: Что делает: выполняет вспомогательное преобразование, проверку или подготовку данных.
-// EN: What it does: canCreateUsers answers whether the current role may create subordinate accounts at all.
-//
-// RU: Ключевые моменты: важен для устойчивости логики; может использоваться сразу в нескольких местах; изменения стоит делать осознанно.
-// EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
 func canCreateUsers(role string) bool {
-	return rolePower(role) >= rolePower(RoleSeniorSpecialist)
+	return roleLevel(role) >= 2
 }
 
-// RU: Функция `canCreateRole`.
-// EN: Function `canCreateRole`.
-//
-// RU: Что делает: выполняет вспомогательное преобразование, проверку или подготовку данных.
-// EN: What it does: canCreateRole checks whether one role is allowed to create another role.
-//
-// RU: Ключевые моменты: важен для устойчивости логики; может использоваться сразу в нескольких местах; изменения стоит делать осознанно.
-// EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
 func canCreateRole(actorRole string, targetRole string) bool {
-	switch actorRole {
-	case RoleAdmin:
-		return targetRole == RoleEmployee || targetRole == RoleSeniorSpecialist || targetRole == RoleManager
-	case RoleManager:
-		return targetRole == RoleEmployee || targetRole == RoleSeniorSpecialist
-	case RoleSeniorSpecialist:
-		return targetRole == RoleEmployee
+	actorRole = normalizeRole(actorRole)
+	targetRole = normalizeAssignableRole(targetRole)
+	if actorRole == RoleAdmin {
+		return targetRole != RoleAdmin
+	}
+	if roleDepartment(actorRole) != roleDepartment(targetRole) {
+		return false
+	}
+	return roleLevel(actorRole) > roleLevel(targetRole)
+}
+
+func canViewAllArchives(role string) bool {
+	return normalizeRole(role) == RoleAdmin
+}
+
+func canViewManagedUsers(role string) bool {
+	return roleLevel(role) >= 2
+}
+
+func canModerateArchives(role string) bool {
+	return normalizeRole(role) == RoleAdmin || roleLevel(role) >= 2
+}
+
+func canSeeUser(actorRole string, targetRole string) bool {
+	actorRole = normalizeRole(actorRole)
+	targetRole = normalizeRole(targetRole)
+	if actorRole == RoleAdmin {
+		return true
+	}
+	if !canViewManagedUsers(actorRole) || roleDepartment(actorRole) != roleDepartment(targetRole) {
+		return false
+	}
+	return roleLevel(actorRole) > roleLevel(targetRole)
+}
+
+func canViewArchiveRole(actor *User, authorRole string, authorUsername string) bool {
+	viewerRole := normalizeRole(actor.Role)
+	authorRole = normalizeRole(authorRole)
+	if viewerRole == RoleAdmin {
+		return true
+	}
+	if authorUsername == actor.Username {
+		return true
+	}
+	if roleDepartment(viewerRole) != roleDepartment(authorRole) {
+		return false
+	}
+	switch roleLevel(viewerRole) {
+	case 3:
+		return roleLevel(authorRole) <= 2
+	case 2:
+		return roleLevel(authorRole) == 1
 	default:
 		return false
 	}
 }
 
-// RU: Функция `normalizeCategory`.
-// EN: Function `normalizeCategory`.
-//
-// RU: Что делает: выполняет вспомогательное преобразование, проверку или подготовку данных.
-// EN: What it does: normalizeCategory sanitizes service category values coming from storage or the frontend.
-//
-// RU: Ключевые моменты: важен для устойчивости логики; может использоваться сразу в нескольких местах; изменения стоит делать осознанно.
-// EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
 func normalizeCategory(category string) string {
 	switch category {
 	case CategoryPrimary, CategorySecondary, CategoryClosing:
@@ -1021,22 +1073,6 @@ func normalizeUnit(unit string) string {
 	}
 }
 
-// RU: Функция `canViewAllArchives`.
-// EN: Function `canViewAllArchives`.
-//
-// RU: Что делает: выполняет вспомогательное преобразование, проверку или подготовку данных.
-// EN: What it does: canViewAllArchives indicates whether a role may browse archives beyond their own calculations.
-//
-// RU: Ключевые моменты: важен для устойчивости логики; может использоваться сразу в нескольких местах; изменения стоит делать осознанно.
-// EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
-func canViewAllArchives(role string) bool {
-	return role == RoleAdmin
-}
-
-// RU: Метод `sessionStateLocked`.
-// EN: Method `sessionStateLocked`.
-//
-// RU: Что делает: выполняет один из ключевых шагов backend-логики внутри приложения.
 // EN: What it does: sessionStateLocked builds a safe guest-like session snapshot used when no active session is available.
 //
 // RU: Ключевые моменты: важен для устойчивости логики; может использоваться сразу в нескольких местах; изменения стоит делать осознанно.
@@ -1046,9 +1082,9 @@ func (a *App) sessionStateLocked(message string) SessionState {
 	if a.currentSession != nil {
 		copyUser := *a.currentSession
 		state.User = &copyUser
-		state.CanManage = rolePower(copyUser.Role) >= rolePower(RoleManager)
-		state.CanAdmin = copyUser.Role == RoleAdmin
-		state.CanModerate = rolePower(copyUser.Role) >= rolePower(RoleSeniorSpecialist)
+		state.CanManage = roleLevel(copyUser.Role) >= 3
+		state.CanAdmin = normalizeRole(copyUser.Role) == RoleAdmin
+		state.CanModerate = canModerateArchives(copyUser.Role)
 	}
 	return state
 }
@@ -1084,7 +1120,7 @@ func (a *App) requireManage() (*User, error) {
 	if err != nil {
 		return nil, err
 	}
-	if rolePower(user.Role) < rolePower(RoleManager) {
+	if roleLevel(user.Role) < 3 {
 		return nil, errors.New("Недостаточно прав для этого действия.")
 	}
 	return user, nil
@@ -1271,6 +1307,10 @@ func displayMoney(value int) string {
 	return fmt.Sprintf("%d р", value)
 }
 
+func archiveDateTitle(now time.Time) string {
+	return now.Format("02.01.2006")
+}
+
 // RU: Метод `saveServiceForOwner`.
 // EN: Method `saveServiceForOwner`.
 //
@@ -1453,7 +1493,7 @@ func (a *App) ListUsers() ([]User, error) {
 	if err != nil {
 		return []User{}, nil
 	}
-	if rolePower(user.Role) < rolePower(RoleSeniorSpecialist) {
+	if !canViewManagedUsers(user.Role) {
 		return []User{}, nil
 	}
 	rows, err := a.db.Query(`SELECT id, username, role, created_at FROM users WHERE username <> 'admin' ORDER BY id ASC`)
@@ -1468,20 +1508,12 @@ func (a *App) ListUsers() ([]User, error) {
 		if err := rows.Scan(&item.ID, &item.Username, &item.Role, &item.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scan user: %w", err)
 		}
+		item.Role = normalizeRole(item.Role)
 		if item.Username == user.Username {
 			continue
 		}
-		switch user.Role {
-		case RoleAdmin:
+		if canSeeUser(user.Role, item.Role) {
 			users = append(users, item)
-		case RoleManager:
-			if item.Role == RoleEmployee || item.Role == RoleSeniorSpecialist {
-				users = append(users, item)
-			}
-		case RoleSeniorSpecialist:
-			if item.Role == RoleEmployee {
-				users = append(users, item)
-			}
 		}
 	}
 	if err := rows.Err(); err != nil {
@@ -1500,15 +1532,6 @@ func (a *App) ListUsers() ([]User, error) {
 	})
 	return users, nil
 }
-
-// RU: Метод `UpdateUserRole`.
-// EN: Method `UpdateUserRole`.
-//
-// RU: Что делает: выполняет изменение данных в приложении и проводит бизнес-операцию.
-// EN: What it does: UpdateUserRole changes another user role while enforcing hierarchy restrictions.
-//
-// RU: Ключевые моменты: меняет состояние SQLite или сессии; опирается на проверки ролей и владения; ошибки здесь заметны пользователю сразу.
-// EN: Key points: mutates SQLite and/or session state; depends on role and ownership checks; failures here are visible to the user immediately.
 func (a *App) UpdateUserRole(userID int64, role string) (User, error) {
 	current, err := a.requireManage()
 	if err != nil {
@@ -1519,21 +1542,15 @@ func (a *App) UpdateUserRole(userID int64, role string) (User, error) {
 	if err != nil {
 		return User{}, fmt.Errorf("find user: %w", err)
 	}
+	user.Role = normalizeRole(user.Role)
 	if user.Username == "admin" || user.Username == current.Username {
-		return User{}, errors.New("Эту учётную запись нельзя изменить.")
+		return User{}, errors.New("??? ??????? ?????? ?????? ????????.")
 	}
-
-	switch current.Role {
-	case RoleAdmin:
-	case RoleManager:
-		if user.Role != RoleEmployee && user.Role != RoleSeniorSpecialist {
-			return User{}, errors.New("Руководитель может менять роли только специалистам тех. поддержки и старшим специалистам ТП.")
-		}
-		if role != RoleEmployee && role != RoleSeniorSpecialist {
-			return User{}, errors.New("Руководитель может назначать только роли специалиста тех. поддержки и старшего специалиста ТП.")
-		}
-	default:
-		return User{}, errors.New("Недостаточно прав для смены роли.")
+	if !canSeeUser(current.Role, user.Role) {
+		return User{}, errors.New("???????????? ???? ??? ????? ???? ????? ????????????.")
+	}
+	if !canCreateRole(current.Role, role) {
+		return User{}, errors.New("?? ?? ?????? ????????? ??? ????.")
 	}
 
 	_, err = a.db.Exec(`UPDATE users SET role = ? WHERE id = ?`, role, userID)
@@ -1544,37 +1561,27 @@ func (a *App) UpdateUserRole(userID int64, role string) (User, error) {
 	if err != nil {
 		return User{}, err
 	}
+	updated.Role = normalizeRole(updated.Role)
 	return updated, nil
 }
-
-// RU: Метод `DeleteUser`.
-// EN: Method `DeleteUser`.
-//
-// RU: Что делает: выполняет изменение данных в приложении и проводит бизнес-операцию.
-// EN: What it does: DeleteUser removes a subordinate account if the current role is allowed to do so.
-//
-// RU: Ключевые моменты: меняет состояние SQLite или сессии; опирается на проверки ролей и владения; ошибки здесь заметны пользователю сразу.
-// EN: Key points: mutates SQLite and/or session state; depends on role and ownership checks; failures here are visible to the user immediately.
 func (a *App) DeleteUser(userID int64) error {
 	current, err := a.requireAuth()
 	if err != nil {
 		return err
 	}
-	if rolePower(current.Role) < rolePower(RoleSeniorSpecialist) {
-		return errors.New("Недостаточно прав для удаления пользователя.")
+	if !canViewManagedUsers(current.Role) {
+		return errors.New("???????????? ???? ??? ???????? ????????????.")
 	}
 	user, err := a.getUserByID(userID)
 	if err != nil {
 		return fmt.Errorf("find user: %w", err)
 	}
+	user.Role = normalizeRole(user.Role)
 	if user.Username == "admin" || user.Username == current.Username {
-		return errors.New("Эту учётную запись удалять нельзя.")
+		return errors.New("??? ??????? ?????? ??????? ??????.")
 	}
-	if current.Role == RoleSeniorSpecialist && user.Role != RoleEmployee {
-		return errors.New("Старший специалист ТП может удалять только специалистов тех. поддержки.")
-	}
-	if current.Role == RoleManager && user.Role != RoleEmployee && user.Role != RoleSeniorSpecialist {
-		return errors.New("Руководитель может удалять только специалистов тех. поддержки и старших специалистов ТП.")
+	if !canSeeUser(current.Role, user.Role) {
+		return errors.New("???????????? ???? ??? ???????? ????? ????????????.")
 	}
 	_, err = a.db.Exec(`DELETE FROM users WHERE id = ?`, userID)
 	if err != nil {
@@ -1582,15 +1589,6 @@ func (a *App) DeleteUser(userID int64) error {
 	}
 	return nil
 }
-
-// RU: Метод `CalculateAmount`.
-// EN: Method `CalculateAmount`.
-//
-// RU: Что делает: выполняет главный расчёт распределения суммы по услугам с учётом процентов и весов.
-// EN: What it does: CalculateAmount is the main business entry point that builds a calculation for a requested total.
-//
-// RU: Ключевые моменты: это центральная бизнес-функция; она связывает проценты, веса и точное равенство сумм; её изменения нужно всегда проверять тестами.
-// EN: Key points: is the central business operation; combines percentages, weights and exact totals; should always be rechecked with tests after changes.
 func (a *App) CalculateAmount(req CalculationRequest) (CalculationResult, error) {
 	if _, err := a.requireAuth(); err != nil {
 		return CalculationResult{}, err
@@ -2258,10 +2256,8 @@ func (a *App) SaveCalculation(req SaveCalculationRequest) (SavedCalculation, err
 	if req.TargetAmount <= 0 || len(req.Items) == 0 {
 		return SavedCalculation{}, errors.New("Нельзя сохранить пустой расчёт.")
 	}
-	title := sanitizeStoredText(req.Title)
-	if title == "" {
-		title = fmt.Sprintf("Расчёт на %s", displayMoney(req.TargetAmount))
-	}
+	now := time.Now()
+	title := archiveDateTitle(now)
 	total := 0
 	for _, item := range req.Items {
 		total += item.LineTotal
@@ -2270,23 +2266,29 @@ func (a *App) SaveCalculation(req SaveCalculationRequest) (SavedCalculation, err
 	if err != nil {
 		return SavedCalculation{}, fmt.Errorf("marshal calculation items: %w", err)
 	}
-	createdAt := time.Now().Format(time.RFC3339)
-	result, err := a.db.Exec(`INSERT INTO calculations(title, target_amount, total_amount, items_json, created_at, created_by) VALUES(?, ?, ?, ?, ?, ?)`, title, req.TargetAmount, total, string(payload), createdAt, user.Username)
+	createdAt := now.Format(time.RFC3339)
+
+	var existingID int64
+	err = a.db.QueryRow(`SELECT id FROM calculations WHERE created_by = ? AND title = ? LIMIT 1`, user.Username, title).Scan(&existingID)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return SavedCalculation{}, fmt.Errorf("find daily calculation: %w", err)
+	}
+	if err == nil {
+		_, err = a.db.Exec(`UPDATE calculations SET target_amount = ?, total_amount = ?, items_json = ?, created_at = ?, created_role = ? WHERE id = ?`, req.TargetAmount, total, string(payload), createdAt, user.Role, existingID)
+		if err != nil {
+			return SavedCalculation{}, fmt.Errorf("update daily calculation: %w", err)
+		}
+		return SavedCalculation{ID: existingID, Title: title, TargetAmount: req.TargetAmount, TotalAmount: total, Items: req.Items, CreatedAt: createdAt, CreatedBy: user.Username, CreatedRole: user.Role}, nil
+	}
+
+	result, err := a.db.Exec(`INSERT INTO calculations(title, target_amount, total_amount, items_json, created_at, created_by, created_role) VALUES(?, ?, ?, ?, ?, ?, ?)`, title, req.TargetAmount, total, string(payload), createdAt, user.Username, user.Role)
 	if err != nil {
 		return SavedCalculation{}, fmt.Errorf("save calculation: %w", err)
 	}
 	id, _ := result.LastInsertId()
-	return SavedCalculation{ID: id, Title: title, TargetAmount: req.TargetAmount, TotalAmount: total, Items: req.Items, CreatedAt: createdAt, CreatedBy: user.Username}, nil
+	return SavedCalculation{ID: id, Title: title, TargetAmount: req.TargetAmount, TotalAmount: total, Items: req.Items, CreatedAt: createdAt, CreatedBy: user.Username, CreatedRole: user.Role}, nil
 }
 
-// RU: Метод `DeleteCalculation`.
-// EN: Method `DeleteCalculation`.
-//
-// RU: Что делает: выполняет изменение данных в приложении и проводит бизнес-операцию.
-// EN: What it does: DeleteCalculation removes one archived calculation if the current role may access that entry.
-//
-// RU: Ключевые моменты: меняет состояние SQLite или сессии; опирается на проверки ролей и владения; ошибки здесь заметны пользователю сразу.
-// EN: Key points: mutates SQLite and/or session state; depends on role and ownership checks; failures here are visible to the user immediately.
 func (a *App) DeleteCalculation(id int64) error {
 	user, err := a.requireAuth()
 	if err != nil {
@@ -2316,22 +2318,7 @@ func (a *App) ListCalculations() ([]SavedCalculation, error) {
 	if err != nil {
 		return []SavedCalculation{}, nil
 	}
-	query := `SELECT c.id, c.title, c.target_amount, c.total_amount, c.items_json, c.created_at, c.created_by FROM calculations c`
-	args := []interface{}{}
-	switch {
-	case canViewAllArchives(user.Role):
-	case user.Role == RoleManager:
-		query += ` LEFT JOIN users u ON u.username = c.created_by WHERE u.role IN (?, ?)`
-		args = append(args, RoleEmployee, RoleSeniorSpecialist)
-	case user.Role == RoleSeniorSpecialist:
-		query += ` LEFT JOIN users u ON u.username = c.created_by WHERE u.role = ?`
-		args = append(args, RoleEmployee)
-	default:
-		query += ` WHERE c.created_by = ?`
-		args = append(args, user.Username)
-	}
-	query += ` ORDER BY c.id DESC`
-	rows, err := a.db.Query(query, args...)
+	rows, err := a.db.Query(`SELECT c.id, c.title, c.target_amount, c.total_amount, c.items_json, c.created_at, c.created_by, c.created_role FROM calculations c ORDER BY c.id DESC`)
 	if err != nil {
 		return nil, fmt.Errorf("list calculations: %w", err)
 	}
@@ -2340,12 +2327,16 @@ func (a *App) ListCalculations() ([]SavedCalculation, error) {
 	for rows.Next() {
 		var item SavedCalculation
 		var payload string
-		if err := rows.Scan(&item.ID, &item.Title, &item.TargetAmount, &item.TotalAmount, &payload, &item.CreatedAt, &item.CreatedBy); err != nil {
+		if err := rows.Scan(&item.ID, &item.Title, &item.TargetAmount, &item.TotalAmount, &payload, &item.CreatedAt, &item.CreatedBy, &item.CreatedRole); err != nil {
 			return nil, fmt.Errorf("scan calculation: %w", err)
+		}
+		item.CreatedRole = normalizeRole(item.CreatedRole)
+		if !canViewArchiveRole(user, item.CreatedRole, item.CreatedBy) {
+			continue
 		}
 		item.Title = sanitizeStoredText(item.Title)
 		if item.Title == "" {
-			item.Title = fmt.Sprintf("Расчёт на %s", displayMoney(item.TargetAmount))
+			item.Title = archiveDateTitle(time.Now())
 		}
 		if err := json.Unmarshal([]byte(payload), &item.Items); err != nil {
 			return nil, fmt.Errorf("parse calculation items: %w", err)

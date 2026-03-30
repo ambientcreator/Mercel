@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	_ "modernc.org/sqlite"
 )
@@ -572,6 +573,90 @@ func TestAuthenticatedUserCanCalculateAndSave(t *testing.T) {
 //
 // RU: Ключевые моменты: работает в изолированном сценарии; нужен для защиты от регрессий; документирует ожидаемое поведение.
 // EN: Key points: runs in an isolated scenario; protects against regressions; documents the expected behavior of the feature or rule.
+func TestSaveCalculationUsesDailyTitleAndOverwritesSameDay(t *testing.T) {
+	app := withTempDB(t)
+	loginAsAdmin(t, app)
+
+	resultOne, err := app.CalculateAmount(CalculationRequest{TargetAmount: 50000, Weights: map[string]int{}})
+	if err != nil {
+		t.Fatalf("CalculateAmount first error = %v", err)
+	}
+	savedOne, err := app.SaveCalculation(SaveCalculationRequest{TargetAmount: resultOne.TargetAmount, Items: resultOne.Items})
+	if err != nil {
+		t.Fatalf("SaveCalculation first error = %v", err)
+	}
+
+	resultTwo, err := app.CalculateAmount(CalculationRequest{TargetAmount: 50100, Weights: map[string]int{}})
+	if err != nil {
+		t.Fatalf("CalculateAmount second error = %v", err)
+	}
+	savedTwo, err := app.SaveCalculation(SaveCalculationRequest{TargetAmount: resultTwo.TargetAmount, Items: resultTwo.Items})
+	if err != nil {
+		t.Fatalf("SaveCalculation second error = %v", err)
+	}
+
+	expectedTitle := archiveDateTitle(time.Now())
+	if savedOne.Title != expectedTitle || savedTwo.Title != expectedTitle {
+		t.Fatalf("expected daily title %q, got first=%q second=%q", expectedTitle, savedOne.Title, savedTwo.Title)
+	}
+	if savedOne.ID != savedTwo.ID {
+		t.Fatalf("expected same calculation row to be overwritten, got ids %d and %d", savedOne.ID, savedTwo.ID)
+	}
+
+	calculations, err := app.ListCalculations()
+	if err != nil {
+		t.Fatalf("ListCalculations error = %v", err)
+	}
+	if len(calculations) != 1 {
+		t.Fatalf("expected one archived calculation for the day, got %+v", calculations)
+	}
+	if calculations[0].TotalAmount != resultTwo.TotalAmount || calculations[0].TargetAmount != resultTwo.TargetAmount {
+		t.Fatalf("expected archive to contain the overwritten latest calculation, got %+v", calculations[0])
+	}
+}
+
+func TestArchiveSurvivesAuthorDeletion(t *testing.T) {
+	app := withTempDB(t)
+	loginAsAdmin(t, app)
+
+	employee, err := app.CreateUser(UserWithPassword{Username: "employee_archive", Password: "secret", Role: RoleEmployee})
+	if err != nil {
+		t.Fatalf("CreateUser employee error = %v", err)
+	}
+
+	loginAsUser(t, app, employee.Username, "secret")
+	createUserService(t, app, employee.Username, "secret", "employee archived service", 100, CategoryPrimary)
+	result, err := app.CalculateAmount(CalculationRequest{TargetAmount: 50100, Weights: map[string]int{}})
+	if err != nil {
+		t.Fatalf("CalculateAmount employee error = %v", err)
+	}
+	if _, err := app.SaveCalculation(SaveCalculationRequest{TargetAmount: result.TargetAmount, Items: result.Items}); err != nil {
+		t.Fatalf("SaveCalculation employee error = %v", err)
+	}
+
+	loginAsAdmin(t, app)
+	if err := app.DeleteUser(employee.ID); err != nil {
+		t.Fatalf("DeleteUser employee error = %v", err)
+	}
+
+	calculations, err := app.ListCalculations()
+	if err != nil {
+		t.Fatalf("ListCalculations admin error = %v", err)
+	}
+	found := false
+	for _, item := range calculations {
+		if item.CreatedBy == employee.Username {
+			found = true
+			if item.CreatedRole != RoleEmployee {
+				t.Fatalf("expected archived role to stay employee, got %+v", item)
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("expected archived calculation to remain visible after author deletion, got %+v", calculations)
+	}
+}
+
 func TestStructuredCalculationKeepsServicesDistributed(t *testing.T) {
 	app := withTempDB(t)
 	loginAsAdmin(t, app)
@@ -1118,11 +1203,15 @@ func TestArchiveVisibilityByRole(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListCalculations senior error = %v", err)
 	}
-	if len(calculations) != 1 {
-		t.Fatalf("expected senior specialist to see only employee archives, got %d", len(calculations))
+	if len(calculations) != 2 {
+		t.Fatalf("expected senior specialist to see own and employee archives, got %d", len(calculations))
 	}
-	if calculations[0].CreatedBy != employee.Username {
-		t.Fatalf("expected senior specialist to see only employee archive, got %+v", calculations)
+	seen := map[string]bool{}
+	for _, item := range calculations {
+		seen[item.CreatedBy] = true
+	}
+	if !seen[employee.Username] || !seen[senior.Username] {
+		t.Fatalf("expected senior specialist to see own and employee archive, got %+v", calculations)
 	}
 
 	loginAsUser(t, app, manager.Username, "secret")
@@ -1131,12 +1220,17 @@ func TestArchiveVisibilityByRole(t *testing.T) {
 		t.Fatalf("ListCalculations manager error = %v", err)
 	}
 	if len(managerCalculations) != 2 {
-		t.Fatalf("expected manager to see only employee and senior archives, got %d", len(managerCalculations))
+		t.Fatalf("expected manager to see employee and senior archives from the same department, got %d", len(managerCalculations))
 	}
+	seenManager := map[string]bool{}
 	for _, item := range managerCalculations {
+		seenManager[item.CreatedBy] = true
 		if item.CreatedBy == "admin" {
 			t.Fatalf("manager must not see admin archive: %+v", managerCalculations)
 		}
+	}
+	if !seenManager[employee.Username] || !seenManager[senior.Username] {
+		t.Fatalf("manager should see employee and senior archives, got %+v", managerCalculations)
 	}
 
 	loginAsAdmin(t, app)
@@ -1308,5 +1402,201 @@ func TestConfirmModalMarkupUsesReadableUTF8(t *testing.T) {
 		if bytes.Contains(content, broken) {
 			t.Fatalf("confirm modal still contains mojibake marker bytes %v", broken)
 		}
+	}
+}
+
+// RU: ???? `TestDepartmentIsolationForUsersAndArchives`.
+// EN: Test `TestDepartmentIsolationForUsersAndArchives`.
+//
+// RU: ??? ??????: ?????????, ??? ???????????? ? ??????? ??????????? ????? ?????? ????????????? ? ?????? ?????? ??????.
+// EN: What it does: verifies that managers and seniors only see users and archives from their own department.
+//
+// RU: ???????? ???????: ????????? ????? ?????? ??????? ??, ???????????? ?????? ? ???; ???????? ?? ????????????? ???????.
+// EN: Key points: covers the new department-based role model across support, tech and MRK; prevents cross-department visibility regressions.
+func TestDepartmentIsolationForUsersAndArchives(t *testing.T) {
+	app := withTempDB(t)
+	loginAsAdmin(t, app)
+
+	supportEmployee, err := app.CreateUser(UserWithPassword{Username: "support_emp", Password: "secret", Role: RoleSupportEmployee})
+	if err != nil {
+		t.Fatalf("CreateUser support employee error = %v", err)
+	}
+	supportSenior, err := app.CreateUser(UserWithPassword{Username: "support_senior", Password: "secret", Role: RoleSupportSeniorSpecialist})
+	if err != nil {
+		t.Fatalf("CreateUser support senior error = %v", err)
+	}
+	supportManager, err := app.CreateUser(UserWithPassword{Username: "support_manager", Password: "secret", Role: RoleSupportManager})
+	if err != nil {
+		t.Fatalf("CreateUser support manager error = %v", err)
+	}
+	techEmployee, err := app.CreateUser(UserWithPassword{Username: "tech_emp", Password: "secret", Role: RoleTechnician})
+	if err != nil {
+		t.Fatalf("CreateUser technician error = %v", err)
+	}
+	techSenior, err := app.CreateUser(UserWithPassword{Username: "tech_senior", Password: "secret", Role: RoleSeniorTech})
+	if err != nil {
+		t.Fatalf("CreateUser senior technician error = %v", err)
+	}
+	mrkManager, err := app.CreateUser(UserWithPassword{Username: "mrk_manager", Password: "secret", Role: RoleMRKManager})
+	if err != nil {
+		t.Fatalf("CreateUser mrk manager error = %v", err)
+	}
+
+	for _, tc := range []struct {
+		username string
+		password string
+		service  string
+		target   int
+	}{
+		{supportEmployee.Username, "secret", "support service", 1000},
+		{supportSenior.Username, "secret", "support senior service", 1100},
+		{supportManager.Username, "secret", "support manager service", 1200},
+		{techEmployee.Username, "secret", "tech service", 1300},
+		{techSenior.Username, "secret", "tech senior service", 1400},
+		{mrkManager.Username, "secret", "mrk service", 1500},
+	} {
+		loginAsUser(t, app, tc.username, tc.password)
+		createUserService(t, app, tc.username, tc.password, tc.service, 100, CategoryPrimary)
+		result, err := app.CalculateAmount(CalculationRequest{TargetAmount: tc.target, Weights: map[string]int{}})
+		if err != nil {
+			t.Fatalf("CalculateAmount %s error = %v", tc.username, err)
+		}
+		if _, err := app.SaveCalculation(SaveCalculationRequest{TargetAmount: result.TargetAmount, Items: result.Items}); err != nil {
+			t.Fatalf("SaveCalculation %s error = %v", tc.username, err)
+		}
+	}
+
+	loginAsUser(t, app, supportManager.Username, "secret")
+	supportUsers, err := app.ListUsers()
+	if err != nil {
+		t.Fatalf("ListUsers support manager error = %v", err)
+	}
+	for _, item := range supportUsers {
+		if roleDepartment(item.Role) != roleDepartment(RoleSupportManager) {
+			t.Fatalf("support manager must not see other departments: %+v", supportUsers)
+		}
+	}
+	supportArchives, err := app.ListCalculations()
+	if err != nil {
+		t.Fatalf("ListCalculations support manager error = %v", err)
+	}
+	for _, item := range supportArchives {
+		if item.CreatedBy == techEmployee.Username || item.CreatedBy == techSenior.Username || item.CreatedBy == mrkManager.Username {
+			t.Fatalf("support manager must not see foreign archives: %+v", supportArchives)
+		}
+	}
+
+	loginAsUser(t, app, mrkManager.Username, "secret")
+	mrkUsers, err := app.ListUsers()
+	if err != nil {
+		t.Fatalf("ListUsers mrk manager error = %v", err)
+	}
+	if len(mrkUsers) != 0 {
+		t.Fatalf("mrk manager should not see support or tech users, got %+v", mrkUsers)
+	}
+	mrkArchives, err := app.ListCalculations()
+	if err != nil {
+		t.Fatalf("ListCalculations mrk manager error = %v", err)
+	}
+	if len(mrkArchives) != 1 || mrkArchives[0].CreatedBy != mrkManager.Username {
+		t.Fatalf("mrk manager should see only own archive, got %+v", mrkArchives)
+	}
+}
+
+// RU: ???? `TestDepartmentRoleChangesStayInsideDepartment`.
+// EN: Test `TestDepartmentRoleChangesStayInsideDepartment`.
+//
+// RU: ??? ??????: ?????????, ??? ???????????? ?? ????? ?????? ???? ????????????? ?? ??????? ??????.
+// EN: What it does: ensures a manager cannot reassign roles for users from another department.
+func TestDepartmentRoleChangesStayInsideDepartment(t *testing.T) {
+	app := withTempDB(t)
+	loginAsAdmin(t, app)
+
+	supportManager, err := app.CreateUser(UserWithPassword{Username: "support_manager2", Password: "secret", Role: RoleSupportManager})
+	if err != nil {
+		t.Fatalf("CreateUser support manager error = %v", err)
+	}
+	techEmployee, err := app.CreateUser(UserWithPassword{Username: "tech_employee2", Password: "secret", Role: RoleTechnician})
+	if err != nil {
+		t.Fatalf("CreateUser technician error = %v", err)
+	}
+
+	loginAsUser(t, app, supportManager.Username, "secret")
+	if _, err := app.UpdateUserRole(techEmployee.ID, RoleSeniorTech); err == nil {
+		t.Fatalf("expected support manager to be blocked from changing tech department role")
+	}
+	if err := app.DeleteUser(techEmployee.ID); err == nil {
+		t.Fatalf("expected support manager to be blocked from deleting tech department user")
+	}
+}
+
+// RU: ???? `TestFrontendRoleLabelsStayReadable`.
+// EN: Test `TestFrontendRoleLabelsStayReadable`.
+//
+// RU: ??? ??????: ?????????, ??? ??????? ????? ? ???????? ?????? ???? ?? ????????? ????????? ???????? ???????.
+// EN: What it does: verifies that frontend role labels and role choice captions remain readable text.
+//
+// RU: ???????? ???????: ???????? ?? ?????????, ????? ??????? ?????? ?? ????????? ???????????? ? `????`.
+// EN: Key points: protects against regressions where frontend Russian strings degrade into `????`.
+func TestFrontendRoleLabelsStayReadable(t *testing.T) {
+	content, err := os.ReadFile(filepath.Join("frontend", "dist", "assets", "app.js"))
+	if err != nil {
+		t.Fatalf("ReadFile app.js error = %v", err)
+	}
+
+	requiredSnippets := [][]byte{
+		[]byte(`\u0420\u0443\u043a\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c \u0422\u0435\u0445. \u041f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0438`),
+		[]byte(`\u0421\u0442\u0430\u0440\u0448\u0438\u0439 \u0421\u043f\u0435\u0446\u0438\u0430\u043b\u0438\u0441\u0442 \u0422\u0435\u0445. \u041f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0438`),
+		[]byte(`\u0421\u043e\u0442\u0440\u0443\u0434\u043d\u0438\u043a \u0422\u0435\u0445. \u041f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0438`),
+		[]byte(`\u0420\u0443\u043a\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c \u0422\u0435\u0445\u043d\u0438\u0447\u0435\u0441\u043a\u043e\u0433\u043e \u043e\u0442\u0434\u0435\u043b\u0430`),
+		[]byte(`\u0421\u0442\u0430\u0440\u0448\u0438\u0439 \u0422\u0435\u0445\u043d\u0438\u043a`),
+		[]byte(`\u0422\u0435\u0445\u043d\u0438\u043a`),
+		[]byte(`\u0420\u0443\u043a\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c \u041c\u0420\u041a`),
+		[]byte(`\u0421\u0442\u0430\u0440\u0448\u0438\u0439 \u041c\u0420\u041a`),
+		[]byte(`\u041c\u0420\u041a`),
+	}
+	for _, snippet := range requiredSnippets {
+		if !bytes.Contains(content, snippet) {
+			t.Fatalf("app.js is missing readable role label %q", string(snippet))
+		}
+	}
+	if bytes.Contains(content, []byte("????")) {
+		t.Fatalf("app.js still contains placeholder question marks in role labels")
+	}
+}
+
+// RU: ???? `TestFrontendCoreUiFunctionsExist`.
+// EN: Test `TestFrontendCoreUiFunctionsExist`.
+//
+// RU: ??? ??????: ?????????, ??? ?? ????????-??????? ???? ???????? ??????? ???????,
+// RU: ????? ????? ? ??????, ? ????? ??? ??????? ???????? ??????? ???????? ?????????.
+// EN: What it does: verifies that the frontend script still contains the core
+// EN: calculator, service-form, and archive functions, and that archive labels remain readable.
+//
+// RU: ???????? ???????: ????? ????????? ????? ?????? ?????? app.js; ???????? ??
+// RU: ??????? ??????? ????? renderResult/resetServiceForm ? ?? ???????? ????? ?????.
+// EN: Key points: catches regressions after manual edits to app.js; protects against
+// EN: missing functions such as renderResult/resetServiceForm and against broken strings.
+func TestFrontendCoreUiFunctionsExist(t *testing.T) {
+	content, err := os.ReadFile(filepath.Join("frontend", "dist", "assets", "app.js"))
+	if err != nil {
+		t.Fatalf("ReadFile app.js error = %v", err)
+	}
+
+	requiredSnippets := [][]byte{
+		[]byte("function resetServiceForm()"),
+		[]byte("function renderResult(result)"),
+		[]byte("function renderArchiveDetails(saved)"),
+		[]byte("Выберите расчёт из архива"),
+		[]byte("Архив пока пуст или расчёт ещё не выбран."),
+	}
+	for _, snippet := range requiredSnippets {
+		if !bytes.Contains(content, snippet) {
+			t.Fatalf("app.js is missing required readable snippet %q", string(snippet))
+		}
+	}
+
+	if bytes.Contains(content, []byte("ReferenceError")) {
+		t.Fatalf("app.js should not contain runtime error text leftovers")
 	}
 }

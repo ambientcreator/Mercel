@@ -18,6 +18,8 @@ import (
 //
 // RU: Ключевые моменты: важен как контракт или опорная точка для других частей проекта; изменения здесь часто требуют осторожности.
 // EN: Key points: serves as a shared contract or reference point; is reused across multiple areas of the project; changes here should be made carefully.
+//
+//go:embed all:frontend/dist
 var assets embed.FS
 
 // RU: Функция `main`.

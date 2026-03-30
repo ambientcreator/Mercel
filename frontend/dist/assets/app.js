@@ -25,9 +25,8 @@ const sessionRole = document.getElementById("session-role");
 const logoutButton = document.getElementById("logout-button");
 const settingsTabButton = document.getElementById("settings-tab-button");
 const amountInput = document.getElementById("amount-input");
-const titleInput = document.getElementById("title-input");
+const archiveDateInput = document.getElementById("archive-date-input");
 const calculateButton = document.getElementById("calculate-button");
-const saveButton = document.getElementById("save-button");
 const resetWeightsButton = document.getElementById("reset-weights-button");
 const deleteArchiveButton = document.getElementById("delete-archive-button");
 const messageNode = document.getElementById("message");
@@ -111,6 +110,23 @@ async function requestDeleteConfirmation(entityLabel, entityName) {
   });
 }
 
+function formatArchiveTitle(date = new Date()) {
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+  return new Intl.DateTimeFormat("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+}
+
+function syncArchiveDateInput() {
+  if (archiveDateInput) {
+    archiveDateInput.value = formatArchiveTitle(new Date());
+  }
+}
+
 function formatDate(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
@@ -161,16 +177,119 @@ function categoryClass(category) {
   }
 }
 
+function roleDepartment(role) {
+  switch (role) {
+    case "support_manager":
+    case "support_senior_specialist":
+    case "support_employee":
+    case "manager":
+    case "senior_specialist":
+    case "employee":
+      return "support";
+    case "tech_manager":
+    case "senior_technician":
+    case "technician":
+      return "tech";
+    case "mrk_manager":
+    case "senior_mrk":
+    case "mrk_employee":
+      return "mrk";
+    default:
+      return "admin";
+  }
+}
+
+function roleLevel(role) {
+  switch (role) {
+    case "admin":
+      return 4;
+    case "support_manager":
+    case "tech_manager":
+    case "mrk_manager":
+    case "manager":
+      return 3;
+    case "support_senior_specialist":
+    case "senior_technician":
+    case "senior_mrk":
+    case "senior_specialist":
+      return 2;
+    case "support_employee":
+    case "technician":
+    case "mrk_employee":
+    case "employee":
+      return 1;
+    default:
+      return 0;
+  }
+}
+
+function roleChoicesForUser(role) {
+  switch (role) {
+    case "admin":
+      return [
+        ["support_manager", "\u0420\u0443\u043a\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c \u0422\u0435\u0445. \u041f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0438"],
+        ["support_senior_specialist", "\u0421\u0442\u0430\u0440\u0448\u0438\u0439 \u0421\u043f\u0435\u0446\u0438\u0430\u043b\u0438\u0441\u0442 \u0422\u0435\u0445. \u041f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0438"],
+        ["support_employee", "\u0421\u043e\u0442\u0440\u0443\u0434\u043d\u0438\u043a \u0422\u0435\u0445. \u041f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0438"],
+        ["tech_manager", "\u0420\u0443\u043a\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c \u0422\u0435\u0445\u043d\u0438\u0447\u0435\u0441\u043a\u043e\u0433\u043e \u043e\u0442\u0434\u0435\u043b\u0430"],
+        ["senior_technician", "\u0421\u0442\u0430\u0440\u0448\u0438\u0439 \u0422\u0435\u0445\u043d\u0438\u043a"],
+        ["technician", "\u0422\u0435\u0445\u043d\u0438\u043a"],
+        ["mrk_manager", "\u0420\u0443\u043a\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c \u041c\u0420\u041a"],
+        ["senior_mrk", "\u0421\u0442\u0430\u0440\u0448\u0438\u0439 \u041c\u0420\u041a"],
+        ["mrk_employee", "\u041c\u0420\u041a"],
+      ];
+    case "support_manager":
+    case "manager":
+      return [["support_senior_specialist", "\u0421\u0442\u0430\u0440\u0448\u0438\u0439 \u0421\u043f\u0435\u0446\u0438\u0430\u043b\u0438\u0441\u0442 \u0422\u0435\u0445. \u041f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0438"], ["support_employee", "\u0421\u043e\u0442\u0440\u0443\u0434\u043d\u0438\u043a \u0422\u0435\u0445. \u041f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0438"]];
+    case "support_senior_specialist":
+    case "senior_specialist":
+      return [["support_employee", "\u0421\u043e\u0442\u0440\u0443\u0434\u043d\u0438\u043a \u0422\u0435\u0445. \u041f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0438"]];
+    case "tech_manager":
+      return [["senior_technician", "\u0421\u0442\u0430\u0440\u0448\u0438\u0439 \u0422\u0435\u0445\u043d\u0438\u043a"], ["technician", "\u0422\u0435\u0445\u043d\u0438\u043a"]];
+    case "senior_technician":
+      return [["technician", "\u0422\u0435\u0445\u043d\u0438\u043a"]];
+    case "mrk_manager":
+      return [["senior_mrk", "\u0421\u0442\u0430\u0440\u0448\u0438\u0439 \u041c\u0420\u041a"], ["mrk_employee", "\u041c\u0420\u041a"]];
+    case "senior_mrk":
+      return [["mrk_employee", "\u041c\u0420\u041a"]];
+    default:
+      return [];
+  }
+}
+
+function canDeleteManagedUser(actorRole, targetRole) {
+  if (actorRole === "admin") {
+    return targetRole !== "admin";
+  }
+  return roleDepartment(actorRole) === roleDepartment(targetRole) && roleLevel(actorRole) > roleLevel(targetRole) && roleLevel(actorRole) >= 2;
+}
+
 function roleLabel(role) {
   switch (role) {
     case "admin":
-      return "Администратор";
+      return "\u0410\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u043e\u0440";
+    case "support_manager":
     case "manager":
-      return "Руководитель";
+      return "\u0420\u0443\u043a\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c \u0422\u0435\u0445. \u041f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0438";
+    case "support_senior_specialist":
     case "senior_specialist":
-      return "Старший специалист ТП";
+      return "\u0421\u0442\u0430\u0440\u0448\u0438\u0439 \u0421\u043f\u0435\u0446\u0438\u0430\u043b\u0438\u0441\u0442 \u0422\u0435\u0445. \u041f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0438";
+    case "support_employee":
+    case "employee":
+      return "\u0421\u043e\u0442\u0440\u0443\u0434\u043d\u0438\u043a \u0422\u0435\u0445. \u041f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0438";
+    case "tech_manager":
+      return "\u0420\u0443\u043a\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c \u0422\u0435\u0445\u043d\u0438\u0447\u0435\u0441\u043a\u043e\u0433\u043e \u043e\u0442\u0434\u0435\u043b\u0430";
+    case "senior_technician":
+      return "\u0421\u0442\u0430\u0440\u0448\u0438\u0439 \u0422\u0435\u0445\u043d\u0438\u043a";
+    case "technician":
+      return "\u0422\u0435\u0445\u043d\u0438\u043a";
+    case "mrk_manager":
+      return "\u0420\u0443\u043a\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c \u041c\u0420\u041a";
+    case "senior_mrk":
+      return "\u0421\u0442\u0430\u0440\u0448\u0438\u0439 \u041c\u0420\u041a";
+    case "mrk_employee":
+      return "\u041c\u0420\u041a";
     default:
-      return "Специалист Тех. Поддержки";
+      return "\u041f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044c";
   }
 }
 
@@ -236,6 +355,8 @@ function applyBootstrap(data) {
   if (!appState.savedCalculations.some((item) => item.id === appState.activeHistoryId)) {
     appState.activeHistoryId = appState.savedCalculations[0]?.id ?? null;
   }
+
+  syncArchiveDateInput();
 }
 
 function renderShellState() {
@@ -382,6 +503,49 @@ function percentText(service, percentMap) {
   return formatPercent(percentMap[service.code] ?? 0);
 }
 
+function resetServiceForm() {
+  appState.editingServiceId = 0;
+  serviceNameInput.value = "";
+  serviceUnitInput.value = "Часы";
+  serviceRateInput.value = "";
+  serviceCategoryInput.value = "primary";
+  servicePercentInput.value = "";
+  saveServiceButton.textContent = "Сохранить услугу";
+  updateServicePercentHint();
+}
+
+function renderResult(result) {
+  if (!result) {
+    resultTotal.textContent = "0 р";
+    summaryTotal.textContent = "0 р";
+    summaryItems.textContent = `0/${appState.services.length}`;
+    exactStatus.textContent = "Ожидание расчёта";
+    resultBody.innerHTML = '<tr><td colspan="7" class="placeholder">Результаты появятся здесь после расчёта.</td></tr>';
+    return;
+  }
+
+  const weightMap = Object.fromEntries(result.items.map((item) => [item.serviceCode, item.weight ?? appState.weights[item.serviceCode] ?? 0]));
+  const effectivePercentMap = buildEffectivePercentMap(result.items, weightMap);
+  resultTotal.textContent = formatMoney(result.totalAmount);
+  summaryTotal.textContent = formatMoney(result.totalAmount);
+  summaryItems.textContent = `${result.activeServices}/${result.items.length}`;
+  exactStatus.textContent = result.exactMatch ? "Точное совпадение найдено" : "Есть отклонение от целевой суммы";
+  resultBody.innerHTML = result.items.map((item, index) => `
+    <tr class="${item.quantity === 0 ? "muted-row" : ""}">
+      <td>${index + 1}</td>
+      <td>
+        <strong class="truncate-text" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong>
+        <div class="service-meta">${formatMoney(item.rate)} / ${escapeHtml(item.unit)}</div>
+      </td>
+      <td class="group-cell">${categoryLabel(item.category)}</td>
+      <td class="weight-value">${formatPercent(effectivePercentMap[item.serviceCode] ?? 0)}</td>
+      <td class="weight-value">${item.weight ?? appState.weights[item.serviceCode] ?? 0}</td>
+      <td class="qty">${item.quantity} ${escapeHtml(item.unit)}</td>
+      <td class="money">${formatMoney(item.lineTotal)}</td>
+    </tr>
+  `).join("");
+}
+
 function renderDefaultPercentages() {
   const groups = appState.defaultGroupPercent;
   defaultPercentages.textContent = `По умолчанию: основные ${Math.round((groups.primary ?? 0) * 100)}%, вторичные ${Math.round((groups.secondary ?? 0) * 100)}%, закрывающие ${Math.round((groups.closing ?? 0) * 100)}%. Внутри группы этот процент делится равномерно, если для услуги не задан свой процент.`;
@@ -394,63 +558,179 @@ function renderServices() {
   }
 
   const effectivePercentMap = buildEffectivePercentMap(appState.services, appState.weights);
-  servicesList.innerHTML = appState.services.map((service, index) => `
-    <article class="service-card">
-      <div class="service-card-top">
+  servicesList.innerHTML = appState.services.map((service, index) => {
+    const weight = appState.weights[service.code] ?? 0;
+    return `
+      <article class="service-card glass">
         <div>
-          <strong class="truncate-text" title="${escapeHtml(service.name)}">${index + 1}. ${escapeHtml(service.name)}</strong>
-          <div class="service-meta">1 ${escapeHtml(service.unit)} = ${formatMoney(service.rate)}</div>
-          <div class="service-meta">Процент: ${escapeHtml(percentText(service, effectivePercentMap))}</div>
-          <span class="category-badge ${categoryClass(service.category)}">${categoryLabel(service.category)}</span>
+          <strong class="truncate-text" title="${escapeHtml(`${index + 1}. ${service.name}`)}">${escapeHtml(`${index + 1}. ${service.name}`)}</strong>
+          <div class="service-meta">${formatMoney(service.rate)} / ${escapeHtml(service.unit)}</div>
+          <div class="service-meta">\u041f\u0440\u043e\u0446\u0435\u043d\u0442: ${percentText(service, effectivePercentMap)}</div>
+          <span class="category-pill ${categoryClass(service.category)}">${categoryLabel(service.category)}</span>
         </div>
-        <div class="weight-box">
-          <label for="weight-${service.code}">Вес</label>
-          <input id="weight-${service.code}" class="weight-input" type="number" min="0" max="10" step="1" value="${appState.weights[service.code] ?? 0}" data-weight-code="${escapeHtml(service.code)}" />
-        </div>
-      </div>
-    </article>
-  `).join("");
+        <label class="weight-field">
+          <span>\u0412\u0435\u0441</span>
+          <input type="number" min="0" max="10" step="1" value="${weight}" data-weight-code="${service.code}" />
+        </label>
+      </article>
+    `;
+  }).join("");
 
-  servicesList.querySelectorAll("[data-weight-code]").forEach((input) => {
-    input.addEventListener("input", () => {
-      const nextValue = Number(input.value);
-      appState.weights[input.dataset.weightCode] = Number.isFinite(nextValue) ? Math.max(0, Math.min(10, Math.trunc(nextValue))) : 0;
+  servicesList.querySelectorAll("[data-weight-code]").forEach((node) => {
+    node.addEventListener("input", (event) => {
+      const nextValue = Number(event.target.value);
+      appState.weights[node.dataset.weightCode] = Number.isFinite(nextValue) ? Math.max(0, Math.min(10, Math.round(nextValue))) : 0;
+      renderServices();
     });
   });
 }
 
-function renderResult(calculation) {
-  if (!calculation || !Array.isArray(calculation.items) || !calculation.items.length) {
-    resultBody.innerHTML = '<tr><td colspan="7" class="placeholder">Результаты появятся здесь после расчёта.</td></tr>';
-    resultTotal.textContent = "0 р";
-    summaryTotal.textContent = "0 р";
-    summaryItems.textContent = `0/${appState.services.length}`;
-    exactStatus.textContent = "Ожидание расчёта";
-    saveButton.disabled = true;
+function startEditService(id) {
+  const service = appState.services.find((item) => item.id === id);
+  if (!service || !appState.session?.authenticated) {
+    return;
+  }
+  appState.editingServiceId = id;
+  serviceNameInput.value = service.name;
+  serviceUnitInput.value = service.unit;
+  serviceRateInput.value = String(service.rate);
+  serviceCategoryInput.value = service.category;
+  servicePercentInput.value = typeof service.allocationPercent === "number" ? String(service.allocationPercent) : "";
+  saveServiceButton.textContent = "\u041e\u0431\u043d\u043e\u0432\u0438\u0442\u044c \u0443\u0441\u043b\u0443\u0433\u0443";
+  updateServicePercentHint();
+  setActiveTab("settings");
+  setServiceFormMessage(`Редактируется услуга «${service.name}».`, "muted");
+}
+
+function renderServicesAdmin() {
+  saveServiceButton.disabled = false;
+  resetServiceFormButton.disabled = false;
+  [serviceNameInput, serviceUnitInput, serviceRateInput, serviceCategoryInput, servicePercentInput].forEach((node) => {
+    node.disabled = false;
+  });
+
+  if (!appState.services.length) {
+    servicesAdminList.innerHTML = '<div class="settings-empty">\u0421\u043f\u0438\u0441\u043e\u043a \u0443\u0441\u043b\u0443\u0433 \u043f\u0443\u0441\u0442.</div>';
+    setServiceFormMessage("\u0423 \u0432\u0430\u0441 \u043f\u043e\u043a\u0430 \u043d\u0435\u0442 \u0443\u0441\u043b\u0443\u0433. \u041c\u043e\u0436\u043d\u043e \u0441\u043e\u0437\u0434\u0430\u0442\u044c \u043f\u0435\u0440\u0432\u0443\u044e \u043f\u0440\u044f\u043c\u043e \u0441\u0435\u0439\u0447\u0430\u0441.", "muted");
+    updateServicePercentHint();
     return;
   }
 
   const effectivePercentMap = buildEffectivePercentMap(appState.services, appState.weights);
-  resultBody.innerHTML = calculation.items.map((item, index) => `
-    <tr class="${item.quantity === 0 ? "muted-row" : ""}">
-      <td>${index + 1}</td>
-      <td>
-        <strong class="truncate-text" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong>
-        <div class="service-meta">${formatMoney(item.rate)} / ${escapeHtml(item.unit)}</div>
-      </td>
-      <td class="group-cell">${categoryLabel(item.category)}</td>
-      <td class="weight-value">${formatPercent(effectivePercentMap[item.serviceCode] ?? 0)}</td>
-      <td class="weight-value">${item.weight ?? 0}</td>
-      <td class="qty">${item.quantity} ${escapeHtml(item.unit)}</td>
-      <td class="money">${formatMoney(item.lineTotal)}</td>
-    </tr>
+  servicesAdminList.innerHTML = appState.services.map((service) => `
+    <article class="settings-item glass">
+      <div>
+        <strong class="truncate-text" title="${escapeHtml(service.name)}">${escapeHtml(service.name)}</strong>
+        <div class="service-meta">${formatMoney(service.rate)} / ${escapeHtml(service.unit)}</div>
+        <div class="service-meta">${categoryLabel(service.category)}, \u0442\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0440\u043e\u0446\u0435\u043d\u0442 ${formatPercent(effectivePercentMap[service.code] ?? 0)}</div>
+      </div>
+      <div class="settings-item-actions">
+        <button type="button" class="ghost-button" data-edit-service="${service.id}">\u0418\u0437\u043c\u0435\u043d\u0438\u0442\u044c</button>
+        <button type="button" class="danger-button" data-delete-service="${service.id}">\u0423\u0434\u0430\u043b\u0438\u0442\u044c</button>
+      </div>
+    </article>
   `).join("");
 
-  resultTotal.textContent = formatMoney(calculation.totalAmount);
-  summaryTotal.textContent = formatMoney(calculation.totalAmount);
-  summaryItems.textContent = `${calculation.activeServices}/${calculation.items.length}`;
-  exactStatus.textContent = calculation.foundExact ? "Точное совпадение найдено" : "Точное совпадение не найдено";
-  saveButton.disabled = !calculation.foundExact;
+  servicesAdminList.querySelectorAll("[data-edit-service]").forEach((button) => {
+    button.addEventListener("click", () => startEditService(Number(button.dataset.editService)));
+  });
+
+  servicesAdminList.querySelectorAll("[data-delete-service]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      await deleteService(Number(button.dataset.deleteService));
+    });
+  });
+
+  setServiceFormMessage("\u041a\u0430\u0436\u0434\u044b\u0439 \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044c \u0443\u043f\u0440\u0430\u0432\u043b\u044f\u0435\u0442 \u0442\u043e\u043b\u044c\u043a\u043e \u0441\u0432\u043e\u0438\u043c \u0441\u043f\u0438\u0441\u043a\u043e\u043c \u0443\u0441\u043b\u0443\u0433 \u0438 \u043c\u043e\u0436\u0435\u0442 \u0440\u0435\u0434\u0430\u043a\u0442\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u0441\u0432\u043e\u0438 \u0437\u0430\u043f\u0438\u0441\u0438.", "muted");
+  updateServicePercentHint();
+}
+
+function renderUsers() {
+  const sortedUsers = [...appState.users].sort((left, right) => {
+    const leftPriority = userSortPriority(left.role);
+    const rightPriority = userSortPriority(right.role);
+    if (leftPriority !== rightPriority) {
+      return leftPriority - rightPriority;
+    }
+    if ((left.createdAt || "") !== (right.createdAt || "")) {
+      return String(left.createdAt || "").localeCompare(String(right.createdAt || ""));
+    }
+    return String(left.username || "").localeCompare(String(right.username || ""), "ru");
+  });
+  const roleChoices = roleChoicesForUser(appState.session.user?.role);
+
+  userRoleInput.innerHTML = roleChoices
+    .map(([value, label]) => `<option value="${value}">${label}</option>`)
+    .join("");
+
+  if (!roleChoices.some(([value]) => value === userRoleInput.value)) {
+    userRoleInput.value = roleChoices[0]?.[0] ?? "";
+  }
+
+  createUserButton.disabled = !appState.session.canModerate || roleChoices.length === 0;
+  userUsernameInput.disabled = !appState.session.canModerate || roleChoices.length === 0;
+  userPasswordInput.disabled = !appState.session.canModerate || roleChoices.length === 0;
+  userRoleInput.disabled = !appState.session.canModerate || roleChoices.length === 0;
+
+  if (!appState.session.canModerate || roleChoices.length === 0) {
+    usersList.innerHTML = '<div class="settings-empty">\u0423\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435 \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044f\u043c\u0438 \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u043e \u0441\u0442\u0430\u0440\u0448\u0438\u043c \u0438 \u0440\u0443\u043a\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044f\u043c \u0441\u0432\u043e\u0435\u0433\u043e \u043e\u0442\u0434\u0435\u043b\u0430, \u0430 \u0442\u0430\u043a\u0436\u0435 \u0430\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u043e\u0440\u0443.</div>';
+    setUserFormMessage("\u0421\u043e\u0437\u0434\u0430\u0432\u0430\u0442\u044c \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u0435\u0439 \u043c\u043e\u0436\u043d\u043e \u0442\u043e\u043b\u044c\u043a\u043e \u0432\u043d\u0443\u0442\u0440\u0438 \u0441\u0432\u043e\u0435\u0433\u043e \u043e\u0442\u0434\u0435\u043b\u0430 \u0438 \u0441\u0432\u043e\u0435\u0439 \u0437\u043e\u043d\u044b \u043e\u0442\u0432\u0435\u0442\u0441\u0442\u0432\u0435\u043d\u043d\u043e\u0441\u0442\u0438.", "muted");
+    return;
+  }
+  if (!sortedUsers.length) {
+    usersList.innerHTML = '<div class="settings-empty">\u041f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u0438 \u043f\u043e\u043a\u0430 \u043d\u0435 \u0441\u043e\u0437\u0434\u0430\u043d\u044b.</div>';
+    setUserFormMessage("\u041c\u043e\u0436\u043d\u043e \u0441\u043e\u0437\u0434\u0430\u0442\u044c \u043f\u0435\u0440\u0432\u043e\u0433\u043e \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044f \u0432 \u0440\u0430\u043c\u043a\u0430\u0445 \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u044b\u0445 \u0432\u0430\u043c \u0440\u043e\u043b\u0435\u0439.", "muted");
+    return;
+  }
+
+  usersList.innerHTML = sortedUsers.map((user) => {
+    const canChangeRole = appState.session.canManage;
+    const canDelete = canDeleteManagedUser(appState.session.user?.role, user.role);
+    const roleOptions = roleChoices.map(([value, label]) => `<option value="${value}" ${user.role === value ? "selected" : ""}>${label}</option>`).join("");
+
+    return `
+      <article class="settings-item glass user-item">
+        <div>
+          <strong>${escapeHtml(user.username)}</strong>
+          <div class="service-meta">${roleLabel(user.role)}</div>
+          <div class="service-meta">\u0421\u043e\u0437\u0434\u0430\u043d: ${formatDate(user.createdAt)}</div>
+        </div>
+        <div class="settings-item-actions stacked-actions">
+          ${canChangeRole ? `<select class="input-select compact-select" data-user-role-id="${user.id}">${roleOptions}</select><button type="button" class="ghost-button" data-apply-role-id="${user.id}">\u0421\u043c\u0435\u043d\u0438\u0442\u044c \u0440\u043e\u043b\u044c</button>` : `<div class="service-meta">\u0421\u043c\u0435\u043d\u0430 \u0440\u043e\u043b\u0435\u0439 \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u0430 \u0442\u043e\u043b\u044c\u043a\u043e \u0440\u0443\u043a\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044e \u043e\u0442\u0434\u0435\u043b\u0430 \u0438 \u0430\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u043e\u0440\u0443.</div>`}
+          <button type="button" class="danger-button" ${canDelete ? `data-delete-user-id="${user.id}"` : "disabled"}>\u0423\u0434\u0430\u043b\u0438\u0442\u044c</button>
+        </div>
+      </article>
+    `;
+  }).join("");
+
+  usersList.querySelectorAll("[data-apply-role-id]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const userId = Number(button.dataset.applyRoleId);
+      const roleInput = usersList.querySelector(`[data-user-role-id="${userId}"]`);
+      await updateUserRole(userId, roleInput?.value ?? "support_employee");
+    });
+  });
+
+  usersList.querySelectorAll("[data-delete-user-id]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      await deleteUser(Number(button.dataset.deleteUserId));
+    });
+  });
+
+  setUserFormMessage("\u041f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u0438 \u043e\u0442\u043e\u0431\u0440\u0430\u0436\u0430\u044e\u0442\u0441\u044f \u0438 \u0441\u043e\u0437\u0434\u0430\u044e\u0442\u0441\u044f \u0442\u043e\u043b\u044c\u043a\u043e \u0432 \u043f\u0440\u0435\u0434\u0435\u043b\u0430\u0445 \u0432\u0430\u0448\u0435\u0433\u043e \u043e\u0442\u0434\u0435\u043b\u0430 \u0438 \u0443\u0440\u043e\u0432\u043d\u044f \u0434\u043e\u0441\u0442\u0443\u043f\u0430.", "muted");
+}
+
+function userSortPriority(role) {
+  switch (roleLevel(role)) {
+    case 3:
+      return 1;
+    case 2:
+      return 2;
+    case 1:
+      return 3;
+    default:
+      return 9;
+  }
 }
 
 function renderArchiveDetails(saved) {
@@ -467,7 +747,7 @@ function renderArchiveDetails(saved) {
   const effectivePercentMap = buildEffectivePercentMap(saved.items, weightMap);
   archiveTitle.textContent = saved.title;
   archiveTotal.textContent = formatMoney(saved.totalAmount);
-  archiveMeta.innerHTML = `<span>Целевая сумма: <strong>${formatMoney(saved.targetAmount)}</strong></span><span>Автор: <strong>${escapeHtml(saved.createdBy || "не указан")}</strong></span><span class="history-date">${formatDate(saved.createdAt)}</span>`;
+  archiveMeta.innerHTML = `<span>Целевая сумма: <strong>${formatMoney(saved.targetAmount)}</strong></span><span>Автор: <strong>${escapeHtml(saved.createdBy || "Не указан")}</strong></span><span class="history-date">${formatDate(saved.createdAt)}</span>`;
   archiveBody.innerHTML = saved.items.map((item, index) => `
     <tr class="${item.quantity === 0 ? "muted-row" : ""}">
       <td>${index + 1}</td>
@@ -507,8 +787,13 @@ function renderArchiveOwnerFilter() {
     options.push(`<option value="${escapeHtml(author)}" ${appState.archiveOwnerFilter === author ? "selected" : ""}>${escapeHtml(author)}</option>`);
   });
   archiveOwnerFilter.innerHTML = options.join("");
-  if (!appState.session?.canAdmin && authors.length && !authors.includes(appState.archiveOwnerFilter)) {
-    appState.archiveOwnerFilter = authors[0];
+  if (!appState.session?.canAdmin && authors.length) {
+    if (!authors.includes(appState.archiveOwnerFilter)) {
+      appState.archiveOwnerFilter = authors[0];
+      archiveOwnerFilter.value = authors[0];
+    }
+  } else if (appState.session?.canAdmin) {
+    archiveOwnerFilter.value = appState.archiveOwnerFilter || "all";
   }
 }
 
@@ -569,185 +854,6 @@ function renderHistory() {
   }
 }
 
-function resetServiceForm() {
-  appState.editingServiceId = 0;
-  serviceNameInput.value = "";
-  serviceUnitInput.value = "ч.";
-  serviceRateInput.value = "";
-  serviceCategoryInput.value = "primary";
-  servicePercentInput.value = "";
-  saveServiceButton.textContent = "Сохранить услугу";
-  updateServicePercentHint();
-}
-
-function startEditService(id) {
-  const service = appState.services.find((item) => item.id === id);
-  if (!service || !appState.session.canManage) {
-    return;
-  }
-  appState.editingServiceId = id;
-  serviceNameInput.value = service.name;
-  serviceUnitInput.value = service.unit;
-  serviceRateInput.value = String(service.rate);
-  serviceCategoryInput.value = service.category;
-  servicePercentInput.value = typeof service.allocationPercent === "number" ? String(service.allocationPercent) : "";
-  saveServiceButton.textContent = "Обновить услугу";
-  updateServicePercentHint();
-  setActiveTab("settings");
-  setServiceFormMessage(`Редактируется услуга «${service.name}».`, "muted");
-}
-
-function renderServicesAdmin() {
-  if (!appState.services.length) {
-    servicesAdminList.innerHTML = '<div class="settings-empty">Список услуг пуст.</div>';
-    return;
-  }
-
-  const effectivePercentMap = buildEffectivePercentMap(appState.services, appState.weights);
-  if (!appState.session.canManage) {
-    servicesAdminList.innerHTML = appState.services.map((service) => `
-      <article class="settings-item glass">
-        <div>
-          <strong class="truncate-text" title="${escapeHtml(service.name)}">${escapeHtml(service.name)}</strong>
-          <div class="service-meta">${formatMoney(service.rate)} / ${escapeHtml(service.unit)}</div>
-          <div class="service-meta">${categoryLabel(service.category)}, текущий процент ${formatPercent(effectivePercentMap[service.code] ?? 0)}</div>
-        </div>
-      </article>
-    `).join("");
-    saveServiceButton.disabled = true;
-    resetServiceFormButton.disabled = true;
-    [serviceNameInput, serviceUnitInput, serviceRateInput, serviceCategoryInput, servicePercentInput].forEach((node) => {
-      node.disabled = true;
-    });
-    setServiceFormMessage("Здесь видно, какой процент сейчас у каждой вашей услуги. Каждый пользователь управляет только своим списком услуг.", "muted");
-    updateServicePercentHint();
-    return;
-  }
-
-  saveServiceButton.disabled = false;
-  resetServiceFormButton.disabled = false;
-  [serviceNameInput, serviceUnitInput, serviceRateInput, serviceCategoryInput, servicePercentInput].forEach((node) => {
-    node.disabled = false;
-  });
-
-  servicesAdminList.innerHTML = appState.services.map((service) => `
-    <article class="settings-item glass">
-      <div>
-        <strong class="truncate-text" title="${escapeHtml(service.name)}">${escapeHtml(service.name)}</strong>
-        <div class="service-meta">${formatMoney(service.rate)} / ${escapeHtml(service.unit)}</div>
-        <div class="service-meta">${categoryLabel(service.category)}, текущий процент ${formatPercent(effectivePercentMap[service.code] ?? 0)}</div>
-      </div>
-      <div class="settings-item-actions">
-        <button type="button" class="ghost-button" data-edit-service="${service.id}">Изменить</button>
-        <button type="button" class="danger-button" data-delete-service="${service.id}">Удалить</button>
-      </div>
-    </article>
-  `).join("");
-
-  servicesAdminList.querySelectorAll("[data-edit-service]").forEach((button) => {
-    button.addEventListener("click", () => startEditService(Number(button.dataset.editService)));
-  });
-
-  servicesAdminList.querySelectorAll("[data-delete-service]").forEach((button) => {
-    button.addEventListener("click", async () => {
-      await deleteService(Number(button.dataset.deleteService));
-    });
-  });
-
-  updateServicePercentHint();
-}
-
-function renderUsers() {
-  const sortedUsers = [...appState.users].sort((left, right) => {
-    const leftPriority = userSortPriority(left.role);
-    const rightPriority = userSortPriority(right.role);
-    if (leftPriority != rightPriority) {
-      return leftPriority - rightPriority;
-    }
-    if ((left.createdAt || "") !== (right.createdAt || "")) {
-      return String(left.createdAt || "").localeCompare(String(right.createdAt || ""));
-    }
-    return String(left.username || "").localeCompare(String(right.username || ""), "ru");
-  });
-  const roleChoices = appState.session.canAdmin
-    ? [["employee", "Специалист Тех. Поддержки"], ["senior_specialist", "Старший специалист ТП"], ["manager", "Руководитель"]]
-    : appState.session.user?.role === "manager"
-      ? [["employee", "Специалист Тех. Поддержки"], ["senior_specialist", "Старший специалист ТП"]]
-      : [["employee", "Специалист Тех. Поддержки"]];
-
-  userRoleInput.innerHTML = roleChoices
-    .map(([value, label]) => `<option value="${value}">${label}</option>`)
-    .join("");
-
-  if (!roleChoices.some(([value]) => value === userRoleInput.value)) {
-    userRoleInput.value = roleChoices[0]?.[0] ?? "employee";
-  }
-
-  createUserButton.disabled = !appState.session.canModerate;
-  userUsernameInput.disabled = !appState.session.canModerate;
-  userPasswordInput.disabled = !appState.session.canModerate;
-  userRoleInput.disabled = !appState.session.canModerate;
-
-  if (!appState.session.canModerate) {
-    usersList.innerHTML = '<div class="settings-empty">Управление пользователями доступно старшему специалисту, руководителю и администратору.</div>';
-    setUserFormMessage("Создавать пользователей могут старший специалист ТП, руководитель и администратор.", "muted");
-    return;
-  }
-  if (!sortedUsers.length) {
-    usersList.innerHTML = '<div class="settings-empty">Пользователи пока не созданы.</div>';
-    setUserFormMessage("Можно создать первого пользователя для вашей роли.", "muted");
-    return;
-  }
-
-  usersList.innerHTML = sortedUsers.map((user) => {
-    const canChangeRole = appState.session.canManage;
-    const canDelete = appState.session.canAdmin ? true : (user.role === "employee" || (appState.session.user?.role === "manager" && user.role === "senior_specialist"));
-    const roleOptions = roleChoices.map(([value, label]) => `<option value="${value}" ${user.role === value ? "selected" : ""}>${label}</option>`).join("");
-
-    return `
-      <article class="settings-item glass user-item">
-        <div>
-          <strong>${escapeHtml(user.username)}</strong>
-          <div class="service-meta">${roleLabel(user.role)}</div>
-          <div class="service-meta">Создан: ${formatDate(user.createdAt)}</div>
-        </div>
-        <div class="settings-item-actions stacked-actions">
-          ${canChangeRole ? `<select class="input-select compact-select" data-user-role-id="${user.id}">${roleOptions}</select><button type="button" class="ghost-button" data-apply-role-id="${user.id}">Сменить роль</button>` : `<div class="service-meta">Смена ролей доступна руководителю и администратору.</div>`}
-          <button type="button" class="danger-button" ${canDelete ? `data-delete-user-id="${user.id}"` : "disabled"}>Удалить</button>
-        </div>
-      </article>
-    `;
-  }).join("");
-
-  usersList.querySelectorAll("[data-apply-role-id]").forEach((button) => {
-    button.addEventListener("click", async () => {
-      const userId = Number(button.dataset.applyRoleId);
-      const roleInput = usersList.querySelector(`[data-user-role-id="${userId}"]`);
-      await updateUserRole(userId, roleInput?.value ?? "employee");
-    });
-  });
-
-  usersList.querySelectorAll("[data-delete-user-id]").forEach((button) => {
-    button.addEventListener("click", async () => {
-      await deleteUser(Number(button.dataset.deleteUserId));
-    });
-  });
-
-  setUserFormMessage("Доступные роли в создании пользователя зависят от вашего уровня доступа.", "muted");
-}
-function userSortPriority(role) {
-  switch (role) {
-    case "manager":
-      return 1;
-    case "senior_specialist":
-      return 2;
-    case "employee":
-      return 3;
-    default:
-      return 9;
-  }
-}
-
 async function refreshBootstrap(options = {}) {
   const data = await api.GetBootstrap();
   applyBootstrap(data);
@@ -788,35 +894,20 @@ async function calculate() {
     });
     appState.currentCalculation = result;
     renderResult(result);
-    setMessage(`Расчёт готов. Активно ${result.activeServices} из ${result.items.length} услуг на сумму ${formatMoney(result.totalAmount)}.`, "success");
+
+    const saved = await api.SaveCalculation({
+      targetAmount: result.targetAmount,
+      items: result.items,
+    });
+    appState.activeHistoryId = saved.id ?? null;
+    await refreshBootstrap({ keepArchiveSelection: true });
+    setMessage(`Расчёт сохранён в архив за ${saved.title}. Активно ${result.activeServices} из ${result.items.length} услуг на сумму ${formatMoney(result.totalAmount)}.`, "success");
   } catch (error) {
     appState.currentCalculation = null;
     renderResult(null);
     setMessage(error, "error");
   } finally {
     calculateButton.disabled = false;
-  }
-}
-
-async function saveCalculation() {
-  if (!appState.currentCalculation?.items?.length) {
-    setMessage("Сначала выполните расчёт, затем его можно сохранить.", "error");
-    return;
-  }
-
-  saveButton.disabled = true;
-  try {
-    await api.SaveCalculation({
-      title: titleInput.value.trim(),
-      targetAmount: appState.currentCalculation.targetAmount,
-      items: appState.currentCalculation.items,
-    });
-    await refreshBootstrap({ keepArchiveSelection: true });
-    setMessage("Расчёт сохранён в архив SQLite.", "success");
-  } catch (error) {
-    setMessage(error, "error");
-  } finally {
-    saveButton.disabled = false;
   }
 }
 
@@ -913,7 +1004,7 @@ async function createUser() {
     });
     userUsernameInput.value = "";
     userPasswordInput.value = "";
-    userRoleInput.value = "employee";
+    userRoleInput.value = roleChoicesForUser(appState.session.user?.role)[0]?.[0] ?? "";
     await refreshBootstrap({ keepArchiveSelection: true });
     setUserFormMessage("Пользователь создан.", "success");
   } catch (error) {
@@ -944,7 +1035,7 @@ async function deleteUser(userId) {
   try {
     await api.DeleteUser(userId);
     await refreshBootstrap({ keepArchiveSelection: true });
-    setUserFormMessage(`ÐÐ¾Ð»ÑÐ·Ð¾Ð²Ð°ÑÐµÐ»Ñ ${user.username} ÑÐ´Ð°Ð»ÑÐ½.`, "success");
+    setUserFormMessage(`Пользователь ${user.username} удалён.`, "success");
   } catch (error) {
     setUserFormMessage(error, "error");
   }
@@ -1008,13 +1099,14 @@ loginPassword.addEventListener("keydown", (event) => {
   }
 });
 calculateButton.addEventListener("click", calculate);
-saveButton.addEventListener("click", saveCalculation);
 resetWeightsButton.addEventListener("click", resetWeights);
 archiveOwnerFilter?.addEventListener("change", () => {
   appState.archiveOwnerFilter = archiveOwnerFilter.value || "all";
   appState.activeHistoryId = null;
   renderHistory();
-});deleteArchiveButton.addEventListener("click", async () => {
+});
+
+deleteArchiveButton.addEventListener("click", async () => {
   if (appState.activeHistoryId !== null) {
     await deleteCalculation(appState.activeHistoryId);
   }
