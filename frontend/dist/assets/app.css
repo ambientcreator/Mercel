@@ -478,6 +478,23 @@ tbody td:nth-child(2) strong { white-space: normal; overflow-wrap: anywhere; }
   padding: 10px 12px;
   border-radius: 14px;
 }
+.user-password-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  margin-top: 10px;
+  max-width: 520px;
+}
+.inline-password-input {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 340px;
+}
+.compact-action-button {
+  padding: 10px 14px;
+  flex: 0 0 auto;
+}
 .truncate-text {
   display: block;
   max-width: 100%;

@@ -12,11 +12,13 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 
+	"golang.org/x/crypto/bcrypt"
 	_ "modernc.org/sqlite"
 )
 
@@ -117,6 +119,11 @@ type UserWithPassword struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	Role     string `json:"role"`
+}
+
+type ResetUserPasswordRequest struct {
+	UserID   int64  `json:"userID"`
+	Password string `json:"password"`
 }
 
 // RU: Тип данных `LoginRequest`.
@@ -492,6 +499,9 @@ func countTableRows(db *sql.DB, table string) (int, error) {
 		return 0, nil
 	}
 	var count int
+	if !isSafeSQLiteIdentifier(table) {
+		return 0, fmt.Errorf("unsafe table identifier: %s", table)
+	}
 	query := fmt.Sprintf("SELECT COUNT(*) FROM %s", table)
 	if err := db.QueryRow(query).Scan(&count); err != nil {
 		return 0, err
@@ -661,6 +671,9 @@ func (a *App) migrateDatabase() error {
 	return nil
 }
 func ensureColumnExists(db *sql.DB, table string, column string, alterSQL string) error {
+	if !isSafeSQLiteIdentifier(table) {
+		return fmt.Errorf("unsafe table identifier: %s", table)
+	}
 	rows, err := db.Query(fmt.Sprintf("PRAGMA table_info(%s)", table))
 	if err != nil {
 		return err
@@ -807,9 +820,75 @@ func (a *App) seedServices() error {
 //
 // RU: Ключевые моменты: важен для устойчивости логики; может использоваться сразу в нескольких местах; изменения стоит делать осознанно.
 // EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
-func hashPassword(password string) string {
+var safeSQLiteIdentifiers = map[string]struct{}{
+	"users":        {},
+	"services":     {},
+	"calculations": {},
+}
+
+var usernamePattern = regexp.MustCompile(`^[A-Za-z0-9._@-]{3,32}$`)
+
+func isSafeSQLiteIdentifier(name string) bool {
+	_, ok := safeSQLiteIdentifiers[name]
+	return ok
+}
+
+func validateUsername(username string) error {
+	if !usernamePattern.MatchString(username) {
+		return errors.New("????? ?????? ???? ?????? ?? 3 ?? 32 ???????? ? ????????? ?????? ?????, ?????, '.', '_', '-' ??? '@'.")
+	}
+	return nil
+}
+
+func validatePassword(password string) error {
+	if len(password) < 4 || len(password) > 128 {
+		return errors.New("?????? ?????? ????????? ?? 4 ?? 128 ????????.")
+	}
+	return nil
+}
+
+func validateServiceName(name string) error {
+	trimmed := strings.TrimSpace(name)
+	if trimmed == "" {
+		return errors.New("???????? ?????? ?? ?????? ???? ??????.")
+	}
+	if len([]rune(trimmed)) > 120 {
+		return errors.New("???????? ?????? ?? ?????? ????????? 120 ????????.")
+	}
+	for _, r := range trimmed {
+		if r < 32 {
+			return errors.New("???????? ?????? ???????? ???????????? ??????????? ???????.")
+		}
+	}
+	return nil
+}
+
+func legacyHashPassword(password string) string {
 	sum := sha256.Sum256([]byte(password))
 	return hex.EncodeToString(sum[:])
+}
+
+func isLegacyPasswordHash(hash string) bool {
+	if len(hash) != 64 {
+		return false
+	}
+	_, err := hex.DecodeString(hash)
+	return err == nil
+}
+
+func hashPassword(password string) string {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return legacyHashPassword(password)
+	}
+	return string(hash)
+}
+
+func verifyPassword(password string, storedHash string) bool {
+	if strings.HasPrefix(storedHash, "$2") {
+		return bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(password)) == nil
+	}
+	return legacyHashPassword(password) == storedHash
 }
 
 // RU: Функция `stripSpaces`.
@@ -994,6 +1073,18 @@ func canSeeUser(actorRole string, targetRole string) bool {
 		return false
 	}
 	return roleLevel(actorRole) > roleLevel(targetRole)
+}
+
+func canResetUserPassword(actor User, target User) bool {
+	actor.Role = normalizeRole(actor.Role)
+	target.Role = normalizeRole(target.Role)
+	if target.Username == "admin" || target.Username == actor.Username {
+		return false
+	}
+	if actor.Role == RoleAdmin {
+		return target.Role != RoleAdmin
+	}
+	return canSeeUser(actor.Role, target.Role)
 }
 
 func canViewArchiveRole(actor *User, authorRole string, authorUsername string) bool {
@@ -1192,7 +1283,13 @@ func (a *App) Login(req LoginRequest) (SessionState, error) {
 	username := stripSpaces(req.Username)
 	password := stripSpaces(req.Password)
 	if username == "" || password == "" {
-		return SessionState{}, errors.New("Введите логин и пароль.")
+		return SessionState{}, errors.New("??????? ????? ? ??????.")
+	}
+	if err := validateUsername(username); err != nil {
+		return SessionState{}, err
+	}
+	if err := validatePassword(password); err != nil {
+		return SessionState{}, err
 	}
 
 	var user User
@@ -1200,28 +1297,31 @@ func (a *App) Login(req LoginRequest) (SessionState, error) {
 	err := a.db.QueryRow(`SELECT id, username, password_hash, role, created_at FROM users WHERE username = ?`, username).Scan(&user.ID, &user.Username, &passwordHash, &user.Role, &user.CreatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return SessionState{}, errors.New("Пользователь не найден.")
+			return SessionState{}, errors.New("???????????? ?? ??????.")
 		}
 		return SessionState{}, fmt.Errorf("login query: %w", err)
 	}
-	if hashPassword(password) != passwordHash {
-		return SessionState{}, errors.New("Неверный пароль.")
+	if !verifyPassword(password, passwordHash) {
+		return SessionState{}, errors.New("???????? ????? ??? ??????.")
+	}
+	if isLegacyPasswordHash(passwordHash) {
+		_, _ = a.db.Exec(`UPDATE users SET password_hash = ? WHERE id = ?`, hashPassword(password), user.ID)
 	}
 
 	a.mu.Lock()
 	a.currentSession = &user
-	state := a.sessionStateLocked("Вход выполнен успешно.")
+	state := a.sessionStateLocked("???? ???????? ???????.")
 	a.mu.Unlock()
 	return state, nil
 }
 
-// RU: Метод `Logout`.
+// RU: ????? `Logout`.
 // EN: Method `Logout`.
 //
-// RU: Что делает: управляет сессией и набором прав текущего пользователя.
+// RU: ??? ??????: ????????? ??????? ? ??????? ???? ???????? ????????????.
 // EN: What it does: Logout clears the in-memory session and returns a locked guest state to the frontend.
 //
-// RU: Ключевые моменты: важен для устойчивости логики; может использоваться сразу в нескольких местах; изменения стоит делать осознанно.
+// RU: ???????? ???????: ????? ??? ???????????? ??????; ????? ?????????????? ????? ? ?????????? ??????; ????????? ????? ?????? ?????????.
 // EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
 func (a *App) Logout() SessionState {
 	a.mu.Lock()
@@ -1322,14 +1422,17 @@ func archiveDateTitle(now time.Time) string {
 func (a *App) saveServiceForOwner(req UpsertServiceRequest, owner string) (Service, error) {
 	name := strings.TrimSpace(req.Name)
 	unit := normalizeUnit(req.Unit)
-	if name == "" || unit == "" || req.Rate <= 0 {
-		return Service{}, errors.New("Заполните название, единицу и стоимость услуги.")
+	if err := validateServiceName(name); err != nil {
+		return Service{}, err
+	}
+	if unit == "" || req.Rate <= 0 || req.Rate > 100000000 {
+		return Service{}, errors.New("????????? ??????? ? ?????????? ????????? ??????.")
 	}
 	category := normalizeCategory(req.Category)
 	var allocation interface{}
 	if req.AllocationPercent != nil {
 		if *req.AllocationPercent < 0 || *req.AllocationPercent > 100 {
-			return Service{}, errors.New("Процент услуги должен быть в диапазоне от 0 до 100.")
+			return Service{}, errors.New("??????? ?????? ?????? ???? ? ????????? ?? 0 ?? 100.")
 		}
 		allocation = *req.AllocationPercent
 	}
@@ -1352,14 +1455,6 @@ func (a *App) saveServiceForOwner(req UpsertServiceRequest, owner string) (Servi
 	return a.getServiceByIDForOwner(req.ID, owner)
 }
 
-// RU: Метод `saveService`.
-// EN: Method `saveService`.
-//
-// RU: Что делает: выполняет один из ключевых шагов backend-логики внутри приложения.
-// EN: What it does: saveService is a convenience wrapper that persists a service for the currently authenticated user.
-//
-// RU: Ключевые моменты: важен для устойчивости логики; может использоваться сразу в нескольких местах; изменения стоит делать осознанно.
-// EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
 func (a *App) saveService(req UpsertServiceRequest) (Service, error) {
 	user, err := a.requireAuth()
 	if err != nil {
@@ -1443,16 +1538,22 @@ func (a *App) CreateUser(req UserWithPassword) (User, error) {
 		return User{}, err
 	}
 	if !canCreateUsers(current.Role) {
-		return User{}, errors.New("Недостаточно прав для создания пользователей.")
+		return User{}, errors.New("???????????? ???? ??? ???????? ?????????????.")
 	}
 	username := stripSpaces(req.Username)
 	password := stripSpaces(req.Password)
 	if username == "" || password == "" {
-		return User{}, errors.New("Введите логин и пароль нового пользователя.")
+		return User{}, errors.New("??????? ????? ? ?????? ?????? ????????????.")
+	}
+	if err := validateUsername(username); err != nil {
+		return User{}, err
+	}
+	if err := validatePassword(password); err != nil {
+		return User{}, err
 	}
 	role := normalizeAssignableRole(req.Role)
 	if !canCreateRole(current.Role, role) {
-		return User{}, errors.New("Вы не можете создать пользователя с этой ролью.")
+		return User{}, errors.New("?? ?? ?????? ??????? ???????????? ? ???? ?????.")
 	}
 	createdAt := time.Now().Format(time.RFC3339)
 	result, err := a.db.Exec(`INSERT INTO users(username, password_hash, role, created_at) VALUES(?, ?, ?, ?)`, username, hashPassword(password), role, createdAt)
@@ -1463,14 +1564,6 @@ func (a *App) CreateUser(req UserWithPassword) (User, error) {
 	return a.getUserByID(id)
 }
 
-// RU: Метод `getUserByID`.
-// EN: Method `getUserByID`.
-//
-// RU: Что делает: выполняет один из ключевых шагов backend-логики внутри приложения.
-// EN: What it does: getUserByID loads one user record by primary key for follow-up authorization logic.
-//
-// RU: Ключевые моменты: важен для устойчивости логики; может использоваться сразу в нескольких местах; изменения стоит делать осознанно.
-// EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
 func (a *App) getUserByID(id int64) (User, error) {
 	var user User
 	err := a.db.QueryRow(`SELECT id, username, role, created_at FROM users WHERE id = ?`, id).Scan(&user.ID, &user.Username, &user.Role, &user.CreatedAt)
@@ -1544,10 +1637,10 @@ func (a *App) UpdateUserRole(userID int64, role string) (User, error) {
 	}
 	user.Role = normalizeRole(user.Role)
 	if user.Username == "admin" || user.Username == current.Username {
-		return User{}, errors.New("??? ??????? ?????? ?????? ????????.")
+		return User{}, errors.New("?????? ?????? ???? ? ?????????? ??????? ??????.")
 	}
 	if !canSeeUser(current.Role, user.Role) {
-		return User{}, errors.New("???????????? ???? ??? ????? ???? ????? ????????????.")
+		return User{}, errors.New("???????????? ???? ??? ????????? ???? ??????? ??????.")
 	}
 	if !canCreateRole(current.Role, role) {
 		return User{}, errors.New("?? ?? ?????? ????????? ??? ????.")
@@ -1564,13 +1657,37 @@ func (a *App) UpdateUserRole(userID int64, role string) (User, error) {
 	updated.Role = normalizeRole(updated.Role)
 	return updated, nil
 }
+
+func (a *App) ResetUserPassword(req ResetUserPasswordRequest) (User, error) {
+	current, err := a.requireAuth()
+	if err != nil {
+		return User{}, err
+	}
+	password := stripSpaces(req.Password)
+	if password == "" {
+		return User{}, errors.New("Новый пароль не должен быть пустым.")
+	}
+	user, err := a.getUserByID(req.UserID)
+	if err != nil {
+		return User{}, fmt.Errorf("find user: %w", err)
+	}
+	user.Role = normalizeRole(user.Role)
+	if !canResetUserPassword(*current, user) {
+		return User{}, errors.New("Недостаточно прав для смены пароля этой учётной записи.")
+	}
+	if _, err := a.db.Exec(`UPDATE users SET password_hash = ? WHERE id = ?`, hashPassword(password), req.UserID); err != nil {
+		return User{}, fmt.Errorf("reset user password: %w", err)
+	}
+	return a.getUserByID(req.UserID)
+}
+
 func (a *App) DeleteUser(userID int64) error {
 	current, err := a.requireAuth()
 	if err != nil {
 		return err
 	}
 	if !canViewManagedUsers(current.Role) {
-		return errors.New("???????????? ???? ??? ???????? ????????????.")
+		return errors.New("???????????? ???? ??? ???????? ?????????????.")
 	}
 	user, err := a.getUserByID(userID)
 	if err != nil {
@@ -1578,10 +1695,10 @@ func (a *App) DeleteUser(userID int64) error {
 	}
 	user.Role = normalizeRole(user.Role)
 	if user.Username == "admin" || user.Username == current.Username {
-		return errors.New("??? ??????? ?????? ??????? ??????.")
+		return errors.New("?????? ??????? ?????????? ??????? ??????.")
 	}
 	if !canSeeUser(current.Role, user.Role) {
-		return errors.New("???????????? ???? ??? ???????? ????? ????????????.")
+		return errors.New("???????????? ???? ??? ???????? ???? ??????? ??????.")
 	}
 	_, err = a.db.Exec(`DELETE FROM users WHERE id = ?`, userID)
 	if err != nil {

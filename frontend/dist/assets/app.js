@@ -673,19 +673,20 @@ function renderUsers() {
   userRoleInput.disabled = !appState.session.canModerate || roleChoices.length === 0;
 
   if (!appState.session.canModerate || roleChoices.length === 0) {
-    usersList.innerHTML = '<div class="settings-empty">\u0423\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435 \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044f\u043c\u0438 \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u043e \u0441\u0442\u0430\u0440\u0448\u0438\u043c \u0438 \u0440\u0443\u043a\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044f\u043c \u0441\u0432\u043e\u0435\u0433\u043e \u043e\u0442\u0434\u0435\u043b\u0430, \u0430 \u0442\u0430\u043a\u0436\u0435 \u0430\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u043e\u0440\u0443.</div>';
-    setUserFormMessage("\u0421\u043e\u0437\u0434\u0430\u0432\u0430\u0442\u044c \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u0435\u0439 \u043c\u043e\u0436\u043d\u043e \u0442\u043e\u043b\u044c\u043a\u043e \u0432\u043d\u0443\u0442\u0440\u0438 \u0441\u0432\u043e\u0435\u0433\u043e \u043e\u0442\u0434\u0435\u043b\u0430 \u0438 \u0441\u0432\u043e\u0435\u0439 \u0437\u043e\u043d\u044b \u043e\u0442\u0432\u0435\u0442\u0441\u0442\u0432\u0435\u043d\u043d\u043e\u0441\u0442\u0438.", "muted");
+    usersList.innerHTML = '<div class="settings-empty">Управление пользователями доступно старшим и руководителям своего отдела, а также администратору.</div>';
+    setUserFormMessage("Создавать пользователей можно только внутри своего отдела и своей зоны ответственности.", "muted");
     return;
   }
   if (!sortedUsers.length) {
-    usersList.innerHTML = '<div class="settings-empty">\u041f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u0438 \u043f\u043e\u043a\u0430 \u043d\u0435 \u0441\u043e\u0437\u0434\u0430\u043d\u044b.</div>';
-    setUserFormMessage("\u041c\u043e\u0436\u043d\u043e \u0441\u043e\u0437\u0434\u0430\u0442\u044c \u043f\u0435\u0440\u0432\u043e\u0433\u043e \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044f \u0432 \u0440\u0430\u043c\u043a\u0430\u0445 \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u044b\u0445 \u0432\u0430\u043c \u0440\u043e\u043b\u0435\u0439.", "muted");
+    usersList.innerHTML = '<div class="settings-empty">Пользователи пока не созданы.</div>';
+    setUserFormMessage("Можно создать первого пользователя в рамках доступных вам ролей.", "muted");
     return;
   }
 
   usersList.innerHTML = sortedUsers.map((user) => {
     const canChangeRole = appState.session.canManage;
     const canDelete = canDeleteManagedUser(appState.session.user?.role, user.role);
+    const canResetPassword = Boolean(appState.session.canModerate);
     const roleOptions = roleChoices.map(([value, label]) => `<option value="${value}" ${user.role === value ? "selected" : ""}>${label}</option>`).join("");
 
     return `
@@ -693,11 +694,12 @@ function renderUsers() {
         <div>
           <strong>${escapeHtml(user.username)}</strong>
           <div class="service-meta">${roleLabel(user.role)}</div>
-          <div class="service-meta">\u0421\u043e\u0437\u0434\u0430\u043d: ${formatDate(user.createdAt)}</div>
+          <div class="service-meta">Создан: ${formatDate(user.createdAt)}</div>
+          ${canResetPassword ? `<div class="user-password-row"><input type="password" class="input-select compact-select inline-password-input" placeholder="Новый пароль" data-user-password-id="${user.id}" /><button type="button" class="ghost-button compact-action-button" data-apply-password-id="${user.id}">Сменить пароль</button></div>` : ""}
         </div>
         <div class="settings-item-actions stacked-actions">
-          ${canChangeRole ? `<select class="input-select compact-select" data-user-role-id="${user.id}">${roleOptions}</select><button type="button" class="ghost-button" data-apply-role-id="${user.id}">\u0421\u043c\u0435\u043d\u0438\u0442\u044c \u0440\u043e\u043b\u044c</button>` : `<div class="service-meta">\u0421\u043c\u0435\u043d\u0430 \u0440\u043e\u043b\u0435\u0439 \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u0430 \u0442\u043e\u043b\u044c\u043a\u043e \u0440\u0443\u043a\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044e \u043e\u0442\u0434\u0435\u043b\u0430 \u0438 \u0430\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u043e\u0440\u0443.</div>`}
-          <button type="button" class="danger-button" ${canDelete ? `data-delete-user-id="${user.id}"` : "disabled"}>\u0423\u0434\u0430\u043b\u0438\u0442\u044c</button>
+          ${canChangeRole ? `<select class="input-select compact-select" data-user-role-id="${user.id}">${roleOptions}</select><button type="button" class="ghost-button" data-apply-role-id="${user.id}">Сменить роль</button>` : `<div class="service-meta">Смена ролей доступна только руководителю отдела и администратору.</div>`}
+          <button type="button" class="danger-button" ${canDelete ? `data-delete-user-id="${user.id}"` : "disabled"}>Удалить</button>
         </div>
       </article>
     `;
@@ -711,13 +713,30 @@ function renderUsers() {
     });
   });
 
+  usersList.querySelectorAll("[data-apply-password-id]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const userId = Number(button.dataset.applyPasswordId);
+      const passwordInput = usersList.querySelector(`[data-user-password-id="${userId}"]`);
+      const nextPassword = stripSpaces(passwordInput?.value ?? "");
+      if (!nextPassword) {
+        setUserFormMessage("\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u043d\u043e\u0432\u044b\u0439 \u043f\u0430\u0440\u043e\u043b\u044c.", "error");
+        passwordInput?.focus();
+        return;
+      }
+      await resetUserPassword(userId, nextPassword);
+      if (passwordInput) {
+        passwordInput.value = "";
+      }
+    });
+  });
+
   usersList.querySelectorAll("[data-delete-user-id]").forEach((button) => {
     button.addEventListener("click", async () => {
       await deleteUser(Number(button.dataset.deleteUserId));
     });
   });
 
-  setUserFormMessage("\u041f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u0438 \u043e\u0442\u043e\u0431\u0440\u0430\u0436\u0430\u044e\u0442\u0441\u044f \u0438 \u0441\u043e\u0437\u0434\u0430\u044e\u0442\u0441\u044f \u0442\u043e\u043b\u044c\u043a\u043e \u0432 \u043f\u0440\u0435\u0434\u0435\u043b\u0430\u0445 \u0432\u0430\u0448\u0435\u0433\u043e \u043e\u0442\u0434\u0435\u043b\u0430 \u0438 \u0443\u0440\u043e\u0432\u043d\u044f \u0434\u043e\u0441\u0442\u0443\u043f\u0430.", "muted");
+  setUserFormMessage("Пользователи отображаются и создаются только в пределах вашего отдела и уровня доступа.", "muted");
 }
 
 function userSortPriority(role) {
@@ -1011,6 +1030,15 @@ async function createUser() {
     setUserFormMessage(error, "error");
   } finally {
     createUserButton.disabled = false;
+  }
+}
+
+async function resetUserPassword(userId, password) {
+  try {
+    await api.ResetUserPassword({ userID: userId, password });
+    setUserFormMessage("Пароль пользователя обновлён.", "success");
+  } catch (error) {
+    setUserFormMessage(error, "error");
   }
 }
 

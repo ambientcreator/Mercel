@@ -1,4 +1,4 @@
-﻿package main
+package main
 
 import (
 	"bytes"
@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -1128,6 +1129,139 @@ func TestSeniorSpecialistCanDeleteEmployeeOnly(t *testing.T) {
 //
 // RU: Ключевые моменты: работает в изолированном сценарии; нужен для защиты от регрессий; документирует ожидаемое поведение.
 // EN: Key points: runs in an isolated scenario; protects against regressions; documents the expected behavior of the feature or rule.
+func TestSeniorRolesCanResetEmployeePasswordsWithinOwnDepartment(t *testing.T) {
+	cases := []struct {
+		seniorRole   string
+		employeeRole string
+		seniorName   string
+		employeeName string
+	}{
+		{RoleSupportSeniorSpecialist, RoleSupportEmployee, "support_senior_reset", "support_employee_reset"},
+		{RoleSeniorTech, RoleTechnician, "tech_senior_reset", "tech_employee_reset"},
+		{RoleSeniorMRK, RoleMRKEmployee, "mrk_senior_reset", "mrk_employee_reset"},
+	}
+
+	for _, tc := range cases {
+		app := withTempDB(t)
+		loginAsAdmin(t, app)
+
+		senior, err := app.CreateUser(UserWithPassword{Username: tc.seniorName, Password: "secret", Role: tc.seniorRole})
+		if err != nil {
+			t.Fatalf("CreateUser senior error = %v", err)
+		}
+		employee, err := app.CreateUser(UserWithPassword{Username: tc.employeeName, Password: "secret", Role: tc.employeeRole})
+		if err != nil {
+			t.Fatalf("CreateUser employee error = %v", err)
+		}
+
+		loginAsUser(t, app, senior.Username, "secret")
+		if _, err := app.ResetUserPassword(ResetUserPasswordRequest{UserID: employee.ID, Password: "updated123"}); err != nil {
+			t.Fatalf("ResetUserPassword() error = %v", err)
+		}
+
+		app.Logout()
+		if _, err := app.Login(LoginRequest{Username: employee.Username, Password: "updated123"}); err != nil {
+			t.Fatalf("Login() with updated password error = %v", err)
+		}
+	}
+}
+
+func TestResetUserPasswordRejectsEmptyPassword(t *testing.T) {
+	app := withTempDB(t)
+	loginAsAdmin(t, app)
+
+	employee, err := app.CreateUser(UserWithPassword{Username: "empty_pwd_employee", Password: "secret", Role: RoleSupportEmployee})
+	if err != nil {
+		t.Fatalf("CreateUser employee error = %v", err)
+	}
+
+	adminUser, err := app.requireAuth()
+	if err != nil {
+		t.Fatalf("requireAuth() error = %v", err)
+	}
+
+	if _, err := app.ResetUserPassword(ResetUserPasswordRequest{UserID: employee.ID, Password: ""}); err == nil {
+		t.Fatalf("expected empty password to be rejected")
+	} else {
+		message := err.Error()
+		if strings.Contains(message, "?") {
+			t.Fatalf("error contains placeholder characters: %q", message)
+		}
+		if strings.TrimSpace(message) == "" {
+			t.Fatalf("unexpected empty error message")
+		}
+	}
+
+	if adminUser == nil {
+		t.Fatalf("expected authenticated admin session")
+	}
+}
+
+func TestCreateUserRejectsUnsafeUsername(t *testing.T) {
+	app := withTempDB(t)
+	loginAsAdmin(t, app)
+
+	if _, err := app.CreateUser(UserWithPassword{Username: "' OR 1=1 --", Password: "secret123", Role: RoleSupportEmployee}); err == nil {
+		t.Fatalf("expected unsafe username to be rejected")
+	}
+
+	users, err := app.ListUsers()
+	if err != nil {
+		t.Fatalf("ListUsers() error = %v", err)
+	}
+	for _, user := range users {
+		if user.Username == "' OR 1=1 --" {
+			t.Fatalf("unsafe username must not be persisted")
+		}
+	}
+}
+
+func TestLegacyPasswordHashMigratesOnLogin(t *testing.T) {
+	app := withTempDB(t)
+	loginAsAdmin(t, app)
+
+	created, err := app.CreateUser(UserWithPassword{Username: "legacy_user", Password: "secret123", Role: RoleSupportEmployee})
+	if err != nil {
+		t.Fatalf("CreateUser() error = %v", err)
+	}
+
+	if _, err := app.db.Exec(`UPDATE users SET password_hash = ? WHERE id = ?`, legacyHashPassword("secret123"), created.ID); err != nil {
+		t.Fatalf("force legacy hash error = %v", err)
+	}
+
+	app.Logout()
+	if _, err := app.Login(LoginRequest{Username: "legacy_user", Password: "secret123"}); err != nil {
+		t.Fatalf("Login() legacy user error = %v", err)
+	}
+
+	var stored string
+	if err := app.db.QueryRow(`SELECT password_hash FROM users WHERE id = ?`, created.ID).Scan(&stored); err != nil {
+		t.Fatalf("QueryRow() password_hash error = %v", err)
+	}
+	if !strings.HasPrefix(stored, "$2") {
+		t.Fatalf("expected bcrypt hash after login migration, got %q", stored)
+	}
+}
+
+func TestSeniorCannotResetPasswordOutsideOwnDepartment(t *testing.T) {
+	app := withTempDB(t)
+	loginAsAdmin(t, app)
+
+	supportSenior, err := app.CreateUser(UserWithPassword{Username: "support_senior_pwd", Password: "secret", Role: RoleSupportSeniorSpecialist})
+	if err != nil {
+		t.Fatalf("CreateUser support senior error = %v", err)
+	}
+	techEmployee, err := app.CreateUser(UserWithPassword{Username: "tech_employee_pwd", Password: "secret", Role: RoleTechnician})
+	if err != nil {
+		t.Fatalf("CreateUser technician error = %v", err)
+	}
+
+	loginAsUser(t, app, supportSenior.Username, "secret")
+	if _, err := app.ResetUserPassword(ResetUserPasswordRequest{UserID: techEmployee.ID, Password: "updated123"}); err == nil {
+		t.Fatalf("expected cross-department password reset to be blocked")
+	}
+}
+
 func TestManagerCanDeleteSeniorSpecialist(t *testing.T) {
 	app := withTempDB(t)
 	loginAsAdmin(t, app)
