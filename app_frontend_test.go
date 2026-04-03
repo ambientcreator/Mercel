@@ -333,7 +333,7 @@ func TestFrontendAdminUsersCanSeeRoleControls(t *testing.T) {
 		t.Fatalf("ReadFile app.js error = %v", err)
 	}
 
-	required := []byte("const canChangeRole = Boolean(appState.session.canAdmin)")
+	required := []byte("const canChangeRole = Boolean(appState.session?.canAdmin)")
 	if !bytes.Contains(content, required) {
 		t.Fatalf("app.js should allow admin users to see role controls")
 	}

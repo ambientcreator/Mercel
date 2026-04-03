@@ -899,7 +899,7 @@ function renderUsers() {
   }
 
   usersList.innerHTML = sortedUsers.map((user) => {
-    const canChangeRole = isAdminSession
+    const canChangeRole = Boolean(appState.session?.canAdmin)
       || (appState.session.canManage
         && roleDepartment(viewerRole) === roleDepartment(user.role));
     const canDelete = canDeleteManagedUser(appState.session.user?.role, user.role);

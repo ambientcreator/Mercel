@@ -21,7 +21,7 @@ func formatMoney(value int) string {
 // RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: РІР°Р¶РµРЅ РґР»СЏ СѓСЃС‚РѕР№С‡РёРІРѕСЃС‚Рё Р»РѕРіРёРєРё; РјРѕР¶РµС‚ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ СЃСЂР°Р·Сѓ РІ РЅРµСЃРєРѕР»СЊРєРёС… РјРµСЃС‚Р°С…; РёР·РјРµРЅРµРЅРёСЏ СЃС‚РѕРёС‚ РґРµР»Р°С‚СЊ РѕСЃРѕР·РЅР°РЅРЅРѕ.
 // EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
 func displayMoney(value int) string {
-	return fmt.Sprintf("%d СЂ", value)
+	return fmt.Sprintf("%d \u0440", value)
 }
 
 func archiveDateTitle(now time.Time) string {
@@ -43,13 +43,13 @@ func (a *App) saveServiceForOwner(req UpsertServiceRequest, owner string) (Servi
 		return Service{}, err
 	}
 	if unit == "" || req.Rate <= 0 || req.Rate > 100000000 {
-		return Service{}, errors.New("РЈРєР°Р¶РёС‚Рµ РєРѕСЂСЂРµРєС‚РЅС‹Рµ РµРґРёРЅРёС†Сѓ Рё СЃС‚РѕРёРјРѕСЃС‚СЊ СѓСЃР»СѓРіРё.")
+		return Service{}, errors.New("\u0423\u043a\u0430\u0436\u0438\u0442\u0435 \u043a\u043e\u0440\u0440\u0435\u043a\u0442\u043d\u044b\u0435 \u0435\u0434\u0438\u043d\u0438\u0446\u0443 \u0438 \u0441\u0442\u043e\u0438\u043c\u043e\u0441\u0442\u044c \u0443\u0441\u043b\u0443\u0433\u0438.")
 	}
 	category := normalizeCategory(req.Category)
 	var allocation interface{}
 	if req.AllocationPercent != nil {
 		if *req.AllocationPercent < 0 || *req.AllocationPercent > 100 {
-			return Service{}, errors.New("РџСЂРѕС†РµРЅС‚ СѓСЃР»СѓРіРё РґРѕР»Р¶РµРЅ Р±С‹С‚СЊ РІ РґРёР°РїР°Р·РѕРЅРµ РѕС‚ 0 РґРѕ 100.")
+			return Service{}, errors.New("\u041f\u0440\u043e\u0446\u0435\u043d\u0442 \u0443\u0441\u043b\u0443\u0433\u0438 \u0434\u043e\u043b\u0436\u0435\u043d \u0431\u044b\u0442\u044c \u0432 \u0434\u0438\u0430\u043f\u0430\u0437\u043e\u043d\u0435 \u043e\u0442 0 \u0434\u043e 100.")
 		}
 		allocation = *req.AllocationPercent
 	}

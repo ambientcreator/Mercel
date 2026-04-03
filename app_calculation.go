@@ -13,10 +13,10 @@ func (a *App) CalculateAmount(req CalculationRequest) (CalculationResult, error)
 		return CalculationResult{}, err
 	}
 	if req.TargetAmount <= 0 {
-		return CalculationResult{}, errors.New("Р’РІРµРґРёС‚Рµ СЃСѓРјРјСѓ Р±РѕР»СЊС€Рµ 0.")
+		return CalculationResult{}, errors.New("Введите сумму больше 0.")
 	}
 	if req.TargetAmount > 1_500_000 {
-		return CalculationResult{}, fmt.Errorf("РЎСѓРјРјР° %d СЂ РїСЂРµРІС‹С€Р°РµС‚ РґРѕРїСѓСЃС‚РёРјС‹Р№ РїСЂРµРґРµР» 1500000 СЂ.", req.TargetAmount)
+		return CalculationResult{}, fmt.Errorf("Сумма %d р превышает допустимый предел 1500000 р.", req.TargetAmount)
 	}
 
 	services, err := a.GetServices()
@@ -24,23 +24,33 @@ func (a *App) CalculateAmount(req CalculationRequest) (CalculationResult, error)
 		return CalculationResult{}, err
 	}
 	if len(services) == 0 {
-		return CalculationResult{}, errors.New("РЎРЅР°С‡Р°Р»Р° СЃРѕР·РґР°Р№С‚Рµ С…РѕС‚СЏ Р±С‹ РѕРґРЅСѓ СѓСЃР»СѓРіСѓ.")
+		return CalculationResult{}, errors.New("Сначала создайте хотя бы одну услугу.")
+	}
+
+	activeServices, activeIndexes := filterCalculableServices(services)
+	if len(activeServices) == 0 {
+		return CalculationResult{}, errors.New("Нет услуг, участвующих в расчёте. Уберите нулевой процент у нужных позиций или добавьте активные услуги.")
 	}
 
 	weights := normalizeWeights(req.Weights, services)
-	quantities, ok := solveStructuredAllocation(req.TargetAmount, services, weights)
+	quantities, ok := solveStructuredAllocation(req.TargetAmount, activeServices, weights)
 	if !ok {
-		quantities, ok = solveExact(req.TargetAmount, services, weights)
+		quantities, ok = solveExact(req.TargetAmount, activeServices, weights)
 	}
 	if !ok {
-		return CalculationResult{}, fmt.Errorf("РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕРґРѕР±СЂР°С‚СЊ С‚РѕС‡РЅС‹Р№ СЂР°СЃС‡С‘С‚ РЅР° СЃСѓРјРјСѓ %s.", displayMoney(req.TargetAmount))
+		return CalculationResult{}, fmt.Errorf("Не удалось подобрать точный расчёт на сумму %s . Измените сумму, проценты или набор активных услуг.", displayMoney(req.TargetAmount))
+	}
+
+	fullQuantities := make([]int, len(services))
+	for idx, quantity := range quantities {
+		fullQuantities[activeIndexes[idx]] = quantity
 	}
 
 	items := make([]CalculationItem, 0, len(services))
 	total := 0
 	active := 0
 	for idx, service := range services {
-		quantity := quantities[idx]
+		quantity := fullQuantities[idx]
 		lineTotal := service.Rate * quantity
 		if quantity > 0 {
 			active++
@@ -60,26 +70,29 @@ func (a *App) CalculateAmount(req CalculationRequest) (CalculationResult, error)
 			AllocationPercent: service.AllocationPercent,
 		})
 	}
+	if total != req.TargetAmount {
+		return CalculationResult{}, fmt.Errorf("Не удалось подобрать точный расчёт на сумму %s . Измените сумму, проценты или набор активных услуг.", displayMoney(req.TargetAmount))
+	}
 
 	return CalculationResult{
 		TargetAmount:   req.TargetAmount,
 		TotalAmount:    total,
 		Items:          items,
-		FoundExact:     total == req.TargetAmount,
+		FoundExact:     true,
 		GeneratedAt:    time.Now().Format(time.RFC3339),
 		ActiveServices: active,
 		Weights:        weights,
 	}, nil
 }
 
-// RU: Р¤СѓРЅРєС†РёСЏ `normalizeWeights`.
+// RU: Функция `normalizeWeights`.
 // EN: Function `normalizeWeights`.
 //
-// RU: Р§С‚Рѕ РґРµР»Р°РµС‚: СѓС‡Р°СЃС‚РІСѓРµС‚ РІРѕ РІРЅСѓС‚СЂРµРЅРЅРµР№ РјР°С‚РµРјР°С‚РёРєРµ СЂР°СЃС‡С‘С‚Р° Рё С‚РѕС‡РЅРѕРј СЂР°СЃРїСЂРµРґРµР»РµРЅРёРё СЃСѓРјРјС‹.
-// EN: What it does: normalizeWeights clamps and aligns frontend weights with the currently available services.
+// RU: Что делает: нормализует и ограничивает веса, пришедшие с фронтенда, по текущему списку услуг.
+// EN: What it does: normalizes and clamps frontend-provided weights against the current service list.
 //
-// RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: СЏРІР»СЏРµС‚СЃСЏ С‡Р°СЃС‚СЊСЋ СЂР°СЃС‡С‘С‚РЅРѕРіРѕ РїР°Р№РїР»Р°Р№РЅР°; С‡СѓРІСЃС‚РІРёС‚РµР»РµРЅ Рє РіСЂР°РЅРёС‡РЅС‹Рј СЃР»СѓС‡Р°СЏРј; С‚СЂРµР±СѓРµС‚ С‚РµСЃС‚РѕРІРѕР№ РїСЂРѕРІРµСЂРєРё РїРѕСЃР»Рµ РїСЂР°РІРѕРє.
-// EN: Key points: belongs to the calculation pipeline; is sensitive to edge cases and exact arithmetic; should be changed together with tests.
+// RU: Ключевые моменты: не создаёт лишние услуги; для отсутствующих весов оставляет значение 0.
+// EN: Key points: does not create extra services; keeps missing weights at zero.
 func normalizeWeights(input map[string]int, services []Service) map[string]int {
 	result := make(map[string]int, len(services))
 	for _, service := range services {
@@ -89,6 +102,26 @@ func normalizeWeights(input map[string]int, services []Service) map[string]int {
 		result[code] = clampWeight(weight)
 	}
 	return result
+}
+
+func filterCalculableServices(services []Service) ([]Service, []int) {
+	filtered := make([]Service, 0, len(services))
+	indexes := make([]int, 0, len(services))
+	for idx, service := range services {
+		if serviceExcludedFromCalculation(service) {
+			continue
+		}
+		filtered = append(filtered, service)
+		indexes = append(indexes, idx)
+	}
+	return filtered, indexes
+}
+
+func serviceExcludedFromCalculation(service Service) bool {
+	if service.AllocationPercent == nil {
+		return false
+	}
+	return *service.AllocationPercent <= 0
 }
 
 // RU: Р¤СѓРЅРєС†РёСЏ `solveStructuredAllocation`.

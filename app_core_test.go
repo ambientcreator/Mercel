@@ -2,7 +2,9 @@ package main
 
 import (
 	"database/sql"
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -702,3 +704,88 @@ func TestStructuredCalculationActivatesAllServicesWhenPossible(t *testing.T) {
 //
 // RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: СЂР°Р±РѕС‚Р°РµС‚ РІ РёР·РѕР»РёСЂРѕРІР°РЅРЅРѕРј СЃС†РµРЅР°СЂРёРё; РЅСѓР¶РµРЅ РґР»СЏ Р·Р°С‰РёС‚С‹ РѕС‚ СЂРµРіСЂРµСЃСЃРёР№; РґРѕРєСѓРјРµРЅС‚РёСЂСѓРµС‚ РѕР¶РёРґР°РµРјРѕРµ РїРѕРІРµРґРµРЅРёРµ.
 // EN: Key points: runs in an isolated scenario; protects against regressions; documents the expected behavior of the feature or rule.
+
+func TestCalculationSkipsServicesWithZeroPercent(t *testing.T) {
+	app := withTempDB(t)
+	loginAsAdmin(t, app)
+
+	zeroPercent := 0.0
+	if _, err := app.UpsertService(UpsertServiceRequest{Name: "Zero Percent Service", Unit: "\u0447.", Rate: 37, Category: CategoryPrimary, AllocationPercent: &zeroPercent}); err != nil {
+		t.Fatalf("UpsertService zero-percent error = %v", err)
+	}
+	if _, err := app.UpsertService(UpsertServiceRequest{Name: "Exact Service", Unit: "\u0447.", Rate: 100, Category: CategoryPrimary}); err != nil {
+		t.Fatalf("UpsertService exact error = %v", err)
+	}
+
+	result, err := app.CalculateAmount(CalculationRequest{TargetAmount: 200, Weights: map[string]int{}})
+	if err != nil {
+		t.Fatalf("CalculateAmount() error = %v", err)
+	}
+
+	var zeroItem *CalculationItem
+	for i := range result.Items {
+		if result.Items[i].Name == "Zero Percent Service" {
+			zeroItem = &result.Items[i]
+			break
+		}
+	}
+	if zeroItem == nil {
+		t.Fatalf("expected zero-percent service to stay in result list, got %+v", result.Items)
+	}
+	if zeroItem.Quantity != 0 || zeroItem.LineTotal != 0 {
+		t.Fatalf("expected zero-percent service to be excluded from calculation, got %+v", *zeroItem)
+	}
+	if result.TotalAmount != 200 {
+		t.Fatalf("expected exact total 200, got %d", result.TotalAmount)
+	}
+}
+
+func TestCalculationFailsWhenExactAmountIsImpossible(t *testing.T) {
+	app := withTempDB(t)
+	loginAsAdmin(t, app)
+
+	services, err := app.GetServices()
+	if err != nil {
+		t.Fatalf("GetServices() error = %v", err)
+	}
+	for _, service := range services {
+		if err := app.DeleteService(service.ID); err != nil {
+			t.Fatalf("DeleteService(%d) error = %v", service.ID, err)
+		}
+	}
+
+	zeroPercent := 0.0
+	if _, err := app.UpsertService(UpsertServiceRequest{Name: "Blocked Seven", Unit: "\u0448\u0442.", Rate: 7, Category: CategoryClosing, AllocationPercent: &zeroPercent}); err != nil {
+		t.Fatalf("UpsertService blocked error = %v", err)
+	}
+	if _, err := app.UpsertService(UpsertServiceRequest{Name: "Only Hundred", Unit: "\u0447.", Rate: 100, Category: CategoryPrimary}); err != nil {
+		t.Fatalf("UpsertService exact error = %v", err)
+	}
+
+	_, err = app.CalculateAmount(CalculationRequest{TargetAmount: 107, Weights: map[string]int{}})
+	if err == nil {
+		t.Fatalf("expected impossible exact calculation to fail")
+	}
+	if !strings.Contains(err.Error(), "Не удалось подобрать точный расчёт") {
+		t.Fatalf("expected exact-failure message, got %q", err.Error())
+	}
+}
+
+func TestCalculationSourceMessagesStayReadable(t *testing.T) {
+	sourcePath := filepath.Join(".", "app_calculation.go")
+	content, err := os.ReadFile(sourcePath)
+	if err != nil {
+		t.Fatalf("ReadFile(%q) error = %v", sourcePath, err)
+	}
+
+	source := string(content)
+	if strings.Contains(source, "????") {
+		t.Fatalf("app_calculation.go still contains broken question-mark placeholders")
+	}
+	if !strings.Contains(source, "Введите сумму больше 0.") {
+		t.Fatalf("expected readable validation message for zero amount")
+	}
+	if !strings.Contains(source, "Не удалось подобрать точный расчёт") {
+		t.Fatalf("expected readable exact-failure message in source")
+	}
+}
