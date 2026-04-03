@@ -29,9 +29,11 @@ const archiveDateInput = document.getElementById("archive-date-input");
 const calculateButton = document.getElementById("calculate-button");
 const resetWeightsButton = document.getElementById("reset-weights-button");
 const deleteArchiveButton = document.getElementById("delete-archive-button");
+const copyArchiveServicesButton = document.getElementById("copy-archive-services-button");
 const messageNode = document.getElementById("message");
 const resultBody = document.getElementById("result-body");
 const resultTotal = document.getElementById("result-total");
+const randomizeButton = document.getElementById("randomize-button");
 const summaryTotal = document.getElementById("summary-total");
 const summaryItems = document.getElementById("summary-items");
 const summaryHistory = document.getElementById("summary-history");
@@ -177,120 +179,299 @@ function categoryClass(category) {
   }
 }
 
-function roleDepartment(role) {
-  switch (role) {
-    case "support_manager":
-    case "support_senior_specialist":
-    case "support_employee":
+function normalizeRole(role) {
+  switch (String(role ?? "").trim()) {
     case "manager":
+    case "support_manager":
+    case "support_head":
+      return "support_head";
     case "senior_specialist":
+    case "support_senior_specialist":
+    case "support_senior":
+      return "support_senior";
     case "employee":
-      return "support";
+    case "support_employee":
+      return "support_employee";
     case "tech_manager":
+    case "technical_head":
+      return "technical_head";
     case "senior_technician":
+    case "technical_senior":
+      return "technical_senior";
     case "technician":
-      return "tech";
+    case "technical_employee":
+      return "technical_employee";
     case "mrk_manager":
+    case "commercial_subscriber_head":
+      return "commercial_subscriber_head";
     case "senior_mrk":
+    case "commercial_senior_mrk":
+      return "commercial_senior_mrk";
     case "mrk_employee":
-      return "mrk";
+    case "commercial_employee_mrk":
+      return "commercial_employee_mrk";
     default:
-      return "admin";
+      return String(role ?? "").trim() || "support_employee";
   }
+}
+
+function roleMeta(role) {
+  const catalog = {
+    admin: { level: 5, department: "global", label: "Администратор" },
+    global_director: { level: 4, department: "global", label: "Генеральный директор" },
+    executive_director: { level: 4, department: "global", label: "Исполнительный директор" },
+    technical_director: { level: 4, department: "global", label: "Технический директор" },
+    support_head: { level: 3, department: "support", label: "Руководитель Тех. Поддержки" },
+    support_sysadmin: { level: 3, department: "support", label: "Системный администратор" },
+    support_senior: { level: 2, department: "support", label: "Старший специалист техподдержки" },
+    support_employee: { level: 1, department: "support", label: "Специалист техподдержки" },
+    technical_head: { level: 3, department: "technical", label: "Руководитель технического отдела" },
+    technical_senior: { level: 2, department: "technical", label: "Старший техник" },
+    technical_employee: { level: 1, department: "technical", label: "Техник" },
+    telecom_construction_director: { level: 3, department: "telecom", label: "Директор по строительству" },
+    telecom_construction_head: { level: 3, department: "telecom", label: "Руководитель строительного отдела" },
+    telecom_senior_vols: { level: 2, department: "telecom", label: "Старший монтажник ВОЛС" },
+    telecom_senior_lvs: { level: 2, department: "telecom", label: "Старший монтажник ЛВС" },
+    telecom_employee_vols: { level: 1, department: "telecom", label: "Монтажник ВОЛС" },
+    telecom_employee_lvs: { level: 1, department: "telecom", label: "Монтажник ЛВС" },
+    skud_head: { level: 3, department: "skud", label: "Руководитель отдела технического обслуживания СКУД" },
+    skud_project_manager: { level: 2, department: "skud", label: "Менеджер проектов СКУД" },
+    skud_senior_service_engineer: { level: 2, department: "skud", label: "Старший сервисный инженер СКУД" },
+    skud_senior_installer: { level: 2, department: "skud", label: "Старший монтажник СКУД" },
+    skud_service_engineer: { level: 1, department: "skud", label: "Сервисный инженер СКУД" },
+    skud_installer: { level: 1, department: "skud", label: "Монтажник СКУД" },
+    approval_head: { level: 3, department: "approval", label: "Руководитель согласования" },
+    approval_senior: { level: 2, department: "approval", label: "Старший менеджер согласования" },
+    approval_employee: { level: 1, department: "approval", label: "Менеджер по согласованию" },
+    marketing_head: { level: 3, department: "marketing", label: "Руководитель отдела рекламы и маркетинга" },
+    marketing_courier: { level: 1, department: "marketing", label: "Курьер" },
+    commercial_director: { level: 4, department: "commercial", label: "Директор коммерческого блока" },
+    commercial_subscriber_head: { level: 3, department: "commercial", label: "Руководитель абонентского отдела" },
+    commercial_active_sales_head: { level: 3, department: "commercial", label: "Менеджер активных продаж" },
+    commercial_senior_mrk: { level: 2, department: "commercial", label: "Старший МРК" },
+    commercial_senior_mryu: { level: 2, department: "commercial", label: "Старший МРЮ" },
+    commercial_employee_mrk: { level: 1, department: "commercial", label: "МРК" },
+    commercial_employee_mryu: { level: 1, department: "commercial", label: "МРЮ" },
+    finance_head: { level: 3, department: "finance", label: "Гл. бухгалтер" },
+    finance_employee: { level: 1, department: "finance", label: "Помощник бухгалтера" },
+    legal_employee: { level: 1, department: "legal", label: "Юрист" },
+    development_head: { level: 3, department: "development", label: "Руководитель группы разработки" },
+    development_senior: { level: 2, department: "development", label: "Старший разработчик" },
+    development_employee: { level: 1, department: "development", label: "Разработчик" },
+  };
+  return catalog[normalizeRole(role)] ?? { level: 0, department: "support", label: "Пользователь" };
+}
+
+function roleDepartment(role) {
+  return roleMeta(role).department;
 }
 
 function roleLevel(role) {
-  switch (role) {
+  return roleMeta(role).level;
+}
+
+function roleViewDepartments(role) {
+  switch (normalizeRole(role)) {
     case "admin":
-      return 4;
-    case "support_manager":
-    case "tech_manager":
-    case "mrk_manager":
-    case "manager":
-      return 3;
-    case "support_senior_specialist":
-    case "senior_technician":
-    case "senior_mrk":
-    case "senior_specialist":
-      return 2;
-    case "support_employee":
-    case "technician":
-    case "mrk_employee":
-    case "employee":
-      return 1;
+    case "global_director":
+    case "executive_director":
+      return ["support", "technical", "telecom", "skud", "approval", "marketing", "commercial", "finance", "legal", "development"];
+    case "technical_director":
+      return ["technical", "telecom"];
     default:
-      return 0;
+      return [roleDepartment(role)];
   }
+}
+
+function roleCanCreateUsers(role) {
+  switch (normalizeRole(role)) {
+    case "admin":
+    case "support_head":
+    case "support_sysadmin":
+    case "support_senior":
+    case "technical_head":
+    case "technical_senior":
+    case "telecom_construction_director":
+    case "telecom_construction_head":
+    case "telecom_senior_vols":
+    case "telecom_senior_lvs":
+    case "skud_head":
+    case "skud_project_manager":
+    case "skud_senior_service_engineer":
+    case "skud_senior_installer":
+    case "approval_head":
+    case "approval_senior":
+    case "marketing_head":
+    case "commercial_director":
+    case "commercial_subscriber_head":
+    case "commercial_active_sales_head":
+    case "commercial_senior_mrk":
+    case "commercial_senior_mryu":
+    case "finance_head":
+    case "development_head":
+    case "development_senior":
+      return true;
+    default:
+      return false;
+  }
+}
+
+function departmentLabel(department) {
+  switch (department) {
+    case "global":
+      return "Глобальные роли";
+    case "support":
+      return "Техподдержка";
+    case "technical":
+      return "Технический отдел";
+    case "telecom":
+      return "Телеком / ВОЛС / ЛВС";
+    case "skud":
+      return "СКУД";
+    case "approval":
+      return "Согласование";
+    case "marketing":
+      return "Маркетинг";
+    case "commercial":
+      return "Коммерческий блок";
+    case "finance":
+      return "Финансы";
+    case "legal":
+      return "Юридический отдел";
+    case "development":
+      return "Разработка";
+    default:
+      return "Отдел";
+  }
+}
+
+function departmentSortPriority(department) {
+  switch (department) {
+    case "global":
+      return 0;
+    case "support":
+      return 1;
+    case "technical":
+      return 2;
+    case "telecom":
+      return 3;
+    case "skud":
+      return 4;
+    case "approval":
+      return 5;
+    case "marketing":
+      return 6;
+    case "commercial":
+      return 7;
+    case "finance":
+      return 8;
+    case "legal":
+      return 9;
+    case "development":
+      return 10;
+    default:
+      return 99;
+  }
+}
+
+function roleChoiceComparator(left, right) {
+  const leftMeta = roleMeta(left);
+  const rightMeta = roleMeta(right);
+  const leftDepartmentPriority = departmentSortPriority(leftMeta.department);
+  const rightDepartmentPriority = departmentSortPriority(rightMeta.department);
+  if (leftDepartmentPriority !== rightDepartmentPriority) {
+    return leftDepartmentPriority - rightDepartmentPriority;
+  }
+
+  const leftLevel = roleLevel(left);
+  const rightLevel = roleLevel(right);
+  if (leftLevel !== rightLevel) {
+    return rightLevel - leftLevel;
+  }
+
+  return roleLabel(left).localeCompare(roleLabel(right), "ru");
 }
 
 function roleChoicesForUser(role) {
-  switch (role) {
-    case "admin":
-      return [
-        ["support_manager", "\u0420\u0443\u043a\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c \u0422\u0435\u0445. \u041f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0438"],
-        ["support_senior_specialist", "\u0421\u0442\u0430\u0440\u0448\u0438\u0439 \u0421\u043f\u0435\u0446\u0438\u0430\u043b\u0438\u0441\u0442 \u0422\u0435\u0445. \u041f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0438"],
-        ["support_employee", "\u0421\u043e\u0442\u0440\u0443\u0434\u043d\u0438\u043a \u0422\u0435\u0445. \u041f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0438"],
-        ["tech_manager", "\u0420\u0443\u043a\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c \u0422\u0435\u0445\u043d\u0438\u0447\u0435\u0441\u043a\u043e\u0433\u043e \u043e\u0442\u0434\u0435\u043b\u0430"],
-        ["senior_technician", "\u0421\u0442\u0430\u0440\u0448\u0438\u0439 \u0422\u0435\u0445\u043d\u0438\u043a"],
-        ["technician", "\u0422\u0435\u0445\u043d\u0438\u043a"],
-        ["mrk_manager", "\u0420\u0443\u043a\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c \u041c\u0420\u041a"],
-        ["senior_mrk", "\u0421\u0442\u0430\u0440\u0448\u0438\u0439 \u041c\u0420\u041a"],
-        ["mrk_employee", "\u041c\u0420\u041a"],
-      ];
-    case "support_manager":
-    case "manager":
-      return [["support_senior_specialist", "\u0421\u0442\u0430\u0440\u0448\u0438\u0439 \u0421\u043f\u0435\u0446\u0438\u0430\u043b\u0438\u0441\u0442 \u0422\u0435\u0445. \u041f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0438"], ["support_employee", "\u0421\u043e\u0442\u0440\u0443\u0434\u043d\u0438\u043a \u0422\u0435\u0445. \u041f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0438"]];
-    case "support_senior_specialist":
-    case "senior_specialist":
-      return [["support_employee", "\u0421\u043e\u0442\u0440\u0443\u0434\u043d\u0438\u043a \u0422\u0435\u0445. \u041f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0438"]];
-    case "tech_manager":
-      return [["senior_technician", "\u0421\u0442\u0430\u0440\u0448\u0438\u0439 \u0422\u0435\u0445\u043d\u0438\u043a"], ["technician", "\u0422\u0435\u0445\u043d\u0438\u043a"]];
-    case "senior_technician":
-      return [["technician", "\u0422\u0435\u0445\u043d\u0438\u043a"]];
-    case "mrk_manager":
-      return [["senior_mrk", "\u0421\u0442\u0430\u0440\u0448\u0438\u0439 \u041c\u0420\u041a"], ["mrk_employee", "\u041c\u0420\u041a"]];
-    case "senior_mrk":
-      return [["mrk_employee", "\u041c\u0420\u041a"]];
-    default:
-      return [];
+  role = normalizeRole(role);
+  const allRoles = [
+    "global_director", "executive_director", "technical_director",
+    "support_head", "support_sysadmin", "support_senior", "support_employee",
+    "technical_head", "technical_senior", "technical_employee",
+    "telecom_construction_director", "telecom_construction_head", "telecom_senior_vols", "telecom_senior_lvs", "telecom_employee_vols", "telecom_employee_lvs",
+    "skud_head", "skud_project_manager", "skud_senior_service_engineer", "skud_senior_installer", "skud_service_engineer", "skud_installer",
+    "approval_head", "approval_senior", "approval_employee",
+    "marketing_head", "marketing_courier",
+    "commercial_director", "commercial_subscriber_head", "commercial_active_sales_head", "commercial_senior_mrk", "commercial_senior_mryu", "commercial_employee_mrk", "commercial_employee_mryu",
+    "finance_head", "finance_employee",
+    "legal_employee",
+    "development_head", "development_senior", "development_employee"
+  ];
+
+  let visibleRoles = [];
+  if (role === "admin") {
+    visibleRoles = [...allRoles];
+  } else if (roleCanCreateUsers(role)) {
+    const actorDept = roleDepartment(role);
+    const actorLevel = roleLevel(role);
+    visibleRoles = allRoles.filter((candidate) => roleDepartment(candidate) === actorDept && roleLevel(candidate) < actorLevel);
   }
+
+  return visibleRoles
+    .sort(roleChoiceComparator)
+    .map((value) => ({
+      value,
+      label: roleLabel(value),
+      level: roleLevel(value),
+      department: roleDepartment(value),
+    }));
+}
+
+function renderRoleOptions(roleChoices, selectedValue = "") {
+  if (!roleChoices.length) {
+    return "";
+  }
+
+  const groups = new Map();
+  roleChoices.forEach((choice) => {
+    const key = choice.department;
+    if (!groups.has(key)) {
+      groups.set(key, {
+        department: choice.department,
+        items: [],
+      });
+    }
+    groups.get(key).items.push(choice);
+  });
+
+  return Array.from(groups.values()).map((group) => {
+    const options = group.items
+      .sort((left, right) => {
+        if (left.level !== right.level) {
+          return right.level - left.level;
+        }
+        return left.label.localeCompare(right.label, "ru");
+      })
+      .map((choice) => `<option value="${choice.value}" ${selectedValue === choice.value ? "selected" : ""}>${choice.label}</option>`)
+      .join("");
+    return `<optgroup label="${departmentLabel(group.department)}">${options}</optgroup>`;
+  }).join("");
 }
 
 function canDeleteManagedUser(actorRole, targetRole) {
+  actorRole = normalizeRole(actorRole);
+  targetRole = normalizeRole(targetRole);
   if (actorRole === "admin") {
     return targetRole !== "admin";
   }
-  return roleDepartment(actorRole) === roleDepartment(targetRole) && roleLevel(actorRole) > roleLevel(targetRole) && roleLevel(actorRole) >= 2;
+  if (!roleCanCreateUsers(actorRole)) {
+    return false;
+  }
+  return roleDepartment(actorRole) === roleDepartment(targetRole) && roleLevel(actorRole) > roleLevel(targetRole);
 }
 
 function roleLabel(role) {
-  switch (role) {
-    case "admin":
-      return "\u0410\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u043e\u0440";
-    case "support_manager":
-    case "manager":
-      return "\u0420\u0443\u043a\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c \u0422\u0435\u0445. \u041f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0438";
-    case "support_senior_specialist":
-    case "senior_specialist":
-      return "\u0421\u0442\u0430\u0440\u0448\u0438\u0439 \u0421\u043f\u0435\u0446\u0438\u0430\u043b\u0438\u0441\u0442 \u0422\u0435\u0445. \u041f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0438";
-    case "support_employee":
-    case "employee":
-      return "\u0421\u043e\u0442\u0440\u0443\u0434\u043d\u0438\u043a \u0422\u0435\u0445. \u041f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0438";
-    case "tech_manager":
-      return "\u0420\u0443\u043a\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c \u0422\u0435\u0445\u043d\u0438\u0447\u0435\u0441\u043a\u043e\u0433\u043e \u043e\u0442\u0434\u0435\u043b\u0430";
-    case "senior_technician":
-      return "\u0421\u0442\u0430\u0440\u0448\u0438\u0439 \u0422\u0435\u0445\u043d\u0438\u043a";
-    case "technician":
-      return "\u0422\u0435\u0445\u043d\u0438\u043a";
-    case "mrk_manager":
-      return "\u0420\u0443\u043a\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c \u041c\u0420\u041a";
-    case "senior_mrk":
-      return "\u0421\u0442\u0430\u0440\u0448\u0438\u0439 \u041c\u0420\u041a";
-    case "mrk_employee":
-      return "\u041c\u0420\u041a";
-    default:
-      return "\u041f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044c";
-  }
+  return roleMeta(role).label;
 }
 
 function normalizeErrorText(text, fallback = "Произошла ошибка.") {
@@ -380,42 +561,74 @@ function applyWeightAdjustmentsToPercents(group, result, weightMap) {
   }
   group.forEach((item) => {
     const code = item.serviceCode ?? item.code;
-    let weight = Number(weightMap?.[code] ?? 0);
-    if (!Number.isFinite(weight)) {
-      weight = 0;
-    }
-    weight = Math.max(0, Math.min(10, Math.trunc(weight)));
-    for (let step = 0; step < weight; step += 1) {
-      const donors = group
-        .map((entry) => entry.serviceCode ?? entry.code)
-        .filter((donorCode) => donorCode !== code && (result[donorCode] ?? 0) > 0);
-      let remaining = 2;
-      let activeDonors = donors;
-      while (remaining > 0.0001 && activeDonors.length) {
-        const slice = remaining / activeDonors.length;
-        const nextDonors = [];
-        let moved = 0;
-        activeDonors.forEach((donorCode) => {
-          const donorValue = result[donorCode] ?? 0;
-          const take = Math.min(slice, donorValue);
-          if (take <= 0) {
-            return;
-          }
-          result[donorCode] = donorValue - take;
-          moved += take;
-          if (result[donorCode] > 0.0001) {
-            nextDonors.push(donorCode);
-          }
-        });
-        if (moved <= 0) {
-          break;
-        }
-        result[code] = (result[code] ?? 0) + moved;
-        remaining -= moved;
-        activeDonors = nextDonors;
+    const weight = clampWeightValue(Number(weightMap?.[code] ?? 0));
+    if (weight > 0) {
+      for (let step = 0; step < weight; step += 1) {
+        transferPercentToTarget(group, result, code, 2);
       }
+      return;
+    }
+    for (let step = 0; step < Math.abs(weight); step += 1) {
+      transferPercentFromTarget(group, result, code, 2);
     }
   });
+}
+
+function transferPercentToTarget(group, result, code, amount) {
+  const donors = group
+    .map((entry) => entry.serviceCode ?? entry.code)
+    .filter((donorCode) => donorCode !== code && (result[donorCode] ?? 0) > 0);
+  let remaining = amount;
+  let activeDonors = donors;
+  while (remaining > 0.0001 && activeDonors.length) {
+    const slice = remaining / activeDonors.length;
+    const nextDonors = [];
+    let moved = 0;
+    activeDonors.forEach((donorCode) => {
+      const donorValue = result[donorCode] ?? 0;
+      const take = Math.min(slice, donorValue);
+      if (take <= 0) {
+        return;
+      }
+      result[donorCode] = donorValue - take;
+      moved += take;
+      if (result[donorCode] > 0.0001) {
+        nextDonors.push(donorCode);
+      }
+    });
+    if (moved <= 0) {
+      break;
+    }
+    result[code] = (result[code] ?? 0) + moved;
+    remaining -= moved;
+    activeDonors = nextDonors;
+  }
+}
+
+function transferPercentFromTarget(group, result, code, amount) {
+  const receivers = group
+    .map((entry) => entry.serviceCode ?? entry.code)
+    .filter((otherCode) => otherCode !== code);
+  const current = result[code] ?? 0;
+  if (!receivers.length || current <= 0) {
+    return;
+  }
+  const moved = Math.min(amount, current);
+  if (moved <= 0) {
+    return;
+  }
+  result[code] = current - moved;
+  const slice = moved / receivers.length;
+  receivers.forEach((receiverCode) => {
+    result[receiverCode] = (result[receiverCode] ?? 0) + slice;
+  });
+}
+
+function clampWeightValue(value) {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  return Math.max(-10, Math.min(10, Math.trunc(value)));
 }
 
 function buildEffectivePercentMap(items, weightMap = null) {
@@ -548,7 +761,7 @@ function renderResult(result) {
 
 function renderDefaultPercentages() {
   const groups = appState.defaultGroupPercent;
-  defaultPercentages.textContent = `По умолчанию: основные ${Math.round((groups.primary ?? 0) * 100)}%, вторичные ${Math.round((groups.secondary ?? 0) * 100)}%, закрывающие ${Math.round((groups.closing ?? 0) * 100)}%. Внутри группы этот процент делится равномерно, если для услуги не задан свой процент.`;
+  defaultPercentages.textContent = `По умолчанию: основные ${Math.round((groups.primary ?? 0) * 100)}%, вторичные ${Math.round((groups.secondary ?? 0) * 100)}%, закрывающие ${Math.round((groups.closing ?? 0) * 100)}%. Внутри группы этот процент делится равномерно, если для услуги не задан свой процент. Вес можно задавать от -10 до 10: плюс усиливает услугу, минус ослабляет.`;
 }
 
 function renderServices() {
@@ -560,17 +773,18 @@ function renderServices() {
   const effectivePercentMap = buildEffectivePercentMap(appState.services, appState.weights);
   servicesList.innerHTML = appState.services.map((service, index) => {
     const weight = appState.weights[service.code] ?? 0;
+    const weightClass = weight > 0 ? "weight-positive" : (weight < 0 ? "weight-negative" : "weight-neutral");
     return `
       <article class="service-card glass">
         <div>
           <strong class="truncate-text" title="${escapeHtml(`${index + 1}. ${service.name}`)}">${escapeHtml(`${index + 1}. ${service.name}`)}</strong>
           <div class="service-meta">${formatMoney(service.rate)} / ${escapeHtml(service.unit)}</div>
-          <div class="service-meta">\u041f\u0440\u043e\u0446\u0435\u043d\u0442: ${percentText(service, effectivePercentMap)}</div>
+          <div class="service-meta">Процент: ${percentText(service, effectivePercentMap)}</div>
           <span class="category-pill ${categoryClass(service.category)}">${categoryLabel(service.category)}</span>
         </div>
         <label class="weight-field">
-          <span>\u0412\u0435\u0441</span>
-          <input type="number" min="0" max="10" step="1" value="${weight}" data-weight-code="${service.code}" />
+          <span>Вес</span>
+          <input type="number" min="-10" max="10" step="1" value="${weight}" class="${weightClass}" data-weight-code="${service.code}" />
         </label>
       </article>
     `;
@@ -579,7 +793,7 @@ function renderServices() {
   servicesList.querySelectorAll("[data-weight-code]").forEach((node) => {
     node.addEventListener("input", (event) => {
       const nextValue = Number(event.target.value);
-      appState.weights[node.dataset.weightCode] = Number.isFinite(nextValue) ? Math.max(0, Math.min(10, Math.round(nextValue))) : 0;
+      appState.weights[node.dataset.weightCode] = clampWeightValue(nextValue);
       renderServices();
     });
   });
@@ -659,12 +873,10 @@ function renderUsers() {
   });
   const roleChoices = roleChoicesForUser(appState.session.user?.role);
 
-  userRoleInput.innerHTML = roleChoices
-    .map(([value, label]) => `<option value="${value}">${label}</option>`)
-    .join("");
+  userRoleInput.innerHTML = renderRoleOptions(roleChoices, userRoleInput.value);
 
-  if (!roleChoices.some(([value]) => value === userRoleInput.value)) {
-    userRoleInput.value = roleChoices[0]?.[0] ?? "";
+  if (!roleChoices.some((choice) => choice.value === userRoleInput.value)) {
+    userRoleInput.value = roleChoices[0]?.value ?? "";
   }
 
   createUserButton.disabled = !appState.session.canModerate || roleChoices.length === 0;
@@ -684,10 +896,13 @@ function renderUsers() {
   }
 
   usersList.innerHTML = sortedUsers.map((user) => {
-    const canChangeRole = appState.session.canManage;
+    const viewerRole = normalizeRole(appState.session.user?.role);
+    const canChangeRole = Boolean(appState.session.canAdmin)
+      || (appState.session.canManage
+        && (viewerRole === "admin" || roleDepartment(viewerRole) === roleDepartment(user.role)));
     const canDelete = canDeleteManagedUser(appState.session.user?.role, user.role);
-    const canResetPassword = Boolean(appState.session.canModerate);
-    const roleOptions = roleChoices.map(([value, label]) => `<option value="${value}" ${user.role === value ? "selected" : ""}>${label}</option>`).join("");
+    const canResetPassword = roleCanCreateUsers(appState.session.user?.role) && canDeleteManagedUser(appState.session.user?.role, user.role);
+    const roleOptions = renderRoleOptions(roleChoices, user.role);
 
     return `
       <article class="settings-item glass user-item">
@@ -741,19 +956,28 @@ function renderUsers() {
 
 function userSortPriority(role) {
   switch (roleLevel(role)) {
-    case 3:
+    case 5:
+      return 0;
+    case 4:
       return 1;
-    case 2:
+    case 3:
       return 2;
-    case 1:
+    case 2:
       return 3;
+    case 1:
+      return 4;
     default:
       return 9;
   }
 }
 
 function renderArchiveDetails(saved) {
-  deleteArchiveButton.disabled = !saved;
+  const canCopyArchiveServices = Boolean(appState.session?.canAdmin && saved);
+  const canDeleteArchive = Boolean((appState.session?.canManage || appState.session?.canAdmin) && saved);
+  deleteArchiveButton.classList.toggle("hidden", !canDeleteArchive);
+  deleteArchiveButton.disabled = !canDeleteArchive;
+  copyArchiveServicesButton.classList.toggle("hidden", !canCopyArchiveServices);
+  copyArchiveServicesButton.disabled = !canCopyArchiveServices;
   if (!saved) {
     archiveTitle.textContent = appState.session?.canModerate ? "Выберите расчёт сотрудника" : "Выберите расчёт из архива";
     archiveTotal.textContent = "0 р";
@@ -896,6 +1120,66 @@ function buildWeightPayload() {
   return payload;
 }
 
+function randomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function buildRandomWeightPayload() {
+  const next = {};
+  const groups = new Map();
+  appState.services.forEach((service) => {
+    const category = service.category || "closing";
+    if (!groups.has(category)) {
+      groups.set(category, []);
+    }
+    groups.get(category).push(service);
+  });
+
+  groups.forEach((services) => {
+    if (!services.length) {
+      return;
+    }
+    if (services.length === 1) {
+      next[services[0].code] = randomInt(-4, 4);
+      return;
+    }
+
+    let hasAccent = false;
+    services.forEach((service) => {
+      const value = randomInt(-4, 4);
+      next[service.code] = value;
+      if (value !== 0) {
+        hasAccent = true;
+      }
+    });
+
+    if (!hasAccent) {
+      const target = services[randomInt(0, services.length - 1)];
+      next[target.code] = randomInt(1, 4);
+    }
+  });
+
+  return next;
+}
+
+async function randomizeCalculation() {
+  const targetAmount = Number(amountInput.value);
+  if (!Number.isInteger(targetAmount) || targetAmount <= 0) {
+    setMessage("Сначала введите корректную сумму, а потом запускайте рандомизацию.", "error");
+    amountInput.focus();
+    return;
+  }
+  if (!appState.services.length) {
+    setMessage("Сначала создайте хотя бы одну услугу для расчёта.", "error");
+    return;
+  }
+
+  appState.weights = buildRandomWeightPayload();
+  renderServices();
+  setMessage("Рандомизация сместила проценты между услугами. Выполняю новый расчёт...", "muted");
+  await calculate();
+}
+
 async function calculate() {
   const targetAmount = Number(amountInput.value);
   if (!Number.isInteger(targetAmount) || targetAmount <= 0) {
@@ -927,6 +1211,23 @@ async function calculate() {
     setMessage(error, "error");
   } finally {
     calculateButton.disabled = false;
+  }
+}
+
+async function copyArchiveServicesToAdmin(id) {
+  const current = appState.savedCalculations.find((item) => item.id === id);
+  if (!current || !appState.session?.canAdmin) {
+    return;
+  }
+  try {
+    const result = await api.CopyArchiveServicesToAdmin(id);
+    await refreshBootstrap({ keepArchiveSelection: true });
+    const created = Number(result?.created ?? 0);
+    const updated = Number(result?.updated ?? 0);
+    setMessage(`Услуги из архива ${current.title} скопированы к администратору: создано ${created}, обновлено ${updated}.`, "success");
+    setActiveTab("settings");
+  } catch (error) {
+    setMessage(error, "error");
   }
 }
 
@@ -1023,7 +1324,7 @@ async function createUser() {
     });
     userUsernameInput.value = "";
     userPasswordInput.value = "";
-    userRoleInput.value = roleChoicesForUser(appState.session.user?.role)[0]?.[0] ?? "";
+    userRoleInput.value = roleChoicesForUser(appState.session.user?.role)[0]?.value ?? "";
     await refreshBootstrap({ keepArchiveSelection: true });
     setUserFormMessage("Пользователь создан.", "success");
   } catch (error) {
@@ -1127,6 +1428,7 @@ loginPassword.addEventListener("keydown", (event) => {
   }
 });
 calculateButton.addEventListener("click", calculate);
+randomizeButton?.addEventListener("click", randomizeCalculation);
 resetWeightsButton.addEventListener("click", resetWeights);
 archiveOwnerFilter?.addEventListener("change", () => {
   appState.archiveOwnerFilter = archiveOwnerFilter.value || "all";
@@ -1137,6 +1439,11 @@ archiveOwnerFilter?.addEventListener("change", () => {
 deleteArchiveButton.addEventListener("click", async () => {
   if (appState.activeHistoryId !== null) {
     await deleteCalculation(appState.activeHistoryId);
+  }
+});
+copyArchiveServicesButton?.addEventListener("click", async () => {
+  if (appState.activeHistoryId !== null) {
+    await copyArchiveServicesToAdmin(appState.activeHistoryId);
   }
 });
 saveServiceButton.addEventListener("click", saveService);

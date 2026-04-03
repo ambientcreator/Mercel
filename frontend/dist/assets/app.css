@@ -180,6 +180,19 @@ button:hover:not(:disabled) { transform: translateY(-1px); }
   gap: 12px;
   align-items: flex-start;
 }
+.result-head-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.randomize-button {
+  border-radius: 14px;
+  padding: 10px 14px;
+  min-height: 44px;
+  white-space: nowrap;
+}
 .panel-head { margin-bottom: 12px; }
 .field { display: block; margin-bottom: 14px; }
 .field span {
@@ -277,6 +290,19 @@ button:hover:not(:disabled) { transform: translateY(-1px); }
 .weight-field input:focus {
   border-color: rgba(110, 231, 200, 0.7);
   background: rgba(9, 17, 31, 0.9);
+}
+.weight-field input.weight-positive {
+  border-color: rgba(16, 185, 129, 0.45);
+  background: rgba(8, 32, 24, 0.72);
+  color: #b6f5df;
+}
+.weight-field input.weight-negative {
+  border-color: rgba(244, 114, 182, 0.45);
+  background: rgba(43, 14, 28, 0.72);
+  color: #ffc8dc;
+}
+.weight-field input.weight-neutral {
+  border-color: rgba(148, 163, 184, 0.2);
 }
 .category-badge {
   display: inline-flex;

@@ -658,6 +658,97 @@ func TestArchiveSurvivesAuthorDeletion(t *testing.T) {
 	}
 }
 
+func TestAdminCanCopyServicesFromArchivedCalculation(t *testing.T) {
+	app := withTempDB(t)
+	loginAsAdmin(t, app)
+
+	if _, err := app.UpsertService(UpsertServiceRequest{Name: "\u0421\u0442\u0430\u0440\u0430\u044f \u0430\u0434\u043c\u0438\u043d\u0441\u043a\u0430\u044f \u0443\u0441\u043b\u0443\u0433\u0430", Unit: "\u0447\u0430\u0441\u044b", Rate: 90, Category: CategoryPrimary}); err != nil {
+		t.Fatalf("seed admin service error = %v", err)
+	}
+	worker, err := app.CreateUser(UserWithPassword{Username: "archive_source", Password: "secret", Role: RoleEmployee})
+	if err != nil {
+		t.Fatalf("CreateUser worker error = %v", err)
+	}
+
+	loginAsUser(t, app, worker.Username, "secret")
+	saved, err := app.SaveCalculation(SaveCalculationRequest{
+		TargetAmount: 470,
+		Items: []CalculationItem{
+			{Name: "Imported New", Unit: "\u0447.", Rate: 120, Quantity: 1, LineTotal: 120, Category: CategoryPrimary, ServiceCode: "imported-new"},
+			{Name: "Imported Update", Unit: "\u0448\u0442.", Rate: 350, Quantity: 1, LineTotal: 350, Category: CategorySecondary, ServiceCode: "imported-update"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("SaveCalculation worker error = %v", err)
+	}
+
+	loginAsAdmin(t, app)
+	copied, err := app.CopyArchiveServicesToAdmin(saved.ID)
+	if err != nil {
+		t.Fatalf("CopyArchiveServicesToAdmin() error = %v", err)
+	}
+	if copied.Created != 2 || copied.Updated != 0 {
+		t.Fatalf("expected full replacement with 2 created services, got %+v", copied)
+	}
+
+	services, err := app.GetServices()
+	if err != nil {
+		t.Fatalf("GetServices() error = %v", err)
+	}
+	foundNew := false
+	foundUpdated := false
+	for _, service := range services {
+		switch service.Name {
+		case "Imported New":
+			foundNew = true
+			if service.Rate != 120 || service.Unit != "\u0447." || service.Category != CategoryPrimary {
+				t.Fatalf("unexpected imported new service: %+v", service)
+			}
+		case "Imported Update":
+			foundUpdated = true
+			if service.Rate != 350 || service.Unit != "\u0448\u0442." || service.Category != CategorySecondary {
+				t.Fatalf("expected admin service to be updated from archive, got %+v", service)
+			}
+		}
+	}
+	if !foundNew || !foundUpdated {
+		t.Fatalf("expected copied services to be visible in admin list, got %+v", services)
+	}
+	for _, service := range services {
+		if service.Name == "\u0421\u0442\u0430\u0440\u0430\u044f \u0430\u0434\u043c\u0438\u043d\u0441\u043a\u0430\u044f \u0443\u0441\u043b\u0443\u0433\u0430" {
+			t.Fatalf("expected previous admin services to be removed before copy, got %+v", services)
+		}
+	}
+}
+
+func TestNonAdminCannotCopyServicesFromArchivedCalculation(t *testing.T) {
+	app := withTempDB(t)
+	loginAsAdmin(t, app)
+
+	worker, err := app.CreateUser(UserWithPassword{Username: "archive_source_2", Password: "secret", Role: RoleEmployee})
+	if err != nil {
+		t.Fatalf("CreateUser worker error = %v", err)
+	}
+	manager, err := app.CreateUser(UserWithPassword{Username: "support_manager_copy", Password: "secret", Role: RoleManager})
+	if err != nil {
+		t.Fatalf("CreateUser manager error = %v", err)
+	}
+
+	loginAsUser(t, app, worker.Username, "secret")
+	saved, err := app.SaveCalculation(SaveCalculationRequest{
+		TargetAmount: 120,
+		Items:        []CalculationItem{{Name: "Copy Guard", Unit: "\u0447.", Rate: 120, Quantity: 1, LineTotal: 120, Category: CategoryPrimary, ServiceCode: "copy-guard"}},
+	})
+	if err != nil {
+		t.Fatalf("SaveCalculation worker error = %v", err)
+	}
+
+	loginAsUser(t, app, manager.Username, "secret")
+	if _, err := app.CopyArchiveServicesToAdmin(saved.ID); err == nil {
+		t.Fatalf("expected non-admin copy from archive to be rejected")
+	}
+}
+
 func TestStructuredCalculationKeepsServicesDistributed(t *testing.T) {
 	app := withTempDB(t)
 	loginAsAdmin(t, app)
@@ -1002,6 +1093,95 @@ func TestExistingFreshMercelDatabaseIsRecoveredFromLegacy(t *testing.T) {
 	}
 }
 
+func TestExistingFreshStableStorageRecoversFromPreviousMercelPath(t *testing.T) {
+	originalResolver := resolveDatabasePath
+	originalLegacyResolver := resolveLegacyDatabasePath
+	originalPreviousMercelResolver := resolvePreviousMercelDatabasePath
+	tempDir := t.TempDir()
+	newPath := filepath.Join(tempDir, AppStorageDirName, AppStorageDBName)
+	previousMercelPath := filepath.Join(tempDir, "Mercel", "mercel.sqlite")
+	resolveDatabasePath = func() (string, error) {
+		return newPath, nil
+	}
+	resolveLegacyDatabasePath = func() (string, error) {
+		return filepath.Join(tempDir, "Statistic", "statistic.sqlite"), nil
+	}
+	resolvePreviousMercelDatabasePath = func() (string, error) {
+		return previousMercelPath, nil
+	}
+	t.Cleanup(func() {
+		resolveDatabasePath = originalResolver
+		resolveLegacyDatabasePath = originalLegacyResolver
+		resolvePreviousMercelDatabasePath = originalPreviousMercelResolver
+	})
+
+	if err := os.MkdirAll(filepath.Dir(newPath), 0o755); err != nil {
+		t.Fatalf("MkdirAll new path error = %v", err)
+	}
+	if err := os.MkdirAll(filepath.Dir(previousMercelPath), 0o755); err != nil {
+		t.Fatalf("MkdirAll previous Mercel path error = %v", err)
+	}
+
+	db, err := sql.Open("sqlite", previousMercelPath)
+	if err != nil {
+		t.Fatalf("sql.Open() previous Mercel db error = %v", err)
+	}
+	queries := []string{
+		`CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, role TEXT NOT NULL, created_at TEXT NOT NULL);`,
+		`CREATE TABLE services (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL UNIQUE, name TEXT NOT NULL, unit TEXT NOT NULL, rate INTEGER NOT NULL, category TEXT NOT NULL, allocation_percent REAL, created_by TEXT NOT NULL DEFAULT 'admin', created_at TEXT NOT NULL);`,
+		`CREATE TABLE calculations (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, target_amount INTEGER NOT NULL, total_amount INTEGER NOT NULL, items_json TEXT NOT NULL, created_at TEXT NOT NULL, created_by TEXT NOT NULL DEFAULT '', created_role TEXT NOT NULL DEFAULT '');`,
+	}
+	for _, query := range queries {
+		if _, err := db.Exec(query); err != nil {
+			t.Fatalf("create previous Mercel schema: %v", err)
+		}
+	}
+	if _, err := db.Exec(`INSERT INTO users(username, password_hash, role, created_at) VALUES(?, ?, ?, ?)`, "admin", hashPassword("#@7pcehQCSpR"), RoleAdmin, "2026-03-27T00:00:00Z"); err != nil {
+		t.Fatalf("insert admin: %v", err)
+	}
+	if _, err := db.Exec(`INSERT INTO users(username, password_hash, role, created_at) VALUES(?, ?, ?, ?)`, "tech_user", hashPassword("secret"), RoleTechnicalEmployee, "2026-03-27T00:01:00Z"); err != nil {
+		t.Fatalf("insert user: %v", err)
+	}
+	if _, err := db.Exec(`INSERT INTO calculations(title, target_amount, total_amount, items_json, created_at, created_by, created_role) VALUES(?, ?, ?, ?, ?, ?, ?)`, "previous mercel calc", 40000, 40000, "[]", "2026-03-27T00:02:00Z", "tech_user", RoleTechnicalEmployee); err != nil {
+		t.Fatalf("insert calculation: %v", err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatalf("db.Close() error = %v", err)
+	}
+
+	app, err := NewApp()
+	if err != nil {
+		t.Fatalf("NewApp() error = %v", err)
+	}
+	defer app.Close()
+
+	if _, err := os.Stat(newPath); err != nil {
+		t.Fatalf("expected stable storage database to be created from previous Mercel path: %v", err)
+	}
+	loginAsAdmin(t, app)
+	users, err := app.ListUsers()
+	if err != nil {
+		t.Fatalf("ListUsers() error = %v", err)
+	}
+	foundTechUser := false
+	for _, user := range users {
+		if user.Username == "tech_user" {
+			foundTechUser = true
+			break
+		}
+	}
+	if !foundTechUser {
+		t.Fatalf("expected tech_user to be recovered from previous Mercel path, got %+v", users)
+	}
+	calculations, err := app.ListCalculations()
+	if err != nil {
+		t.Fatalf("ListCalculations() error = %v", err)
+	}
+	if len(calculations) != 1 || calculations[0].Title != "previous mercel calc" {
+		t.Fatalf("expected recovered archive from previous Mercel db, got %+v", calculations)
+	}
+}
+
 // RU: Тест `TestBuildServiceTargetsDistributesDefaultsEvenly`.
 // EN: Test `TestBuildServiceTargetsDistributesDefaultsEvenly`.
 //
@@ -1075,6 +1255,32 @@ func TestBuildServiceTargetsWeightAddsShareWithinGroup(t *testing.T) {
 
 	if targets["s1"] <= targets["s2"] {
 		t.Fatalf("expected weighted service to receive a larger share, got s1=%d s2=%d s3=%d", targets["s1"], targets["s2"], targets["s3"])
+	}
+	if absInt(targets["s2"]-targets["s3"]) > 1 {
+		t.Fatalf("expected remaining services to stay balanced, got s2=%d s3=%d", targets["s2"], targets["s3"])
+	}
+	if targets["s1"]+targets["s2"]+targets["s3"] != 79000 {
+		t.Fatalf("expected total to stay unchanged, got %d", targets["s1"]+targets["s2"]+targets["s3"])
+	}
+}
+
+func TestBuildServiceTargetsNegativeWeightRemovesShareWithinGroup(t *testing.T) {
+	services := []Service{
+		{Code: "s1", Category: CategoryPrimary},
+		{Code: "s2", Category: CategoryPrimary},
+		{Code: "s3", Category: CategoryPrimary},
+	}
+
+	targets := buildServiceTargets(map[string][]Service{
+		CategoryPrimary: services,
+	}, map[string]int{
+		CategoryPrimary: 79000,
+	}, map[string]int{
+		"s1": -1,
+	})
+
+	if targets["s1"] >= targets["s2"] {
+		t.Fatalf("expected negatively weighted service to receive a smaller share, got s1=%d s2=%d s3=%d", targets["s1"], targets["s2"], targets["s3"])
 	}
 	if absInt(targets["s2"]-targets["s3"]) > 1 {
 		t.Fatalf("expected remaining services to stay balanced, got s2=%d s3=%d", targets["s2"], targets["s3"])
@@ -1485,8 +1691,8 @@ func TestListUsersSortsByRolePriority(t *testing.T) {
 		t.Fatalf("expected at least 3 users, got %+v", adminUsers)
 	}
 
-	if adminUsers[0].Role != RoleManager || adminUsers[1].Role != RoleSeniorSpecialist || adminUsers[2].Role != RoleEmployee {
-		t.Fatalf("expected manager -> senior -> employee order, got %+v", adminUsers[:3])
+	if adminUsers[0].Role != RoleAdmin || adminUsers[1].Role != RoleManager || adminUsers[2].Role != RoleSeniorSpecialist || adminUsers[3].Role != RoleEmployee {
+		t.Fatalf("expected admin -> manager -> senior -> employee order, got %+v", adminUsers[:4])
 	}
 
 	loginAsUser(t, app, "manager6", "secret")
@@ -1642,6 +1848,83 @@ func TestDepartmentIsolationForUsersAndArchives(t *testing.T) {
 //
 // RU: Что делает: проверяет, что руководитель не может менять роли пользователей из другого отдела.
 // EN: What it does: ensures a manager cannot reassign roles for users from another department.
+func TestTechnicalDirectorSeesOnlyTechnicalAndTelecom(t *testing.T) {
+	app := withTempDB(t)
+	loginAsAdmin(t, app)
+
+	techDirector, err := app.CreateUser(UserWithPassword{Username: "tech_director_1", Password: "secret", Role: RoleTechnicalDirector})
+	if err != nil {
+		t.Fatalf("CreateUser technical director error = %v", err)
+	}
+	techUser, err := app.CreateUser(UserWithPassword{Username: "tech_visible_1", Password: "secret", Role: RoleTechnicalEmployee})
+	if err != nil {
+		t.Fatalf("CreateUser technical employee error = %v", err)
+	}
+	telecomUser, err := app.CreateUser(UserWithPassword{Username: "telecom_visible_1", Password: "secret", Role: RoleTelecomEmployeeVOLS})
+	if err != nil {
+		t.Fatalf("CreateUser telecom employee error = %v", err)
+	}
+	skudUser, err := app.CreateUser(UserWithPassword{Username: "skud_hidden_1", Password: "secret", Role: RoleSKUDInstaller})
+	if err != nil {
+		t.Fatalf("CreateUser skud employee error = %v", err)
+	}
+
+	createUserService(t, app, techUser.Username, "secret", "tech service", 100, CategoryPrimary)
+	loginAsUser(t, app, techUser.Username, "secret")
+	if _, err := app.SaveCalculation(SaveCalculationRequest{TargetAmount: 100, Items: []CalculationItem{{Name: "tech service", Unit: "ч.", Rate: 100, Quantity: 1, LineTotal: 100, Category: CategoryPrimary, ServiceCode: "tech-service"}}}); err != nil {
+		t.Fatalf("SaveCalculation technical employee error = %v", err)
+	}
+
+	createUserService(t, app, telecomUser.Username, "secret", "telecom service", 110, CategorySecondary)
+	loginAsUser(t, app, telecomUser.Username, "secret")
+	if _, err := app.SaveCalculation(SaveCalculationRequest{TargetAmount: 110, Items: []CalculationItem{{Name: "telecom service", Unit: "шт.", Rate: 110, Quantity: 1, LineTotal: 110, Category: CategorySecondary, ServiceCode: "telecom-service"}}}); err != nil {
+		t.Fatalf("SaveCalculation telecom employee error = %v", err)
+	}
+
+	createUserService(t, app, skudUser.Username, "secret", "skud service", 120, CategoryClosing)
+	loginAsUser(t, app, skudUser.Username, "secret")
+	if _, err := app.SaveCalculation(SaveCalculationRequest{TargetAmount: 120, Items: []CalculationItem{{Name: "skud service", Unit: "шт.", Rate: 120, Quantity: 1, LineTotal: 120, Category: CategoryClosing, ServiceCode: "skud-service"}}}); err != nil {
+		t.Fatalf("SaveCalculation skud employee error = %v", err)
+	}
+
+	loginAsUser(t, app, techDirector.Username, "secret")
+	users, err := app.ListUsers()
+	if err != nil {
+		t.Fatalf("ListUsers technical director error = %v", err)
+	}
+	seen := map[string]bool{}
+	for _, user := range users {
+		seen[user.Username] = true
+		if dept := roleDepartment(user.Role); dept != DepartmentTechnical && dept != DepartmentTelecom {
+			t.Fatalf("technical director must not see foreign department user: %+v", users)
+		}
+	}
+	if !seen[techUser.Username] || !seen[telecomUser.Username] {
+		t.Fatalf("technical director must see technical and telecom users, got %+v", users)
+	}
+	if seen[skudUser.Username] {
+		t.Fatalf("technical director must not see skud users, got %+v", users)
+	}
+
+	archives, err := app.ListCalculations()
+	if err != nil {
+		t.Fatalf("ListCalculations technical director error = %v", err)
+	}
+	archiveSeen := map[string]bool{}
+	for _, item := range archives {
+		archiveSeen[item.CreatedBy] = true
+		if dept := roleDepartment(item.CreatedRole); dept != DepartmentTechnical && dept != DepartmentTelecom {
+			t.Fatalf("technical director must not see foreign archive: %+v", archives)
+		}
+	}
+	if !archiveSeen[techUser.Username] || !archiveSeen[telecomUser.Username] {
+		t.Fatalf("technical director must see technical and telecom archives, got %+v", archives)
+	}
+	if archiveSeen[skudUser.Username] {
+		t.Fatalf("technical director must not see skud archives, got %+v", archives)
+	}
+}
+
 func TestDepartmentRoleChangesStayInsideDepartment(t *testing.T) {
 	app := withTempDB(t)
 	loginAsAdmin(t, app)
@@ -1679,15 +1962,25 @@ func TestFrontendRoleLabelsStayReadable(t *testing.T) {
 	}
 
 	requiredSnippets := [][]byte{
-		[]byte(`\u0420\u0443\u043a\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c \u0422\u0435\u0445. \u041f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0438`),
-		[]byte(`\u0421\u0442\u0430\u0440\u0448\u0438\u0439 \u0421\u043f\u0435\u0446\u0438\u0430\u043b\u0438\u0441\u0442 \u0422\u0435\u0445. \u041f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0438`),
-		[]byte(`\u0421\u043e\u0442\u0440\u0443\u0434\u043d\u0438\u043a \u0422\u0435\u0445. \u041f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0438`),
-		[]byte(`\u0420\u0443\u043a\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c \u0422\u0435\u0445\u043d\u0438\u0447\u0435\u0441\u043a\u043e\u0433\u043e \u043e\u0442\u0434\u0435\u043b\u0430`),
-		[]byte(`\u0421\u0442\u0430\u0440\u0448\u0438\u0439 \u0422\u0435\u0445\u043d\u0438\u043a`),
-		[]byte(`\u0422\u0435\u0445\u043d\u0438\u043a`),
-		[]byte(`\u0420\u0443\u043a\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c \u041c\u0420\u041a`),
-		[]byte(`\u0421\u0442\u0430\u0440\u0448\u0438\u0439 \u041c\u0420\u041a`),
-		[]byte(`\u041c\u0420\u041a`),
+		[]byte(`global_director`),
+		[]byte(`executive_director`),
+		[]byte(`technical_director`),
+		[]byte(`support_head`),
+		[]byte(`support_sysadmin`),
+		[]byte(`technical_senior`),
+		[]byte(`telecom_construction_director`),
+		[]byte(`telecom_senior_vols`),
+		[]byte(`skud_head`),
+		[]byte(`approval_employee`),
+		[]byte(`marketing_courier`),
+		[]byte(`commercial_senior_mrk`),
+		[]byte(`finance_head`),
+		[]byte(`legal_employee`),
+		[]byte(`development_head`),
+		[]byte(`Генеральный директор`),
+		[]byte(`Системный администратор`),
+		[]byte(`Старший монтажник ВОЛС`),
+		[]byte(`Руководитель группы разработки`),
 	}
 	for _, snippet := range requiredSnippets {
 		if !bytes.Contains(content, snippet) {
@@ -1721,6 +2014,11 @@ func TestFrontendCoreUiFunctionsExist(t *testing.T) {
 		[]byte("function resetServiceForm()"),
 		[]byte("function renderResult(result)"),
 		[]byte("function renderArchiveDetails(saved)"),
+		[]byte("function randomizeCalculation()"),
+		[]byte("const randomizeButton = document.getElementById(\"randomize-button\")"),
+		[]byte("function renderRoleOptions(roleChoices, selectedValue = \"\")"),
+		[]byte("function departmentSortPriority(department)"),
+		[]byte("<optgroup label=\"${departmentLabel(group.department)}\">${options}</optgroup>"),
 		[]byte("Выберите расчёт из архива"),
 		[]byte("Архив пока пуст или расчёт ещё не выбран."),
 	}
@@ -1732,5 +2030,25 @@ func TestFrontendCoreUiFunctionsExist(t *testing.T) {
 
 	if bytes.Contains(content, []byte("ReferenceError")) {
 		t.Fatalf("app.js should not contain runtime error text leftovers")
+	}
+}
+
+// RU: ???? `TestFrontendAdminUsersCanSeeRoleControls`.
+// EN: Test `TestFrontendAdminUsersCanSeeRoleControls`.
+//
+// RU: ??? ??????: ?????????, ??? ???????? ??????? canAdmin ??????????? ???????? ??? ?????? ?????????? ??????.
+// EN: What it does: verifies that the frontend treats canAdmin as sufficient for rendering role management controls.
+//
+// RU: ???????? ???????: ???????? ???????? test-admin `admin1`, ? ???????? ???? admin, ?? UI ?? ?????? ???????? ?????? ?? canManage.
+// EN: Key points: protects the admin1 scenario where the user has the admin role and the UI must not depend on canManage alone.
+func TestFrontendAdminUsersCanSeeRoleControls(t *testing.T) {
+	content, err := os.ReadFile(filepath.Join("frontend", "dist", "assets", "app.js"))
+	if err != nil {
+		t.Fatalf("ReadFile app.js error = %v", err)
+	}
+
+	required := []byte("const canChangeRole = Boolean(appState.session.canAdmin)")
+	if !bytes.Contains(content, required) {
+		t.Fatalf("app.js should allow admin users to see role controls")
 	}
 }

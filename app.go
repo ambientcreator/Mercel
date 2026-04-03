@@ -34,25 +34,137 @@ const (
 	CategoryPrimary   = "primary"
 	CategorySecondary = "secondary"
 	CategoryClosing   = "closing"
+	AppStorageDirName = "MercelData"
+	AppStorageDBName  = "mercel.sqlite"
 
-	RoleAdmin = "admin"
+	RoleAdmin                     = "admin"
+	RoleGlobalDirector            = "global_director"
+	RoleExecutiveDirector         = "executive_director"
+	RoleTechnicalDirector         = "technical_director"
+	DepartmentGlobal              = "global"
+	DepartmentSupport             = "support"
+	DepartmentTechnical           = "technical"
+	DepartmentTelecom             = "telecom"
+	DepartmentSKUD                = "skud"
+	DepartmentApproval            = "approval"
+	DepartmentMarketing           = "marketing"
+	DepartmentCommercial          = "commercial"
+	DepartmentFinance             = "finance"
+	DepartmentLegal               = "legal"
+	DepartmentDevelopment         = "development"
+	RoleSupportHead               = "support_head"
+	RoleSupportSenior             = "support_senior"
+	RoleSupportEmployee           = "support_employee"
+	RoleSupportSysadmin           = "support_sysadmin"
+	RoleTechnicalHead             = "technical_head"
+	RoleTechnicalSenior           = "technical_senior"
+	RoleTechnicalEmployee         = "technical_employee"
+	RoleTelecomDirector           = "telecom_construction_director"
+	RoleTelecomHead               = "telecom_construction_head"
+	RoleTelecomSeniorVOLS         = "telecom_senior_vols"
+	RoleTelecomSeniorLVS          = "telecom_senior_lvs"
+	RoleTelecomEmployeeVOLS       = "telecom_employee_vols"
+	RoleTelecomEmployeeLVS        = "telecom_employee_lvs"
+	RoleSKUDHead                  = "skud_head"
+	RoleSKUDProjectManager        = "skud_project_manager"
+	RoleSKUDSeniorService         = "skud_senior_service_engineer"
+	RoleSKUDSeniorInstaller       = "skud_senior_installer"
+	RoleSKUDServiceEngineer       = "skud_service_engineer"
+	RoleSKUDInstaller             = "skud_installer"
+	RoleApprovalHead              = "approval_head"
+	RoleApprovalSenior            = "approval_senior"
+	RoleApprovalEmployee          = "approval_employee"
+	RoleMarketingHead             = "marketing_head"
+	RoleMarketingCourier          = "marketing_courier"
+	RoleCommercialDirector        = "commercial_director"
+	RoleCommercialSubscriberHead  = "commercial_subscriber_head"
+	RoleCommercialSeniorMRK       = "commercial_senior_mrk"
+	RoleCommercialSeniorMRYU      = "commercial_senior_mryu"
+	RoleCommercialActiveSalesHead = "commercial_active_sales_head"
+	RoleCommercialEmployeeMRK     = "commercial_employee_mrk"
+	RoleCommercialEmployeeMRYU    = "commercial_employee_mryu"
+	RoleFinanceHead               = "finance_head"
+	RoleFinanceEmployee           = "finance_employee"
+	RoleLegalEmployee             = "legal_employee"
+	RoleDevelopmentHead           = "development_head"
+	RoleDevelopmentSenior         = "development_senior"
+	RoleDevelopmentEmployee       = "development_employee"
 
-	RoleSupportManager          = "support_manager"
-	RoleSupportSeniorSpecialist = "support_senior_specialist"
-	RoleSupportEmployee         = "support_employee"
-
-	RoleTechManager = "tech_manager"
-	RoleSeniorTech  = "senior_technician"
-	RoleTechnician  = "technician"
-
-	RoleMRKManager  = "mrk_manager"
-	RoleSeniorMRK   = "senior_mrk"
-	RoleMRKEmployee = "mrk_employee"
-
-	RoleManager          = RoleSupportManager
-	RoleSeniorSpecialist = RoleSupportSeniorSpecialist
-	RoleEmployee         = RoleSupportEmployee
+	RoleSupportManager          = RoleSupportHead
+	RoleSupportSeniorSpecialist = RoleSupportSenior
+	RoleTechManager             = RoleTechnicalHead
+	RoleSeniorTech              = RoleTechnicalSenior
+	RoleTechnician              = RoleTechnicalEmployee
+	RoleMRKManager              = RoleCommercialSubscriberHead
+	RoleSeniorMRK               = RoleCommercialSeniorMRK
+	RoleMRKEmployee             = RoleCommercialEmployeeMRK
+	RoleManager                 = RoleSupportHead
+	RoleSeniorSpecialist        = RoleSupportSenior
+	RoleEmployee                = RoleSupportEmployee
 )
+
+type roleMeta struct {
+	Department string
+	Level      int
+	Label      string
+}
+
+var roleCatalog = map[string]roleMeta{
+	RoleAdmin:                     {Department: DepartmentGlobal, Level: 5, Label: "Администратор"},
+	RoleGlobalDirector:            {Department: DepartmentGlobal, Level: 4, Label: "Генеральный директор"},
+	RoleExecutiveDirector:         {Department: DepartmentGlobal, Level: 4, Label: "Исполнительный директор"},
+	RoleTechnicalDirector:         {Department: DepartmentGlobal, Level: 4, Label: "Технический директор"},
+	RoleSupportHead:               {Department: DepartmentSupport, Level: 3, Label: "Руководитель Тех. Поддержки"},
+	RoleSupportSysadmin:           {Department: DepartmentSupport, Level: 3, Label: "Системный администратор"},
+	RoleSupportSenior:             {Department: DepartmentSupport, Level: 2, Label: "Старший специалист техподдержки"},
+	RoleSupportEmployee:           {Department: DepartmentSupport, Level: 1, Label: "Специалист техподдержки"},
+	RoleTechnicalHead:             {Department: DepartmentTechnical, Level: 3, Label: "Руководитель технического отдела"},
+	RoleTechnicalSenior:           {Department: DepartmentTechnical, Level: 2, Label: "Старший техник"},
+	RoleTechnicalEmployee:         {Department: DepartmentTechnical, Level: 1, Label: "Техник"},
+	RoleTelecomDirector:           {Department: DepartmentTelecom, Level: 3, Label: "Директор по строительству"},
+	RoleTelecomHead:               {Department: DepartmentTelecom, Level: 3, Label: "Руководитель строительного отдела"},
+	RoleTelecomSeniorVOLS:         {Department: DepartmentTelecom, Level: 2, Label: "Старший монтажник ВОЛС"},
+	RoleTelecomSeniorLVS:          {Department: DepartmentTelecom, Level: 2, Label: "Старший монтажник ЛВС"},
+	RoleTelecomEmployeeVOLS:       {Department: DepartmentTelecom, Level: 1, Label: "Монтажник ВОЛС"},
+	RoleTelecomEmployeeLVS:        {Department: DepartmentTelecom, Level: 1, Label: "Монтажник ЛВС"},
+	RoleSKUDHead:                  {Department: DepartmentSKUD, Level: 3, Label: "Руководитель отдела технического обслуживания СКУД"},
+	RoleSKUDProjectManager:        {Department: DepartmentSKUD, Level: 2, Label: "Менеджер проектов СКУД"},
+	RoleSKUDSeniorService:         {Department: DepartmentSKUD, Level: 2, Label: "Старший сервисный инженер СКУД"},
+	RoleSKUDSeniorInstaller:       {Department: DepartmentSKUD, Level: 2, Label: "Старший монтажник СКУД"},
+	RoleSKUDServiceEngineer:       {Department: DepartmentSKUD, Level: 1, Label: "Сервисный инженер СКУД"},
+	RoleSKUDInstaller:             {Department: DepartmentSKUD, Level: 1, Label: "Монтажник СКУД"},
+	RoleApprovalHead:              {Department: DepartmentApproval, Level: 3, Label: "Руководитель согласования"},
+	RoleApprovalSenior:            {Department: DepartmentApproval, Level: 2, Label: "Старший менеджер согласования"},
+	RoleApprovalEmployee:          {Department: DepartmentApproval, Level: 1, Label: "Менеджер по согласованию"},
+	RoleMarketingHead:             {Department: DepartmentMarketing, Level: 3, Label: "Руководитель отдела рекламы и маркетинга"},
+	RoleMarketingCourier:          {Department: DepartmentMarketing, Level: 1, Label: "Курьер"},
+	RoleCommercialDirector:        {Department: DepartmentCommercial, Level: 4, Label: "Руководитель отдела рекламы и маркетинга"},
+	RoleCommercialSubscriberHead:  {Department: DepartmentCommercial, Level: 3, Label: "Руководитель абонентского отдела"},
+	RoleCommercialActiveSalesHead: {Department: DepartmentCommercial, Level: 3, Label: "Менеджер активных продаж"},
+	RoleCommercialSeniorMRK:       {Department: DepartmentCommercial, Level: 2, Label: "Старший МРК"},
+	RoleCommercialSeniorMRYU:      {Department: DepartmentCommercial, Level: 2, Label: "Старший МРЮ"},
+	RoleCommercialEmployeeMRK:     {Department: DepartmentCommercial, Level: 1, Label: "МРК"},
+	RoleCommercialEmployeeMRYU:    {Department: DepartmentCommercial, Level: 1, Label: "МРЮ"},
+	RoleFinanceHead:               {Department: DepartmentFinance, Level: 3, Label: "Гл. бухгалтер"},
+	RoleFinanceEmployee:           {Department: DepartmentFinance, Level: 1, Label: "Помощник бухгалтера"},
+	RoleLegalEmployee:             {Department: DepartmentLegal, Level: 1, Label: "Юрист"},
+	RoleDevelopmentHead:           {Department: DepartmentDevelopment, Level: 3, Label: "Руководитель группы разработки"},
+	RoleDevelopmentSenior:         {Department: DepartmentDevelopment, Level: 2, Label: "Старший разработчик"},
+	RoleDevelopmentEmployee:       {Department: DepartmentDevelopment, Level: 1, Label: "Разработчик"},
+}
+
+var allBusinessDepartments = []string{
+	DepartmentSupport,
+	DepartmentTechnical,
+	DepartmentTelecom,
+	DepartmentSKUD,
+	DepartmentApproval,
+	DepartmentMarketing,
+	DepartmentCommercial,
+	DepartmentFinance,
+	DepartmentLegal,
+	DepartmentDevelopment,
+}
 
 // RU: Тип данных `Service`.
 // EN: Data type `Service`.
@@ -242,6 +354,19 @@ type SavedCalculation struct {
 	CreatedRole  string            `json:"createdRole,omitempty"`
 }
 
+// RU: Тип данных `CopyArchiveServicesResult`.
+// EN: Data type `CopyArchiveServicesResult`.
+//
+// RU: Что делает: описывает результат копирования услуг из архивного расчёта в список услуг администратора.
+// EN: What it does: CopyArchiveServicesResult reports how many services were created or updated after importing from an archived calculation.
+//
+// RU: Ключевые моменты: используется только в админском сценарии; помогает фронтенду показать понятное сообщение после импорта; отделяет статистику операции от полного списка услуг.
+// EN: Key points: used only in the admin-only archive import flow; lets the frontend show a concise status message; keeps operation stats separate from the full services list.
+type CopyArchiveServicesResult struct {
+	Created int `json:"created"`
+	Updated int `json:"updated"`
+}
+
 // RU: Тип данных `AppBootstrap`.
 // EN: Data type `AppBootstrap`.
 //
@@ -348,11 +473,11 @@ var resolveDatabasePath = func() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("resolve user config dir: %w", err)
 	}
-	appDir := filepath.Join(baseDir, "Mercel")
+	appDir := filepath.Join(baseDir, AppStorageDirName)
 	if err := os.MkdirAll(appDir, 0o755); err != nil {
 		return "", fmt.Errorf("create app dir: %w", err)
 	}
-	return filepath.Join(appDir, "mercel.sqlite"), nil
+	return filepath.Join(appDir, AppStorageDBName), nil
 }
 
 // RU: Переменная `resolveLegacyDatabasePath`.
@@ -369,6 +494,14 @@ var resolveLegacyDatabasePath = func() (string, error) {
 		return "", fmt.Errorf("resolve user config dir: %w", err)
 	}
 	return filepath.Join(baseDir, "Statistic", "statistic.sqlite"), nil
+}
+
+var resolvePreviousMercelDatabasePath = func() (string, error) {
+	baseDir, err := os.UserConfigDir()
+	if err != nil {
+		return "", fmt.Errorf("resolve user config dir: %w", err)
+	}
+	return filepath.Join(baseDir, "Mercel", "mercel.sqlite"), nil
 }
 
 // RU: Функция `ensureDatabasePath`.
@@ -388,8 +521,26 @@ func ensureDatabasePath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if legacyPath == dbPath {
-		return dbPath, nil
+	previousMercelPath, err := resolvePreviousMercelDatabasePath()
+	if err != nil {
+		return "", err
+	}
+
+	legacyCandidates := make([]string, 0, 2)
+	for _, candidate := range []string{previousMercelPath, legacyPath} {
+		if candidate == "" || candidate == dbPath {
+			continue
+		}
+		duplicate := false
+		for _, existing := range legacyCandidates {
+			if existing == candidate {
+				duplicate = true
+				break
+			}
+		}
+		if !duplicate {
+			legacyCandidates = append(legacyCandidates, candidate)
+		}
 	}
 
 	dbExists := false
@@ -399,31 +550,34 @@ func ensureDatabasePath() (string, error) {
 		return "", fmt.Errorf("stat database: %w", err)
 	}
 
-	legacyExists := false
-	if _, err := os.Stat(legacyPath); err == nil {
-		legacyExists = true
-	} else if !errors.Is(err, os.ErrNotExist) {
-		return "", fmt.Errorf("stat legacy database: %w", err)
+	existingLegacyCandidates := make([]string, 0, len(legacyCandidates))
+	for _, candidate := range legacyCandidates {
+		if _, err := os.Stat(candidate); err == nil {
+			existingLegacyCandidates = append(existingLegacyCandidates, candidate)
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return "", fmt.Errorf("stat legacy database: %w", err)
+		}
 	}
 
 	if !dbExists {
-		if legacyExists {
-			if err := copyFile(legacyPath, dbPath); err != nil {
+		if len(existingLegacyCandidates) > 0 {
+			if err := copyFile(existingLegacyCandidates[0], dbPath); err != nil {
 				return "", fmt.Errorf("copy legacy database: %w", err)
 			}
 		}
 		return dbPath, nil
 	}
 
-	if legacyExists {
-		shouldRecover, err := shouldRecoverFromLegacy(dbPath, legacyPath)
+	for _, candidate := range existingLegacyCandidates {
+		shouldRecover, err := shouldRecoverFromLegacy(dbPath, candidate)
 		if err != nil {
 			return "", fmt.Errorf("compare legacy database: %w", err)
 		}
 		if shouldRecover {
-			if err := copyFile(legacyPath, dbPath); err != nil {
+			if err := copyFile(candidate, dbPath); err != nil {
 				return "", fmt.Errorf("restore legacy database: %w", err)
 			}
+			break
 		}
 	}
 	return dbPath, nil
@@ -668,6 +822,54 @@ func (a *App) migrateDatabase() error {
 	if _, err := a.db.Exec(`UPDATE calculations SET created_role = ? WHERE created_role = 'employee'`, RoleSupportEmployee); err != nil {
 		return fmt.Errorf("normalize calculations.employee role: %w", err)
 	}
+	if _, err := a.db.Exec(`UPDATE users SET role = ? WHERE role = 'support_manager'`, RoleSupportHead); err != nil {
+		return fmt.Errorf("normalize users.support_manager role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE users SET role = ? WHERE role = 'support_senior_specialist'`, RoleSupportSenior); err != nil {
+		return fmt.Errorf("normalize users.support_senior_specialist role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE users SET role = ? WHERE role = 'tech_manager'`, RoleTechnicalHead); err != nil {
+		return fmt.Errorf("normalize users.tech_manager role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE users SET role = ? WHERE role = 'senior_technician'`, RoleTechnicalSenior); err != nil {
+		return fmt.Errorf("normalize users.senior_technician role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE users SET role = ? WHERE role = 'technician'`, RoleTechnicalEmployee); err != nil {
+		return fmt.Errorf("normalize users.technician role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE users SET role = ? WHERE role = 'mrk_manager'`, RoleCommercialSubscriberHead); err != nil {
+		return fmt.Errorf("normalize users.mrk_manager role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE users SET role = ? WHERE role = 'senior_mrk'`, RoleCommercialSeniorMRK); err != nil {
+		return fmt.Errorf("normalize users.senior_mrk role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE users SET role = ? WHERE role = 'mrk_employee'`, RoleCommercialEmployeeMRK); err != nil {
+		return fmt.Errorf("normalize users.mrk_employee role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE calculations SET created_role = ? WHERE created_role = 'support_manager'`, RoleSupportHead); err != nil {
+		return fmt.Errorf("normalize calculations.support_manager role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE calculations SET created_role = ? WHERE created_role = 'support_senior_specialist'`, RoleSupportSenior); err != nil {
+		return fmt.Errorf("normalize calculations.support_senior_specialist role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE calculations SET created_role = ? WHERE created_role = 'tech_manager'`, RoleTechnicalHead); err != nil {
+		return fmt.Errorf("normalize calculations.tech_manager role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE calculations SET created_role = ? WHERE created_role = 'senior_technician'`, RoleTechnicalSenior); err != nil {
+		return fmt.Errorf("normalize calculations.senior_technician role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE calculations SET created_role = ? WHERE created_role = 'technician'`, RoleTechnicalEmployee); err != nil {
+		return fmt.Errorf("normalize calculations.technician role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE calculations SET created_role = ? WHERE created_role = 'mrk_manager'`, RoleCommercialSubscriberHead); err != nil {
+		return fmt.Errorf("normalize calculations.mrk_manager role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE calculations SET created_role = ? WHERE created_role = 'senior_mrk'`, RoleCommercialSeniorMRK); err != nil {
+		return fmt.Errorf("normalize calculations.senior_mrk role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE calculations SET created_role = ? WHERE created_role = 'mrk_employee'`, RoleCommercialEmployeeMRK); err != nil {
+		return fmt.Errorf("normalize calculations.mrk_employee role: %w", err)
+	}
 	return nil
 }
 func ensureColumnExists(db *sql.DB, table string, column string, alterSQL string) error {
@@ -757,13 +959,13 @@ func (a *App) seedAdmin() error {
 //
 // RU: Ключевые моменты: важен для устойчивости логики; может использоваться сразу в нескольких местах; изменения стоит делать осознанно.
 // EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
-// RU: ????? `seedTestAdmin`.
+// RU: Метод `seedTestAdmin`.
 // EN: Method `seedTestAdmin`.
 //
-// RU: ??? ??????: ???????????? ??????? ??????? ???????? admin-?????? ??? ???????? ????????? ?????????.
+// RU: Что делает: гарантирует наличие тестовой admin-учётки для проверки интерфейса и сценариев администрирования.
 // EN: What it does: seedTestAdmin guarantees that a regular admin-role account for UI testing exists with known credentials.
 //
-// RU: ???????? ???????: ??? ?????? ?? ???????? ??????????; ?? ????? ? ??????? ? ????? ???????; ?????????? ???????? ?????? username `admin`.
+// RU: Ключевые моменты: эта учётка не является защищённой; остаётся видимой в списках и удаляемой; защищённым остаётся только username `admin`.
 // EN: Key points: this account is not protected; it remains visible in lists and deletable; only the username `admin` stays protected.
 func (a *App) seedTestAdmin() error {
 	var count int
@@ -835,14 +1037,14 @@ func isSafeSQLiteIdentifier(name string) bool {
 
 func validateUsername(username string) error {
 	if !usernamePattern.MatchString(username) {
-		return errors.New("????? ?????? ???? ?????? ?? 3 ?? 32 ???????? ? ????????? ?????? ?????, ?????, '.', '_', '-' ??? '@'.")
+		return errors.New("Имя пользователя должно быть длиной от 3 до 32 символов и содержать только буквы, цифры, '.', '_', '-' или '@'.")
 	}
 	return nil
 }
 
 func validatePassword(password string) error {
 	if len(password) < 4 || len(password) > 128 {
-		return errors.New("?????? ?????? ????????? ?? 4 ?? 128 ????????.")
+		return errors.New("Пароль должен содержать от 4 до 128 символов.")
 	}
 	return nil
 }
@@ -850,14 +1052,14 @@ func validatePassword(password string) error {
 func validateServiceName(name string) error {
 	trimmed := strings.TrimSpace(name)
 	if trimmed == "" {
-		return errors.New("???????? ?????? ?? ?????? ???? ??????.")
+		return errors.New("Название услуги не должно быть пустым.")
 	}
 	if len([]rune(trimmed)) > 120 {
-		return errors.New("???????? ?????? ?? ?????? ????????? 120 ????????.")
+		return errors.New("Название услуги не должно превышать 120 символов.")
 	}
 	for _, r := range trimmed {
 		if r < 32 {
-			return errors.New("???????? ?????? ???????? ???????????? ??????????? ???????.")
+			return errors.New("Название услуги содержит недопустимые управляющие символы.")
 		}
 	}
 	return nil
@@ -967,31 +1169,19 @@ func defaultGroupPercent() map[string]float64 {
 // RU: Ключевые моменты: важен для устойчивости логики; может использоваться сразу в нескольких местах; изменения стоит делать осознанно.
 // EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
 func roleDepartment(role string) string {
-	switch normalizeRole(role) {
-	case RoleSupportManager, RoleSupportSeniorSpecialist, RoleSupportEmployee:
-		return "support"
-	case RoleTechManager, RoleSeniorTech, RoleTechnician:
-		return "tech"
-	case RoleMRKManager, RoleSeniorMRK, RoleMRKEmployee:
-		return "mrk"
-	default:
-		return "admin"
+	meta, ok := roleCatalog[normalizeRole(role)]
+	if !ok {
+		return DepartmentSupport
 	}
+	return meta.Department
 }
 
 func roleLevel(role string) int {
-	switch normalizeRole(role) {
-	case RoleAdmin:
-		return 4
-	case RoleSupportManager, RoleTechManager, RoleMRKManager:
-		return 3
-	case RoleSupportSeniorSpecialist, RoleSeniorTech, RoleSeniorMRK:
-		return 2
-	case RoleSupportEmployee, RoleTechnician, RoleMRKEmployee:
-		return 1
-	default:
+	meta, ok := roleCatalog[normalizeRole(role)]
+	if !ok {
 		return 0
 	}
+	return meta.Level
 }
 
 func rolePower(role string) int {
@@ -1000,43 +1190,110 @@ func rolePower(role string) int {
 
 func userSortPriority(role string) int {
 	switch roleLevel(role) {
-	case 3:
+	case 5:
+		return 0
+	case 4:
 		return 1
-	case 2:
+	case 3:
 		return 2
-	case 1:
+	case 2:
 		return 3
+	case 1:
+		return 4
 	default:
 		return 9
 	}
 }
 
 func normalizeRole(role string) string {
-	switch role {
-	case "manager", RoleSupportManager:
-		return RoleSupportManager
-	case "senior_specialist", RoleSupportSeniorSpecialist:
-		return RoleSupportSeniorSpecialist
-	case "employee", RoleSupportEmployee:
+	switch strings.TrimSpace(role) {
+	case "manager", "support_manager":
+		return RoleSupportHead
+	case "senior_specialist", "support_senior_specialist":
+		return RoleSupportSenior
+	case "employee", "support_employee":
 		return RoleSupportEmployee
-	case RoleTechManager, RoleSeniorTech, RoleTechnician, RoleMRKManager, RoleSeniorMRK, RoleMRKEmployee, RoleAdmin:
-		return role
+	case "tech_manager":
+		return RoleTechnicalHead
+	case "senior_technician":
+		return RoleTechnicalSenior
+	case "technician":
+		return RoleTechnicalEmployee
+	case "mrk_manager":
+		return RoleCommercialSubscriberHead
+	case "senior_mrk":
+		return RoleCommercialSeniorMRK
+	case "mrk_employee":
+		return RoleCommercialEmployeeMRK
+	case RoleAdmin, RoleGlobalDirector, RoleExecutiveDirector, RoleTechnicalDirector,
+		RoleSupportHead, RoleSupportSenior, RoleSupportSysadmin,
+		RoleTechnicalHead, RoleTechnicalSenior, RoleTechnicalEmployee,
+		RoleTelecomDirector, RoleTelecomHead, RoleTelecomSeniorVOLS, RoleTelecomSeniorLVS, RoleTelecomEmployeeVOLS, RoleTelecomEmployeeLVS,
+		RoleSKUDHead, RoleSKUDProjectManager, RoleSKUDSeniorService, RoleSKUDSeniorInstaller, RoleSKUDServiceEngineer, RoleSKUDInstaller,
+		RoleApprovalHead, RoleApprovalSenior, RoleApprovalEmployee,
+		RoleMarketingHead, RoleMarketingCourier,
+		RoleCommercialDirector, RoleCommercialSubscriberHead, RoleCommercialActiveSalesHead, RoleCommercialSeniorMRK, RoleCommercialSeniorMRYU, RoleCommercialEmployeeMRK, RoleCommercialEmployeeMRYU,
+		RoleFinanceHead, RoleFinanceEmployee,
+		RoleLegalEmployee,
+		RoleDevelopmentHead, RoleDevelopmentSenior, RoleDevelopmentEmployee:
+		return strings.TrimSpace(role)
 	default:
 		return RoleSupportEmployee
 	}
 }
 
 func normalizeAssignableRole(role string) string {
-	switch normalizeRole(role) {
-	case RoleSupportManager, RoleSupportSeniorSpecialist, RoleSupportEmployee, RoleTechManager, RoleSeniorTech, RoleTechnician, RoleMRKManager, RoleSeniorMRK, RoleMRKEmployee:
-		return normalizeRole(role)
-	default:
+	role = normalizeRole(role)
+	if role == RoleAdmin {
 		return RoleSupportEmployee
+	}
+	if _, ok := roleCatalog[role]; ok {
+		return role
+	}
+	return RoleSupportEmployee
+}
+
+func roleViewDepartments(role string) []string {
+	switch normalizeRole(role) {
+	case RoleAdmin, RoleGlobalDirector, RoleExecutiveDirector:
+		return append([]string{}, allBusinessDepartments...)
+	case RoleTechnicalDirector:
+		return []string{DepartmentTechnical, DepartmentTelecom}
+	default:
+		dept := roleDepartment(role)
+		if dept == DepartmentGlobal {
+			return nil
+		}
+		return []string{dept}
 	}
 }
 
+func roleCanManageUsers(role string) bool {
+	switch normalizeRole(role) {
+	case RoleAdmin:
+		return true
+	case RoleSupportHead, RoleSupportSysadmin, RoleTechnicalHead, RoleTelecomDirector, RoleTelecomHead, RoleSKUDHead, RoleApprovalHead, RoleMarketingHead, RoleCommercialDirector, RoleCommercialSubscriberHead, RoleCommercialActiveSalesHead, RoleFinanceHead, RoleDevelopmentHead:
+		return true
+	default:
+		return false
+	}
+}
+
+func roleCanCreateUsers(role string) bool {
+	return roleCanManageUsers(role) || roleLevel(role) == 2
+}
+
+func departmentInScope(actorRole string, targetDepartment string) bool {
+	for _, department := range roleViewDepartments(actorRole) {
+		if department == targetDepartment {
+			return true
+		}
+	}
+	return false
+}
+
 func canCreateUsers(role string) bool {
-	return roleLevel(role) >= 2
+	return roleCanCreateUsers(role)
 }
 
 func canCreateRole(actorRole string, targetRole string) bool {
@@ -1045,6 +1302,9 @@ func canCreateRole(actorRole string, targetRole string) bool {
 	if actorRole == RoleAdmin {
 		return targetRole != RoleAdmin
 	}
+	if !roleCanCreateUsers(actorRole) {
+		return false
+	}
 	if roleDepartment(actorRole) != roleDepartment(targetRole) {
 		return false
 	}
@@ -1052,15 +1312,15 @@ func canCreateRole(actorRole string, targetRole string) bool {
 }
 
 func canViewAllArchives(role string) bool {
-	return normalizeRole(role) == RoleAdmin
+	return normalizeRole(role) == RoleAdmin || normalizeRole(role) == RoleGlobalDirector || normalizeRole(role) == RoleExecutiveDirector
 }
 
 func canViewManagedUsers(role string) bool {
-	return roleLevel(role) >= 2
+	return len(roleViewDepartments(role)) > 0 && (roleCanCreateUsers(role) || roleLevel(role) >= 4)
 }
 
 func canModerateArchives(role string) bool {
-	return normalizeRole(role) == RoleAdmin || roleLevel(role) >= 2
+	return len(roleViewDepartments(role)) > 0 && (roleLevel(role) >= 2 || roleLevel(role) >= 4)
 }
 
 func canSeeUser(actorRole string, targetRole string) bool {
@@ -1069,7 +1329,13 @@ func canSeeUser(actorRole string, targetRole string) bool {
 	if actorRole == RoleAdmin {
 		return true
 	}
-	if !canViewManagedUsers(actorRole) || roleDepartment(actorRole) != roleDepartment(targetRole) {
+	if !departmentInScope(actorRole, roleDepartment(targetRole)) {
+		return false
+	}
+	if roleDepartment(actorRole) == DepartmentGlobal {
+		return targetRole != RoleAdmin && roleDepartment(targetRole) != DepartmentGlobal
+	}
+	if !canViewManagedUsers(actorRole) {
 		return false
 	}
 	return roleLevel(actorRole) > roleLevel(targetRole)
@@ -1084,7 +1350,7 @@ func canResetUserPassword(actor User, target User) bool {
 	if actor.Role == RoleAdmin {
 		return target.Role != RoleAdmin
 	}
-	return canSeeUser(actor.Role, target.Role)
+	return roleCanCreateUsers(actor.Role) && canSeeUser(actor.Role, target.Role)
 }
 
 func canViewArchiveRole(actor *User, authorRole string, authorUsername string) bool {
@@ -1096,8 +1362,11 @@ func canViewArchiveRole(actor *User, authorRole string, authorUsername string) b
 	if authorUsername == actor.Username {
 		return true
 	}
-	if roleDepartment(viewerRole) != roleDepartment(authorRole) {
+	if !departmentInScope(viewerRole, roleDepartment(authorRole)) {
 		return false
+	}
+	if roleDepartment(viewerRole) == DepartmentGlobal {
+		return roleDepartment(authorRole) != DepartmentGlobal
 	}
 	switch roleLevel(viewerRole) {
 	case 3:
@@ -1173,7 +1442,7 @@ func (a *App) sessionStateLocked(message string) SessionState {
 	if a.currentSession != nil {
 		copyUser := *a.currentSession
 		state.User = &copyUser
-		state.CanManage = roleLevel(copyUser.Role) >= 3
+		state.CanManage = roleCanManageUsers(copyUser.Role)
 		state.CanAdmin = normalizeRole(copyUser.Role) == RoleAdmin
 		state.CanModerate = canModerateArchives(copyUser.Role)
 	}
@@ -1211,7 +1480,7 @@ func (a *App) requireManage() (*User, error) {
 	if err != nil {
 		return nil, err
 	}
-	if roleLevel(user.Role) < 3 {
+	if !roleCanManageUsers(user.Role) {
 		return nil, errors.New("Недостаточно прав для этого действия.")
 	}
 	return user, nil
@@ -1283,7 +1552,7 @@ func (a *App) Login(req LoginRequest) (SessionState, error) {
 	username := stripSpaces(req.Username)
 	password := stripSpaces(req.Password)
 	if username == "" || password == "" {
-		return SessionState{}, errors.New("??????? ????? ? ??????.")
+		return SessionState{}, errors.New("Укажите логин и пароль.")
 	}
 	if err := validateUsername(username); err != nil {
 		return SessionState{}, err
@@ -1297,12 +1566,12 @@ func (a *App) Login(req LoginRequest) (SessionState, error) {
 	err := a.db.QueryRow(`SELECT id, username, password_hash, role, created_at FROM users WHERE username = ?`, username).Scan(&user.ID, &user.Username, &passwordHash, &user.Role, &user.CreatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return SessionState{}, errors.New("???????????? ?? ??????.")
+			return SessionState{}, errors.New("Пользователь не найден.")
 		}
 		return SessionState{}, fmt.Errorf("login query: %w", err)
 	}
 	if !verifyPassword(password, passwordHash) {
-		return SessionState{}, errors.New("???????? ????? ??? ??????.")
+		return SessionState{}, errors.New("Неверный логин или пароль.")
 	}
 	if isLegacyPasswordHash(passwordHash) {
 		_, _ = a.db.Exec(`UPDATE users SET password_hash = ? WHERE id = ?`, hashPassword(password), user.ID)
@@ -1310,18 +1579,18 @@ func (a *App) Login(req LoginRequest) (SessionState, error) {
 
 	a.mu.Lock()
 	a.currentSession = &user
-	state := a.sessionStateLocked("???? ???????? ???????.")
+	state := a.sessionStateLocked("Вход выполнен успешно.")
 	a.mu.Unlock()
 	return state, nil
 }
 
-// RU: ????? `Logout`.
+// RU: Метод `Logout`.
 // EN: Method `Logout`.
 //
-// RU: ??? ??????: ????????? ??????? ? ??????? ???? ???????? ????????????.
+// RU: Что делает: завершает сессию и очищает все данные текущей авторизации.
 // EN: What it does: Logout clears the in-memory session and returns a locked guest state to the frontend.
 //
-// RU: ???????? ???????: ????? ??? ???????????? ??????; ????? ?????????????? ????? ? ?????????? ??????; ????????? ????? ?????? ?????????.
+// RU: Ключевые моменты: важен для корректного logout-сценария; после вызова интерфейс должен перейти в гостевое состояние.
 // EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
 func (a *App) Logout() SessionState {
 	a.mu.Lock()
@@ -1426,13 +1695,13 @@ func (a *App) saveServiceForOwner(req UpsertServiceRequest, owner string) (Servi
 		return Service{}, err
 	}
 	if unit == "" || req.Rate <= 0 || req.Rate > 100000000 {
-		return Service{}, errors.New("????????? ??????? ? ?????????? ????????? ??????.")
+		return Service{}, errors.New("Укажите корректные единицу и стоимость услуги.")
 	}
 	category := normalizeCategory(req.Category)
 	var allocation interface{}
 	if req.AllocationPercent != nil {
 		if *req.AllocationPercent < 0 || *req.AllocationPercent > 100 {
-			return Service{}, errors.New("??????? ?????? ?????? ???? ? ????????? ?? 0 ?? 100.")
+			return Service{}, errors.New("Процент услуги должен быть в диапазоне от 0 до 100.")
 		}
 		allocation = *req.AllocationPercent
 	}
@@ -1475,6 +1744,21 @@ func (a *App) getServiceByIDForOwner(id int64, owner string) (Service, error) {
 	var item Service
 	var allocation sql.NullFloat64
 	err := a.db.QueryRow(`SELECT id, code, name, unit, rate, category, allocation_percent, created_by, created_at FROM services WHERE id = ? AND created_by = ?`, id, owner).Scan(&item.ID, &item.Code, &item.Name, &item.Unit, &item.Rate, &item.Category, &allocation, &item.CreatedBy, &item.CreatedAt)
+	if err != nil {
+		return Service{}, err
+	}
+	item.Description = fmt.Sprintf("1 %s = %s", strings.TrimSuffix(item.Unit, "."), displayMoney(item.Rate))
+	if allocation.Valid {
+		value := allocation.Float64
+		item.AllocationPercent = &value
+	}
+	return item, nil
+}
+
+func (a *App) getServiceByNameForOwner(name string, owner string) (Service, error) {
+	var item Service
+	var allocation sql.NullFloat64
+	err := a.db.QueryRow(`SELECT id, code, name, unit, rate, category, allocation_percent, created_by, created_at FROM services WHERE created_by = ? AND name = ? ORDER BY id ASC LIMIT 1`, owner, strings.TrimSpace(name)).Scan(&item.ID, &item.Code, &item.Name, &item.Unit, &item.Rate, &item.Category, &allocation, &item.CreatedBy, &item.CreatedAt)
 	if err != nil {
 		return Service{}, err
 	}
@@ -1538,12 +1822,12 @@ func (a *App) CreateUser(req UserWithPassword) (User, error) {
 		return User{}, err
 	}
 	if !canCreateUsers(current.Role) {
-		return User{}, errors.New("???????????? ???? ??? ???????? ?????????????.")
+		return User{}, errors.New("Недостаточно прав для создания пользователей.")
 	}
 	username := stripSpaces(req.Username)
 	password := stripSpaces(req.Password)
 	if username == "" || password == "" {
-		return User{}, errors.New("??????? ????? ? ?????? ?????? ????????????.")
+		return User{}, errors.New("Укажите логин и пароль нового пользователя.")
 	}
 	if err := validateUsername(username); err != nil {
 		return User{}, err
@@ -1553,7 +1837,7 @@ func (a *App) CreateUser(req UserWithPassword) (User, error) {
 	}
 	role := normalizeAssignableRole(req.Role)
 	if !canCreateRole(current.Role, role) {
-		return User{}, errors.New("?? ?? ?????? ??????? ???????????? ? ???? ?????.")
+		return User{}, errors.New("Вы не можете создать пользователя с этой ролью.")
 	}
 	createdAt := time.Now().Format(time.RFC3339)
 	result, err := a.db.Exec(`INSERT INTO users(username, password_hash, role, created_at) VALUES(?, ?, ?, ?)`, username, hashPassword(password), role, createdAt)
@@ -1637,13 +1921,13 @@ func (a *App) UpdateUserRole(userID int64, role string) (User, error) {
 	}
 	user.Role = normalizeRole(user.Role)
 	if user.Username == "admin" || user.Username == current.Username {
-		return User{}, errors.New("?????? ?????? ???? ? ?????????? ??????? ??????.")
+		return User{}, errors.New("Нельзя менять роль у защищённой учётной записи.")
 	}
 	if !canSeeUser(current.Role, user.Role) {
-		return User{}, errors.New("???????????? ???? ??? ????????? ???? ??????? ??????.")
+		return User{}, errors.New("Недостаточно прав для изменения роли этой учётной записи.")
 	}
 	if !canCreateRole(current.Role, role) {
-		return User{}, errors.New("?? ?? ?????? ????????? ??? ????.")
+		return User{}, errors.New("Вы не можете назначить эту роль.")
 	}
 
 	_, err = a.db.Exec(`UPDATE users SET role = ? WHERE id = ?`, role, userID)
@@ -1687,7 +1971,7 @@ func (a *App) DeleteUser(userID int64) error {
 		return err
 	}
 	if !canViewManagedUsers(current.Role) {
-		return errors.New("???????????? ???? ??? ???????? ?????????????.")
+		return errors.New("Недостаточно прав для удаления пользователей.")
 	}
 	user, err := a.getUserByID(userID)
 	if err != nil {
@@ -1695,10 +1979,10 @@ func (a *App) DeleteUser(userID int64) error {
 	}
 	user.Role = normalizeRole(user.Role)
 	if user.Username == "admin" || user.Username == current.Username {
-		return errors.New("?????? ??????? ?????????? ??????? ??????.")
+		return errors.New("Нельзя удалить защищённую учётную запись.")
 	}
 	if !canSeeUser(current.Role, user.Role) {
-		return errors.New("???????????? ???? ??? ???????? ???? ??????? ??????.")
+		return errors.New("Недостаточно прав для удаления этой учётной записи.")
 	}
 	_, err = a.db.Exec(`DELETE FROM users WHERE id = ?`, userID)
 	if err != nil {
@@ -1784,10 +2068,7 @@ func normalizeWeights(input map[string]int, services []Service) map[string]int {
 		result[service.Code] = 0
 	}
 	for code, weight := range input {
-		if weight < 0 {
-			weight = 0
-		}
-		result[code] = weight
+		result[code] = clampWeight(weight)
 	}
 	return result
 }
@@ -2010,15 +2291,15 @@ func applyWeightAdjustments(ratios []float64, group []Service, weights map[strin
 		return
 	}
 	for idx, service := range group {
-		weight := weights[service.Code]
-		if weight < 0 {
-			weight = 0
+		weight := clampWeight(weights[service.Code])
+		if weight > 0 {
+			for step := 0; step < weight; step++ {
+				transferShareToTarget(ratios, idx, 2.0)
+			}
+			continue
 		}
-		if weight > 10 {
-			weight = 10
-		}
-		for step := 0; step < weight; step++ {
-			transferShare(ratios, idx, 2.0)
+		for step := 0; step < -weight; step++ {
+			transferShareFromTarget(ratios, idx, 2.0)
 		}
 	}
 }
@@ -2031,7 +2312,7 @@ func applyWeightAdjustments(ratios []float64, group []Service, weights map[strin
 //
 // RU: Ключевые моменты: является частью расчётного пайплайна; чувствителен к граничным случаям; требует тестовой проверки после правок.
 // EN: Key points: belongs to the calculation pipeline; is sensitive to edge cases and exact arithmetic; should be changed together with tests.
-func transferShare(ratios []float64, target int, share float64) {
+func transferShareToTarget(ratios []float64, target int, share float64) {
 	if share <= 0 {
 		return
 	}
@@ -2065,6 +2346,41 @@ func transferShare(ratios []float64, target int, share float64) {
 		remaining -= moved
 		donors = nextDonors
 	}
+}
+
+func transferShareFromTarget(ratios []float64, target int, share float64) {
+	if share <= 0 || target < 0 || target >= len(ratios) {
+		return
+	}
+	receivers := make([]int, 0, len(ratios)-1)
+	for idx := range ratios {
+		if idx == target {
+			continue
+		}
+		receivers = append(receivers, idx)
+	}
+	if len(receivers) == 0 || ratios[target] <= 0 {
+		return
+	}
+	moved := math.Min(share, ratios[target])
+	if moved <= 0 {
+		return
+	}
+	ratios[target] -= moved
+	slice := moved / float64(len(receivers))
+	for _, receiver := range receivers {
+		ratios[receiver] += slice
+	}
+}
+
+func clampWeight(weight int) int {
+	if weight < -10 {
+		return -10
+	}
+	if weight > 10 {
+		return 10
+	}
+	return weight
 }
 
 // RU: Функция `reachableAmounts`.
@@ -2414,12 +2730,82 @@ func (a *App) DeleteCalculation(id int64) error {
 	if id <= 0 {
 		return errors.New("Некорректный идентификатор расчёта.")
 	}
-	if rolePower(user.Role) >= rolePower(RoleManager) {
+	if normalizeRole(user.Role) == RoleAdmin || roleCanManageUsers(user.Role) {
 		_, err = a.db.Exec(`DELETE FROM calculations WHERE id = ?`, id)
 		return err
 	}
 	_, err = a.db.Exec(`DELETE FROM calculations WHERE id = ? AND created_by = ?`, id, user.Username)
 	return err
+}
+
+// RU: Метод `CopyArchiveServicesToAdmin`.
+// EN: Method `CopyArchiveServicesToAdmin`.
+//
+// RU: Что делает: позволяет администратору взять услуги из выбранного архивного расчёта и скопировать их в свой собственный список услуг.
+// EN: What it does: CopyArchiveServicesToAdmin lets an administrator import services from a selected archived calculation into the admin-owned service list.
+//
+// RU: Ключевые моменты: доступен только роли admin; использует upsert по имени услуги, чтобы не плодить дубликаты у администратора; копирует тариф, единицу, группу и индивидуальный процент услуги из архива.
+// EN: Key points: available only to the admin role; performs an upsert by service name to avoid duplicate admin services; copies rate, unit, category and per-service allocation from the archive.
+func (a *App) CopyArchiveServicesToAdmin(calculationID int64) (CopyArchiveServicesResult, error) {
+	admin, err := a.requireAdmin()
+	if err != nil {
+		return CopyArchiveServicesResult{}, err
+	}
+	if calculationID <= 0 {
+		return CopyArchiveServicesResult{}, errors.New("Некорректный идентификатор архивного расчёта.")
+	}
+
+	var payload string
+	err = a.db.QueryRow(`SELECT items_json FROM calculations WHERE id = ?`, calculationID).Scan(&payload)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return CopyArchiveServicesResult{}, errors.New("Архивный расчёт не найден.")
+		}
+		return CopyArchiveServicesResult{}, fmt.Errorf("load calculation for copy: %w", err)
+	}
+
+	var items []CalculationItem
+	if err := json.Unmarshal([]byte(payload), &items); err != nil {
+		return CopyArchiveServicesResult{}, fmt.Errorf("parse calculation items for copy: %w", err)
+	}
+	if len(items) == 0 {
+		return CopyArchiveServicesResult{}, errors.New("В архивном расчёте нет услуг для копирования.")
+	}
+
+	result := CopyArchiveServicesResult{}
+	seenNames := make(map[string]struct{})
+	requests := make([]UpsertServiceRequest, 0, len(items))
+	for _, item := range items {
+		name := strings.TrimSpace(item.Name)
+		if name == "" {
+			continue
+		}
+		if _, exists := seenNames[name]; exists {
+			continue
+		}
+		seenNames[name] = struct{}{}
+		requests = append(requests, UpsertServiceRequest{
+			Name:              name,
+			Unit:              normalizeUnit(item.Unit),
+			Rate:              item.Rate,
+			Category:          normalizeCategory(item.Category),
+			AllocationPercent: item.AllocationPercent,
+		})
+	}
+
+	if len(requests) == 0 {
+		return CopyArchiveServicesResult{}, errors.New("В архивном расчёте не найдено услуг для копирования.")
+	}
+	if _, err := a.db.Exec(`DELETE FROM services WHERE created_by = ?`, admin.Username); err != nil {
+		return CopyArchiveServicesResult{}, fmt.Errorf("clear admin services before copy: %w", err)
+	}
+	for _, req := range requests {
+		if _, err := a.saveServiceForOwner(req, admin.Username); err != nil {
+			return CopyArchiveServicesResult{}, fmt.Errorf("copy archive service %q: %w", req.Name, err)
+		}
+		result.Created++
+	}
+	return result, nil
 }
 
 // RU: Метод `ListCalculations`.
