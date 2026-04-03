@@ -1,0 +1,600 @@
+package main
+
+import (
+	"context"
+	"database/sql"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
+	_ "modernc.org/sqlite"
+)
+
+func NewApp() (*App, error) {
+	dbPath, err := ensureDatabasePath()
+	if err != nil {
+		return nil, err
+	}
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		return nil, fmt.Errorf("open database: %w", err)
+	}
+
+	app := &App{db: db}
+	if err := app.initDatabase(); err != nil {
+		db.Close()
+		return nil, err
+	}
+	if err := app.seedDefaultData(); err != nil {
+		db.Close()
+		return nil, err
+	}
+	return app, nil
+}
+
+// RU: РџРµСЂРµРјРµРЅРЅР°СЏ `resolveDatabasePath`.
+// EN: Variable `resolveDatabasePath`.
+//
+// RU: Р§С‚Рѕ РґРµР»Р°РµС‚: С…СЂР°РЅРёС‚ СЂРµСЃСѓСЂСЃС‹ РёР»Рё РіР»РѕР±Р°Р»СЊРЅРѕРµ СЃРѕСЃС‚РѕСЏРЅРёРµ, РєРѕС‚РѕСЂРѕРµ РЅСѓР¶РЅРѕ РґСЂСѓРіРёРј С‡Р°СЃС‚СЏРј РїСЂРѕРіСЂР°РјРјС‹.
+// EN: What it does: resolveDatabasePath returns the canonical SQLite path for the current Mercel installation.
+//
+// RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: РІР°Р¶РµРЅ РєР°Рє РєРѕРЅС‚СЂР°РєС‚ РёР»Рё РѕРїРѕСЂРЅР°СЏ С‚РѕС‡РєР° РґР»СЏ РґСЂСѓРіРёС… С‡Р°СЃС‚РµР№ РїСЂРѕРµРєС‚Р°; РёР·РјРµРЅРµРЅРёСЏ Р·РґРµСЃСЊ С‡Р°СЃС‚Рѕ С‚СЂРµР±СѓСЋС‚ РѕСЃС‚РѕСЂРѕР¶РЅРѕСЃС‚Рё.
+// EN: Key points: serves as a shared contract or reference point; is reused across multiple areas of the project; changes here should be made carefully.
+var resolveDatabasePath = func() (string, error) {
+	baseDir, err := os.UserConfigDir()
+	if err != nil {
+		return "", fmt.Errorf("resolve user config dir: %w", err)
+	}
+	appDir := filepath.Join(baseDir, AppStorageDirName)
+	if err := os.MkdirAll(appDir, 0o755); err != nil {
+		return "", fmt.Errorf("create app dir: %w", err)
+	}
+	return filepath.Join(appDir, AppStorageDBName), nil
+}
+
+// RU: РџРµСЂРµРјРµРЅРЅР°СЏ `resolveLegacyDatabasePath`.
+// EN: Variable `resolveLegacyDatabasePath`.
+//
+// RU: Р§С‚Рѕ РґРµР»Р°РµС‚: С…СЂР°РЅРёС‚ СЂРµСЃСѓСЂСЃС‹ РёР»Рё РіР»РѕР±Р°Р»СЊРЅРѕРµ СЃРѕСЃС‚РѕСЏРЅРёРµ, РєРѕС‚РѕСЂРѕРµ РЅСѓР¶РЅРѕ РґСЂСѓРіРёРј С‡Р°СЃС‚СЏРј РїСЂРѕРіСЂР°РјРјС‹.
+// EN: What it does: resolveLegacyDatabasePath points to the pre-rename Statistic database so data can be recovered automatically.
+//
+// RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: РІР°Р¶РµРЅ РєР°Рє РєРѕРЅС‚СЂР°РєС‚ РёР»Рё РѕРїРѕСЂРЅР°СЏ С‚РѕС‡РєР° РґР»СЏ РґСЂСѓРіРёС… С‡Р°СЃС‚РµР№ РїСЂРѕРµРєС‚Р°; РёР·РјРµРЅРµРЅРёСЏ Р·РґРµСЃСЊ С‡Р°СЃС‚Рѕ С‚СЂРµР±СѓСЋС‚ РѕСЃС‚РѕСЂРѕР¶РЅРѕСЃС‚Рё.
+// EN: Key points: serves as a shared contract or reference point; is reused across multiple areas of the project; changes here should be made carefully.
+var resolveLegacyDatabasePath = func() (string, error) {
+	baseDir, err := os.UserConfigDir()
+	if err != nil {
+		return "", fmt.Errorf("resolve user config dir: %w", err)
+	}
+	return filepath.Join(baseDir, "Statistic", "statistic.sqlite"), nil
+}
+
+var resolvePreviousMercelDatabasePath = func() (string, error) {
+	baseDir, err := os.UserConfigDir()
+	if err != nil {
+		return "", fmt.Errorf("resolve user config dir: %w", err)
+	}
+	return filepath.Join(baseDir, "Mercel", "mercel.sqlite"), nil
+}
+
+// RU: Р¤СѓРЅРєС†РёСЏ `ensureDatabasePath`.
+// EN: Function `ensureDatabasePath`.
+//
+// RU: Р§С‚Рѕ РґРµР»Р°РµС‚: РїРѕРјРѕРіР°РµС‚ СЂР°Р±РѕС‚Р°С‚СЊ СЃ С„Р°Р№Р»Р°РјРё, SQLite Рё РјРёРіСЂР°С†РёСЏРјРё.
+// EN: What it does: ensureDatabasePath decides which database file should be used and performs legacy recovery when needed.
+//
+// RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: РІР°Р¶РµРЅ РґР»СЏ СѓСЃС‚РѕР№С‡РёРІРѕСЃС‚Рё Р»РѕРіРёРєРё; РјРѕР¶РµС‚ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ СЃСЂР°Р·Сѓ РІ РЅРµСЃРєРѕР»СЊРєРёС… РјРµСЃС‚Р°С…; РёР·РјРµРЅРµРЅРёСЏ СЃС‚РѕРёС‚ РґРµР»Р°С‚СЊ РѕСЃРѕР·РЅР°РЅРЅРѕ.
+// EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
+func ensureDatabasePath() (string, error) {
+	dbPath, err := resolveDatabasePath()
+	if err != nil {
+		return "", err
+	}
+	legacyPath, err := resolveLegacyDatabasePath()
+	if err != nil {
+		return "", err
+	}
+	previousMercelPath, err := resolvePreviousMercelDatabasePath()
+	if err != nil {
+		return "", err
+	}
+
+	legacyCandidates := make([]string, 0, 2)
+	for _, candidate := range []string{previousMercelPath, legacyPath} {
+		if candidate == "" || candidate == dbPath {
+			continue
+		}
+		duplicate := false
+		for _, existing := range legacyCandidates {
+			if existing == candidate {
+				duplicate = true
+				break
+			}
+		}
+		if !duplicate {
+			legacyCandidates = append(legacyCandidates, candidate)
+		}
+	}
+
+	dbExists := false
+	if _, err := os.Stat(dbPath); err == nil {
+		dbExists = true
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return "", fmt.Errorf("stat database: %w", err)
+	}
+
+	existingLegacyCandidates := make([]string, 0, len(legacyCandidates))
+	for _, candidate := range legacyCandidates {
+		if _, err := os.Stat(candidate); err == nil {
+			existingLegacyCandidates = append(existingLegacyCandidates, candidate)
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return "", fmt.Errorf("stat legacy database: %w", err)
+		}
+	}
+
+	if !dbExists {
+		if len(existingLegacyCandidates) > 0 {
+			if err := copyFile(existingLegacyCandidates[0], dbPath); err != nil {
+				return "", fmt.Errorf("copy legacy database: %w", err)
+			}
+		}
+		return dbPath, nil
+	}
+
+	for _, candidate := range existingLegacyCandidates {
+		shouldRecover, err := shouldRecoverFromLegacy(dbPath, candidate)
+		if err != nil {
+			return "", fmt.Errorf("compare legacy database: %w", err)
+		}
+		if shouldRecover {
+			if err := copyFile(candidate, dbPath); err != nil {
+				return "", fmt.Errorf("restore legacy database: %w", err)
+			}
+			break
+		}
+	}
+	return dbPath, nil
+}
+
+// RU: Р¤СѓРЅРєС†РёСЏ `shouldRecoverFromLegacy`.
+// EN: Function `shouldRecoverFromLegacy`.
+//
+// RU: Р§С‚Рѕ РґРµР»Р°РµС‚: РІС‹РїРѕР»РЅСЏРµС‚ РІСЃРїРѕРјРѕРіР°С‚РµР»СЊРЅРѕРµ РїСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёРµ, РїСЂРѕРІРµСЂРєСѓ РёР»Рё РїРѕРґРіРѕС‚РѕРІРєСѓ РґР°РЅРЅС‹С….
+// EN: What it does: shouldRecoverFromLegacy compares the new and legacy databases to detect when the new DB is only a fresh shell.
+//
+// RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: РІР°Р¶РµРЅ РґР»СЏ СѓСЃС‚РѕР№С‡РёРІРѕСЃС‚Рё Р»РѕРіРёРєРё; РјРѕР¶РµС‚ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ СЃСЂР°Р·Сѓ РІ РЅРµСЃРєРѕР»СЊРєРёС… РјРµСЃС‚Р°С…; РёР·РјРµРЅРµРЅРёСЏ СЃС‚РѕРёС‚ РґРµР»Р°С‚СЊ РѕСЃРѕР·РЅР°РЅРЅРѕ.
+// EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
+func shouldRecoverFromLegacy(targetPath string, legacyPath string) (bool, error) {
+	targetUsers, targetCalcs, targetServices, err := databaseCounts(targetPath)
+	if err != nil {
+		return false, err
+	}
+	legacyUsers, legacyCalcs, legacyServices, err := databaseCounts(legacyPath)
+	if err != nil {
+		return false, err
+	}
+
+	targetLooksFresh := targetUsers <= 1 && targetCalcs == 0 && targetServices <= 8
+	legacyHasMoreData := legacyUsers > targetUsers || legacyCalcs > targetCalcs || legacyServices > targetServices
+	return targetLooksFresh && legacyHasMoreData, nil
+}
+
+// RU: Р¤СѓРЅРєС†РёСЏ `databaseCounts`.
+// EN: Function `databaseCounts`.
+//
+// RU: Р§С‚Рѕ РґРµР»Р°РµС‚: РїРѕРјРѕРіР°РµС‚ СЂР°Р±РѕС‚Р°С‚СЊ СЃ С„Р°Р№Р»Р°РјРё, SQLite Рё РјРёРіСЂР°С†РёСЏРјРё.
+// EN: What it does: databaseCounts opens a database file read-only enough for diagnostics and reports key table sizes.
+//
+// RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: РІР°Р¶РµРЅ РґР»СЏ СѓСЃС‚РѕР№С‡РёРІРѕСЃС‚Рё Р»РѕРіРёРєРё; РјРѕР¶РµС‚ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ СЃСЂР°Р·Сѓ РІ РЅРµСЃРєРѕР»СЊРєРёС… РјРµСЃС‚Р°С…; РёР·РјРµРЅРµРЅРёСЏ СЃС‚РѕРёС‚ РґРµР»Р°С‚СЊ РѕСЃРѕР·РЅР°РЅРЅРѕ.
+// EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
+func databaseCounts(path string) (users int, calculations int, services int, err error) {
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	defer db.Close()
+
+	users, err = countTableRows(db, "users")
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	calculations, err = countTableRows(db, "calculations")
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	services, err = countTableRows(db, "services")
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	return users, calculations, services, nil
+}
+
+// RU: Р¤СѓРЅРєС†РёСЏ `countTableRows`.
+// EN: Function `countTableRows`.
+//
+// RU: Р§С‚Рѕ РґРµР»Р°РµС‚: РїРѕРјРѕРіР°РµС‚ СЂР°Р±РѕС‚Р°С‚СЊ СЃ С„Р°Р№Р»Р°РјРё, SQLite Рё РјРёРіСЂР°С†РёСЏРјРё.
+// EN: What it does: countTableRows is a small helper that counts rows in one table during migration and recovery checks.
+//
+// RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: РІР°Р¶РµРЅ РґР»СЏ СѓСЃС‚РѕР№С‡РёРІРѕСЃС‚Рё Р»РѕРіРёРєРё; РјРѕР¶РµС‚ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ СЃСЂР°Р·Сѓ РІ РЅРµСЃРєРѕР»СЊРєРёС… РјРµСЃС‚Р°С…; РёР·РјРµРЅРµРЅРёСЏ СЃС‚РѕРёС‚ РґРµР»Р°С‚СЊ РѕСЃРѕР·РЅР°РЅРЅРѕ.
+// EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
+func countTableRows(db *sql.DB, table string) (int, error) {
+	var exists int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?`, table).Scan(&exists); err != nil {
+		return 0, err
+	}
+	if exists == 0 {
+		return 0, nil
+	}
+	var count int
+	if !isSafeSQLiteIdentifier(table) {
+		return 0, fmt.Errorf("unsafe table identifier: %s", table)
+	}
+	query := fmt.Sprintf("SELECT COUNT(*) FROM %s", table)
+	if err := db.QueryRow(query).Scan(&count); err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+// RU: Р¤СѓРЅРєС†РёСЏ `copyFile`.
+// EN: Function `copyFile`.
+//
+// RU: Р§С‚Рѕ РґРµР»Р°РµС‚: РїРѕРјРѕРіР°РµС‚ СЂР°Р±РѕС‚Р°С‚СЊ СЃ С„Р°Р№Р»Р°РјРё, SQLite Рё РјРёРіСЂР°С†РёСЏРјРё.
+// EN: What it does: copyFile copies a database file byte-for-byte into a destination path, creating parent folders first.
+//
+// RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: РІР°Р¶РµРЅ РґР»СЏ СѓСЃС‚РѕР№С‡РёРІРѕСЃС‚Рё Р»РѕРіРёРєРё; РјРѕР¶РµС‚ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ СЃСЂР°Р·Сѓ РІ РЅРµСЃРєРѕР»СЊРєРёС… РјРµСЃС‚Р°С…; РёР·РјРµРЅРµРЅРёСЏ СЃС‚РѕРёС‚ РґРµР»Р°С‚СЊ РѕСЃРѕР·РЅР°РЅРЅРѕ.
+// EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
+func copyFile(src string, dst string) error {
+	sourceFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer sourceFile.Close()
+
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		return err
+	}
+
+	tempPath := dst + ".tmp"
+	targetFile, err := os.Create(tempPath)
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(targetFile, sourceFile); err != nil {
+		targetFile.Close()
+		_ = os.Remove(tempPath)
+		return err
+	}
+	if err := targetFile.Close(); err != nil {
+		_ = os.Remove(tempPath)
+		return err
+	}
+	if err := os.Rename(tempPath, dst); err != nil {
+		_ = os.Remove(tempPath)
+		return err
+	}
+	return nil
+}
+
+// RU: РњРµС‚РѕРґ `startup`.
+// EN: Method `startup`.
+//
+// RU: Р§С‚Рѕ РґРµР»Р°РµС‚: РІС‹РїРѕР»РЅСЏРµС‚ РѕРґРёРЅ РёР· РєР»СЋС‡РµРІС‹С… С€Р°РіРѕРІ backend-Р»РѕРіРёРєРё РІРЅСѓС‚СЂРё РїСЂРёР»РѕР¶РµРЅРёСЏ.
+// EN: What it does: startup stores the Wails startup context so backend methods can interact with the runtime if needed later.
+//
+// RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: РІР°Р¶РµРЅ РґР»СЏ СѓСЃС‚РѕР№С‡РёРІРѕСЃС‚Рё Р»РѕРіРёРєРё; РјРѕР¶РµС‚ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ СЃСЂР°Р·Сѓ РІ РЅРµСЃРєРѕР»СЊРєРёС… РјРµСЃС‚Р°С…; РёР·РјРµРЅРµРЅРёСЏ СЃС‚РѕРёС‚ РґРµР»Р°С‚СЊ РѕСЃРѕР·РЅР°РЅРЅРѕ.
+// EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
+func (a *App) startup(ctx context.Context) {
+	a.ctx = ctx
+}
+
+// RU: РњРµС‚РѕРґ `Close`.
+// EN: Method `Close`.
+//
+// RU: Р§С‚Рѕ РґРµР»Р°РµС‚: РІС‹РїРѕР»РЅСЏРµС‚ РѕРґРёРЅ РёР· РєР»СЋС‡РµРІС‹С… С€Р°РіРѕРІ backend-Р»РѕРіРёРєРё РІРЅСѓС‚СЂРё РїСЂРёР»РѕР¶РµРЅРёСЏ.
+// EN: What it does: Close releases persistent resources such as the SQLite connection when the app shuts down.
+//
+// RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: РІР°Р¶РµРЅ РґР»СЏ СѓСЃС‚РѕР№С‡РёРІРѕСЃС‚Рё Р»РѕРіРёРєРё; РјРѕР¶РµС‚ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ СЃСЂР°Р·Сѓ РІ РЅРµСЃРєРѕР»СЊРєРёС… РјРµСЃС‚Р°С…; РёР·РјРµРЅРµРЅРёСЏ СЃС‚РѕРёС‚ РґРµР»Р°С‚СЊ РѕСЃРѕР·РЅР°РЅРЅРѕ.
+// EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
+func (a *App) Close() error {
+	if a.db != nil {
+		return a.db.Close()
+	}
+	return nil
+}
+
+// RU: РњРµС‚РѕРґ `initDatabase`.
+// EN: Method `initDatabase`.
+//
+// RU: Р§С‚Рѕ РґРµР»Р°РµС‚: РІС‹РїРѕР»РЅСЏРµС‚ РѕРґРёРЅ РёР· РєР»СЋС‡РµРІС‹С… С€Р°РіРѕРІ backend-Р»РѕРіРёРєРё РІРЅСѓС‚СЂРё РїСЂРёР»РѕР¶РµРЅРёСЏ.
+// EN: What it does: initDatabase creates the schema, runs lightweight migrations and seeds baseline application data.
+//
+// RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: РІР°Р¶РµРЅ РґР»СЏ СѓСЃС‚РѕР№С‡РёРІРѕСЃС‚Рё Р»РѕРіРёРєРё; РјРѕР¶РµС‚ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ СЃСЂР°Р·Сѓ РІ РЅРµСЃРєРѕР»СЊРєРёС… РјРµСЃС‚Р°С…; РёР·РјРµРЅРµРЅРёСЏ СЃС‚РѕРёС‚ РґРµР»Р°С‚СЊ РѕСЃРѕР·РЅР°РЅРЅРѕ.
+// EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
+func (a *App) initDatabase() error {
+	queries := []string{
+		`CREATE TABLE IF NOT EXISTS users (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			username TEXT NOT NULL UNIQUE,
+			password_hash TEXT NOT NULL,
+			role TEXT NOT NULL,
+			created_at TEXT NOT NULL
+		);`,
+		`CREATE TABLE IF NOT EXISTS services (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			code TEXT NOT NULL UNIQUE,
+			name TEXT NOT NULL,
+			unit TEXT NOT NULL,
+			rate INTEGER NOT NULL,
+			category TEXT NOT NULL,
+			allocation_percent REAL,
+			created_by TEXT NOT NULL DEFAULT 'admin',
+			created_at TEXT NOT NULL
+		);`,
+		`CREATE TABLE IF NOT EXISTS calculations (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			title TEXT NOT NULL,
+			target_amount INTEGER NOT NULL,
+			total_amount INTEGER NOT NULL,
+			items_json TEXT NOT NULL,
+			created_at TEXT NOT NULL,
+			created_by TEXT NOT NULL DEFAULT '',
+			created_role TEXT NOT NULL DEFAULT ''
+		);`,
+	}
+	for _, query := range queries {
+		if _, err := a.db.Exec(query); err != nil {
+			return fmt.Errorf("init database: %w", err)
+		}
+	}
+	if err := a.migrateDatabase(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// RU: РњРµС‚РѕРґ `migrateDatabase`.
+// EN: Method `migrateDatabase`.
+//
+// RU: Р§С‚Рѕ РґРµР»Р°РµС‚: РІС‹РїРѕР»РЅСЏРµС‚ РѕРґРёРЅ РёР· РєР»СЋС‡РµРІС‹С… С€Р°РіРѕРІ backend-Р»РѕРіРёРєРё РІРЅСѓС‚СЂРё РїСЂРёР»РѕР¶РµРЅРёСЏ.
+// EN: What it does: migrateDatabase upgrades older SQLite files by adding missing columns required by newer builds.
+//
+// RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: РІР°Р¶РµРЅ РґР»СЏ СѓСЃС‚РѕР№С‡РёРІРѕСЃС‚Рё Р»РѕРіРёРєРё; РјРѕР¶РµС‚ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ СЃСЂР°Р·Сѓ РІ РЅРµСЃРєРѕР»СЊРєРёС… РјРµСЃС‚Р°С…; РёР·РјРµРЅРµРЅРёСЏ СЃС‚РѕРёС‚ РґРµР»Р°С‚СЊ РѕСЃРѕР·РЅР°РЅРЅРѕ.
+// EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
+func (a *App) migrateDatabase() error {
+	if err := ensureColumnExists(a.db, "calculations", "created_by", `ALTER TABLE calculations ADD COLUMN created_by TEXT NOT NULL DEFAULT ''`); err != nil {
+		return fmt.Errorf("migrate calculations.created_by: %w", err)
+	}
+	if err := ensureColumnExists(a.db, "calculations", "created_role", `ALTER TABLE calculations ADD COLUMN created_role TEXT NOT NULL DEFAULT ''`); err != nil {
+		return fmt.Errorf("migrate calculations.created_role: %w", err)
+	}
+	if err := ensureColumnExists(a.db, "services", "created_by", `ALTER TABLE services ADD COLUMN created_by TEXT NOT NULL DEFAULT 'admin'`); err != nil {
+		return fmt.Errorf("migrate services.created_by: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE services SET created_by = 'admin' WHERE created_by = '' OR created_by IS NULL`); err != nil {
+		return fmt.Errorf("backfill services.created_by: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE users SET role = ? WHERE role = 'manager'`, RoleSupportManager); err != nil {
+		return fmt.Errorf("normalize users.manager role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE users SET role = ? WHERE role = 'senior_specialist'`, RoleSupportSeniorSpecialist); err != nil {
+		return fmt.Errorf("normalize users.senior_specialist role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE users SET role = ? WHERE role = 'employee'`, RoleSupportEmployee); err != nil {
+		return fmt.Errorf("normalize users.employee role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE calculations SET created_role = COALESCE((SELECT role FROM users WHERE username = calculations.created_by), created_role, '') WHERE created_role = '' OR created_role IS NULL`); err != nil {
+		return fmt.Errorf("backfill calculations.created_role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE calculations SET created_role = ? WHERE created_role = 'manager'`, RoleSupportManager); err != nil {
+		return fmt.Errorf("normalize calculations.manager role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE calculations SET created_role = ? WHERE created_role = 'senior_specialist'`, RoleSupportSeniorSpecialist); err != nil {
+		return fmt.Errorf("normalize calculations.senior_specialist role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE calculations SET created_role = ? WHERE created_role = 'employee'`, RoleSupportEmployee); err != nil {
+		return fmt.Errorf("normalize calculations.employee role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE users SET role = ? WHERE role = 'support_manager'`, RoleSupportHead); err != nil {
+		return fmt.Errorf("normalize users.support_manager role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE users SET role = ? WHERE role = 'support_senior_specialist'`, RoleSupportSenior); err != nil {
+		return fmt.Errorf("normalize users.support_senior_specialist role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE users SET role = ? WHERE role = 'tech_manager'`, RoleTechnicalHead); err != nil {
+		return fmt.Errorf("normalize users.tech_manager role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE users SET role = ? WHERE role = 'senior_technician'`, RoleTechnicalSenior); err != nil {
+		return fmt.Errorf("normalize users.senior_technician role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE users SET role = ? WHERE role = 'technician'`, RoleTechnicalEmployee); err != nil {
+		return fmt.Errorf("normalize users.technician role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE users SET role = ? WHERE role = 'mrk_manager'`, RoleCommercialSubscriberHead); err != nil {
+		return fmt.Errorf("normalize users.mrk_manager role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE users SET role = ? WHERE role = 'senior_mrk'`, RoleCommercialSeniorMRK); err != nil {
+		return fmt.Errorf("normalize users.senior_mrk role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE users SET role = ? WHERE role = 'mrk_employee'`, RoleCommercialEmployeeMRK); err != nil {
+		return fmt.Errorf("normalize users.mrk_employee role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE calculations SET created_role = ? WHERE created_role = 'support_manager'`, RoleSupportHead); err != nil {
+		return fmt.Errorf("normalize calculations.support_manager role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE calculations SET created_role = ? WHERE created_role = 'support_senior_specialist'`, RoleSupportSenior); err != nil {
+		return fmt.Errorf("normalize calculations.support_senior_specialist role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE calculations SET created_role = ? WHERE created_role = 'tech_manager'`, RoleTechnicalHead); err != nil {
+		return fmt.Errorf("normalize calculations.tech_manager role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE calculations SET created_role = ? WHERE created_role = 'senior_technician'`, RoleTechnicalSenior); err != nil {
+		return fmt.Errorf("normalize calculations.senior_technician role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE calculations SET created_role = ? WHERE created_role = 'technician'`, RoleTechnicalEmployee); err != nil {
+		return fmt.Errorf("normalize calculations.technician role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE calculations SET created_role = ? WHERE created_role = 'mrk_manager'`, RoleCommercialSubscriberHead); err != nil {
+		return fmt.Errorf("normalize calculations.mrk_manager role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE calculations SET created_role = ? WHERE created_role = 'senior_mrk'`, RoleCommercialSeniorMRK); err != nil {
+		return fmt.Errorf("normalize calculations.senior_mrk role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE calculations SET created_role = ? WHERE created_role = 'mrk_employee'`, RoleCommercialEmployeeMRK); err != nil {
+		return fmt.Errorf("normalize calculations.mrk_employee role: %w", err)
+	}
+	return nil
+}
+func ensureColumnExists(db *sql.DB, table string, column string, alterSQL string) error {
+	if !isSafeSQLiteIdentifier(table) {
+		return fmt.Errorf("unsafe table identifier: %s", table)
+	}
+	rows, err := db.Query(fmt.Sprintf("PRAGMA table_info(%s)", table))
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var cid int
+		var name string
+		var dataType string
+		var notNull int
+		var defaultV sql.NullString
+		var primaryKey int
+		if err := rows.Scan(&cid, &name, &dataType, &notNull, &defaultV, &primaryKey); err != nil {
+			return err
+		}
+		if strings.EqualFold(name, column) {
+			return nil
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	_, err = db.Exec(alterSQL)
+	return err
+}
+
+// RU: РњРµС‚РѕРґ `seedDefaultData`.
+// EN: Method `seedDefaultData`.
+//
+// RU: Р§С‚Рѕ РґРµР»Р°РµС‚: РІС‹РїРѕР»РЅСЏРµС‚ РѕРґРёРЅ РёР· РєР»СЋС‡РµРІС‹С… С€Р°РіРѕРІ backend-Р»РѕРіРёРєРё РІРЅСѓС‚СЂРё РїСЂРёР»РѕР¶РµРЅРёСЏ.
+// EN: What it does: seedDefaultData inserts baseline records that every installation expects to exist after startup.
+//
+// RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: РІР°Р¶РµРЅ РґР»СЏ СѓСЃС‚РѕР№С‡РёРІРѕСЃС‚Рё Р»РѕРіРёРєРё; РјРѕР¶РµС‚ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ СЃСЂР°Р·Сѓ РІ РЅРµСЃРєРѕР»СЊРєРёС… РјРµСЃС‚Р°С…; РёР·РјРµРЅРµРЅРёСЏ СЃС‚РѕРёС‚ РґРµР»Р°С‚СЊ РѕСЃРѕР·РЅР°РЅРЅРѕ.
+// EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
+func (a *App) seedDefaultData() error {
+	if err := a.seedAdmin(); err != nil {
+		return err
+	}
+	if err := a.seedTestAdmin(); err != nil {
+		return err
+	}
+	return a.seedServices()
+}
+
+// RU: РњРµС‚РѕРґ `seedAdmin`.
+// EN: Method `seedAdmin`.
+//
+// RU: Р§С‚Рѕ РґРµР»Р°РµС‚: РІС‹РїРѕР»РЅСЏРµС‚ РѕРґРёРЅ РёР· РєР»СЋС‡РµРІС‹С… С€Р°РіРѕРІ backend-Р»РѕРіРёРєРё РІРЅСѓС‚СЂРё РїСЂРёР»РѕР¶РµРЅРёСЏ.
+// EN: What it does: seedAdmin guarantees the protected admin account exists with the expected credentials and role.
+//
+// RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: РІР°Р¶РµРЅ РґР»СЏ СѓСЃС‚РѕР№С‡РёРІРѕСЃС‚Рё Р»РѕРіРёРєРё; РјРѕР¶РµС‚ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ СЃСЂР°Р·Сѓ РІ РЅРµСЃРєРѕР»СЊРєРёС… РјРµСЃС‚Р°С…; РёР·РјРµРЅРµРЅРёСЏ СЃС‚РѕРёС‚ РґРµР»Р°С‚СЊ РѕСЃРѕР·РЅР°РЅРЅРѕ.
+// EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
+func (a *App) seedAdmin() error {
+	var (
+		count int
+		role  string
+	)
+	if err := a.db.QueryRow(`SELECT COUNT(*), COALESCE(MAX(role), '') FROM users WHERE username = 'admin'`).Scan(&count, &role); err != nil {
+		return fmt.Errorf("check admin user: %w", err)
+	}
+	if count == 0 {
+		_, err := a.db.Exec(`INSERT INTO users(username, password_hash, role, created_at) VALUES(?, ?, ?, ?)`, "admin", hashPassword("#@7pcehQCSpR"), RoleAdmin, time.Now().Format(time.RFC3339))
+		if err != nil {
+			return fmt.Errorf("seed admin user: %w", err)
+		}
+		return nil
+	}
+	_, err := a.db.Exec(`UPDATE users SET password_hash = ?, role = ? WHERE username = ?`, hashPassword("#@7pcehQCSpR"), RoleAdmin, "admin")
+	if err != nil {
+		return fmt.Errorf("restore admin user: %w", err)
+	}
+	return nil
+}
+
+// RU: РњРµС‚РѕРґ `seedServices`.
+// EN: Method `seedServices`.
+//
+// RU: Р§С‚Рѕ РґРµР»Р°РµС‚: РІС‹РїРѕР»РЅСЏРµС‚ РѕРґРёРЅ РёР· РєР»СЋС‡РµРІС‹С… С€Р°РіРѕРІ backend-Р»РѕРіРёРєРё РІРЅСѓС‚СЂРё РїСЂРёР»РѕР¶РµРЅРёСЏ.
+// EN: What it does: seedServices populates default admin-owned services for first start and legacy empty databases.
+//
+// RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: РІР°Р¶РµРЅ РґР»СЏ СѓСЃС‚РѕР№С‡РёРІРѕСЃС‚Рё Р»РѕРіРёРєРё; РјРѕР¶РµС‚ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ СЃСЂР°Р·Сѓ РІ РЅРµСЃРєРѕР»СЊРєРёС… РјРµСЃС‚Р°С…; РёР·РјРµРЅРµРЅРёСЏ СЃС‚РѕРёС‚ РґРµР»Р°С‚СЊ РѕСЃРѕР·РЅР°РЅРЅРѕ.
+// EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
+// RU: РњРµС‚РѕРґ `seedTestAdmin`.
+// EN: Method `seedTestAdmin`.
+//
+// RU: Р§С‚Рѕ РґРµР»Р°РµС‚: РіР°СЂР°РЅС‚РёСЂСѓРµС‚ РЅР°Р»РёС‡РёРµ С‚РµСЃС‚РѕРІРѕР№ admin-СѓС‡С‘С‚РєРё РґР»СЏ РїСЂРѕРІРµСЂРєРё РёРЅС‚РµСЂС„РµР№СЃР° Рё СЃС†РµРЅР°СЂРёРµРІ Р°РґРјРёРЅРёСЃС‚СЂРёСЂРѕРІР°РЅРёСЏ.
+// EN: What it does: seedTestAdmin guarantees that a regular admin-role account for UI testing exists with known credentials.
+//
+// RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: СЌС‚Р° СѓС‡С‘С‚РєР° РЅРµ СЏРІР»СЏРµС‚СЃСЏ Р·Р°С‰РёС‰С‘РЅРЅРѕР№; РѕСЃС‚Р°С‘С‚СЃСЏ РІРёРґРёРјРѕР№ РІ СЃРїРёСЃРєР°С… Рё СѓРґР°Р»СЏРµРјРѕР№; Р·Р°С‰РёС‰С‘РЅРЅС‹Рј РѕСЃС‚Р°С‘С‚СЃСЏ С‚РѕР»СЊРєРѕ username `admin`.
+// EN: Key points: this account is not protected; it remains visible in lists and deletable; only the username `admin` stays protected.
+func (a *App) seedTestAdmin() error {
+	var count int
+	if err := a.db.QueryRow(`SELECT COUNT(*) FROM users WHERE username = 'admin1'`).Scan(&count); err != nil {
+		return fmt.Errorf("check test admin user: %w", err)
+	}
+	if count == 0 {
+		_, err := a.db.Exec(`INSERT INTO users(username, password_hash, role, created_at) VALUES(?, ?, ?, ?)`, "admin1", hashPassword("admin1"), RoleAdmin, time.Now().Format(time.RFC3339))
+		if err != nil {
+			return fmt.Errorf("seed test admin user: %w", err)
+		}
+		return nil
+	}
+	_, err := a.db.Exec(`UPDATE users SET password_hash = ?, role = ? WHERE username = ?`, hashPassword("admin1"), RoleAdmin, "admin1")
+	if err != nil {
+		return fmt.Errorf("restore test admin user: %w", err)
+	}
+	return nil
+}
+
+func (a *App) seedServices() error {
+	var count int
+	if err := a.db.QueryRow(`SELECT COUNT(*) FROM services WHERE created_by = 'admin'`).Scan(&count); err != nil {
+		return fmt.Errorf("count services: %w", err)
+	}
+	if count > 0 {
+		return nil
+	}
+
+	defaults := []UpsertServiceRequest{
+		{Name: "РЈРґР°Р»С‘РЅРЅР°СЏ С‚РµС…РЅРёС‡РµСЃРєР°СЏ РїРѕРґРґРµСЂР¶РєР° РєР»РёРµРЅС‚РѕРІ", Unit: "С‡.", Rate: 350, Category: CategoryPrimary},
+		{Name: "РЈРґР°Р»С‘РЅРЅС‹Р№ РјРѕРЅРёС‚РѕСЂРёРЅРі СЃРµС‚Рё", Unit: "С‡.", Rate: 200, Category: CategoryPrimary},
+		{Name: "Р”РёР°РіРЅРѕСЃС‚РёРєР° Рё СѓСЃС‚СЂР°РЅРµРЅРёРµ РІРЅРµС€С‚Р°С‚РЅС‹С… РїСЂРѕР±Р»РµРј РєРѕРјРјСѓС‚Р°С†РёРѕРЅРЅРѕРіРѕ РѕР±РѕСЂСѓРґРѕРІР°РЅРёСЏ", Unit: "С‡.", Rate: 100, Category: CategoryPrimary},
+		{Name: "РЈРґР°Р»С‘РЅРЅР°СЏ РЅР°СЃС‚СЂРѕР№РєР° СЃРµС‚РµРІРѕРіРѕ РѕР±РѕСЂСѓРґРѕРІР°РЅРёСЏ (Eltex MES2124M)", Unit: "С€С‚.", Rate: 505, Category: CategorySecondary},
+		{Name: "РЈРґР°Р»С‘РЅРЅР°СЏ РЅР°СЃС‚СЂРѕР№РєР° СЃРµС‚РµРІРѕРіРѕ РѕР±РѕСЂСѓРґРѕРІР°РЅРёСЏ (TP-Link TL-SG3428X)", Unit: "С€С‚.", Rate: 1015, Category: CategorySecondary},
+		{Name: "РќР°СЃС‚СЂРѕР№РєР° Рё РѕР±СЃР»СѓР¶РёРІР°РЅРёРµ СЃРµС‚РµРІРѕРіРѕ РѕР±РѕСЂСѓРґРѕРІР°РЅРёСЏ (Linksys SPS 224G4)", Unit: "С€С‚.", Rate: 1010, Category: CategorySecondary},
+		{Name: "РќР°СЃС‚СЂРѕР№РєР° VLAN РїРѕ Р·Р°РїСЂРѕСЃСѓ", Unit: "С€С‚.", Rate: 15, Category: CategoryClosing},
+		{Name: "РР·РјРµРЅРµРЅРёРµ РѕРїРёСЃР°РЅРёСЏ РїРѕСЂС‚Р° РЅР° РѕР±РѕСЂСѓРґРѕРІР°РЅРёРё", Unit: "С€С‚.", Rate: 12, Category: CategoryClosing},
+	}
+
+	for _, service := range defaults {
+		if _, err := a.saveServiceForOwner(service, "admin"); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// RU: Р¤СѓРЅРєС†РёСЏ `hashPassword`.
+// EN: Function `hashPassword`.
+//
+// RU: Р§С‚Рѕ РґРµР»Р°РµС‚: РІС‹РїРѕР»РЅСЏРµС‚ РІСЃРїРѕРјРѕРіР°С‚РµР»СЊРЅРѕРµ РїСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёРµ, РїСЂРѕРІРµСЂРєСѓ РёР»Рё РїРѕРґРіРѕС‚РѕРІРєСѓ РґР°РЅРЅС‹С….
+// EN: What it does: hashPassword performs a simple deterministic password hash used by this local desktop application.
+//
+// RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: РІР°Р¶РµРЅ РґР»СЏ СѓСЃС‚РѕР№С‡РёРІРѕСЃС‚Рё Р»РѕРіРёРєРё; РјРѕР¶РµС‚ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ СЃСЂР°Р·Сѓ РІ РЅРµСЃРєРѕР»СЊРєРёС… РјРµСЃС‚Р°С…; РёР·РјРµРЅРµРЅРёСЏ СЃС‚РѕРёС‚ РґРµР»Р°С‚СЊ РѕСЃРѕР·РЅР°РЅРЅРѕ.
+// EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.

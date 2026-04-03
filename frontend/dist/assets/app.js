@@ -871,7 +871,10 @@ function renderUsers() {
     }
     return String(left.username || "").localeCompare(String(right.username || ""), "ru");
   });
-  const roleChoices = roleChoicesForUser(appState.session.user?.role);
+  const viewerRole = normalizeRole(appState.session.user?.role);
+  const isAdminSession = viewerRole === "admin";
+  const canModerateUsers = Boolean(isAdminSession || appState.session.canModerate || appState.session.canManage);
+  const roleChoices = roleChoicesForUser(viewerRole);
 
   userRoleInput.innerHTML = renderRoleOptions(roleChoices, userRoleInput.value);
 
@@ -879,12 +882,12 @@ function renderUsers() {
     userRoleInput.value = roleChoices[0]?.value ?? "";
   }
 
-  createUserButton.disabled = !appState.session.canModerate || roleChoices.length === 0;
-  userUsernameInput.disabled = !appState.session.canModerate || roleChoices.length === 0;
-  userPasswordInput.disabled = !appState.session.canModerate || roleChoices.length === 0;
-  userRoleInput.disabled = !appState.session.canModerate || roleChoices.length === 0;
+  createUserButton.disabled = !canModerateUsers || roleChoices.length === 0;
+  userUsernameInput.disabled = !canModerateUsers || roleChoices.length === 0;
+  userPasswordInput.disabled = !canModerateUsers || roleChoices.length === 0;
+  userRoleInput.disabled = !canModerateUsers || roleChoices.length === 0;
 
-  if (!appState.session.canModerate || roleChoices.length === 0) {
+  if (!canModerateUsers || roleChoices.length === 0) {
     usersList.innerHTML = '<div class="settings-empty">Управление пользователями доступно старшим и руководителям своего отдела, а также администратору.</div>';
     setUserFormMessage("Создавать пользователей можно только внутри своего отдела и своей зоны ответственности.", "muted");
     return;
@@ -896,10 +899,9 @@ function renderUsers() {
   }
 
   usersList.innerHTML = sortedUsers.map((user) => {
-    const viewerRole = normalizeRole(appState.session.user?.role);
-    const canChangeRole = Boolean(appState.session.canAdmin)
+    const canChangeRole = isAdminSession
       || (appState.session.canManage
-        && (viewerRole === "admin" || roleDepartment(viewerRole) === roleDepartment(user.role)));
+        && roleDepartment(viewerRole) === roleDepartment(user.role));
     const canDelete = canDeleteManagedUser(appState.session.user?.role, user.role);
     const canResetPassword = roleCanCreateUsers(appState.session.user?.role) && canDeleteManagedUser(appState.session.user?.role, user.role);
     const roleOptions = renderRoleOptions(roleChoices, user.role);
