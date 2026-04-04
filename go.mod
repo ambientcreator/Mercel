@@ -3,6 +3,7 @@ module statistic
 go 1.26.1
 
 require (
+	github.com/jung-kurt/gofpdf v1.16.2
 	github.com/wailsapp/wails/v2 v2.11.0
 	golang.org/x/crypto v0.33.0
 	modernc.org/sqlite v1.47.0

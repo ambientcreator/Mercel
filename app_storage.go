@@ -320,6 +320,11 @@ func (a *App) initDatabase() error {
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			username TEXT NOT NULL UNIQUE,
 			password_hash TEXT NOT NULL,
+			full_name TEXT NOT NULL DEFAULT '',
+			last_act_number INTEGER NOT NULL DEFAULT 1,
+			contract_spbks_number TEXT NOT NULL DEFAULT '',
+			contract_grizabl_number TEXT NOT NULL DEFAULT '',
+			contract_signed_at TEXT NOT NULL DEFAULT '',
 			role TEXT NOT NULL,
 			created_at TEXT NOT NULL
 		);`,
@@ -365,6 +370,21 @@ func (a *App) initDatabase() error {
 // RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: РІР°Р¶РµРЅ РґР»СЏ СѓСЃС‚РѕР№С‡РёРІРѕСЃС‚Рё Р»РѕРіРёРєРё; РјРѕР¶РµС‚ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ СЃСЂР°Р·Сѓ РІ РЅРµСЃРєРѕР»СЊРєРёС… РјРµСЃС‚Р°С…; РёР·РјРµРЅРµРЅРёСЏ СЃС‚РѕРёС‚ РґРµР»Р°С‚СЊ РѕСЃРѕР·РЅР°РЅРЅРѕ.
 // EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
 func (a *App) migrateDatabase() error {
+	if err := ensureColumnExists(a.db, "users", "full_name", `ALTER TABLE users ADD COLUMN full_name TEXT NOT NULL DEFAULT ''`); err != nil {
+		return fmt.Errorf("migrate users.full_name: %w", err)
+	}
+	if err := ensureColumnExists(a.db, "users", "last_act_number", `ALTER TABLE users ADD COLUMN last_act_number INTEGER NOT NULL DEFAULT 1`); err != nil {
+		return fmt.Errorf("migrate users.last_act_number: %w", err)
+	}
+	if err := ensureColumnExists(a.db, "users", "contract_spbks_number", `ALTER TABLE users ADD COLUMN contract_spbks_number TEXT NOT NULL DEFAULT ''`); err != nil {
+		return fmt.Errorf("migrate users.contract_spbks_number: %w", err)
+	}
+	if err := ensureColumnExists(a.db, "users", "contract_grizabl_number", `ALTER TABLE users ADD COLUMN contract_grizabl_number TEXT NOT NULL DEFAULT ''`); err != nil {
+		return fmt.Errorf("migrate users.contract_grizabl_number: %w", err)
+	}
+	if err := ensureColumnExists(a.db, "users", "contract_signed_at", `ALTER TABLE users ADD COLUMN contract_signed_at TEXT NOT NULL DEFAULT ''`); err != nil {
+		return fmt.Errorf("migrate users.contract_signed_at: %w", err)
+	}
 	if err := ensureColumnExists(a.db, "calculations", "created_by", `ALTER TABLE calculations ADD COLUMN created_by TEXT NOT NULL DEFAULT ''`); err != nil {
 		return fmt.Errorf("migrate calculations.created_by: %w", err)
 	}
@@ -421,6 +441,9 @@ func (a *App) migrateDatabase() error {
 	}
 	if _, err := a.db.Exec(`UPDATE users SET role = ? WHERE role = 'mrk_employee'`, RoleCommercialEmployeeMRK); err != nil {
 		return fmt.Errorf("normalize users.mrk_employee role: %w", err)
+	}
+	if _, err := a.db.Exec(`UPDATE users SET last_act_number = 1 WHERE last_act_number IS NULL OR last_act_number <= 0`); err != nil {
+		return fmt.Errorf("backfill users.last_act_number: %w", err)
 	}
 	if _, err := a.db.Exec(`UPDATE calculations SET created_role = ? WHERE created_role = 'support_manager'`, RoleSupportHead); err != nil {
 		return fmt.Errorf("normalize calculations.support_manager role: %w", err)
@@ -514,7 +537,7 @@ func (a *App) seedAdmin() error {
 		return fmt.Errorf("check admin user: %w", err)
 	}
 	if count == 0 {
-		_, err := a.db.Exec(`INSERT INTO users(username, password_hash, role, created_at) VALUES(?, ?, ?, ?)`, "admin", hashPassword("#@7pcehQCSpR"), RoleAdmin, time.Now().Format(time.RFC3339))
+		_, err := a.db.Exec(`INSERT INTO users(username, password_hash, full_name, last_act_number, role, created_at) VALUES(?, ?, ?, ?, ?, ?)`, "admin", hashPassword("#@7pcehQCSpR"), "", 1, RoleAdmin, time.Now().Format(time.RFC3339))
 		if err != nil {
 			return fmt.Errorf("seed admin user: %w", err)
 		}
@@ -549,7 +572,7 @@ func (a *App) seedTestAdmin() error {
 		return fmt.Errorf("check test admin user: %w", err)
 	}
 	if count == 0 {
-		_, err := a.db.Exec(`INSERT INTO users(username, password_hash, role, created_at) VALUES(?, ?, ?, ?)`, "admin1", hashPassword("admin1"), RoleAdmin, time.Now().Format(time.RFC3339))
+		_, err := a.db.Exec(`INSERT INTO users(username, password_hash, full_name, last_act_number, role, created_at) VALUES(?, ?, ?, ?, ?, ?)`, "admin1", hashPassword("admin1"), "", 1, RoleAdmin, time.Now().Format(time.RFC3339))
 		if err != nil {
 			return fmt.Errorf("seed test admin user: %w", err)
 		}
@@ -572,14 +595,14 @@ func (a *App) seedServices() error {
 	}
 
 	defaults := []UpsertServiceRequest{
-		{Name: "РЈРґР°Р»С‘РЅРЅР°СЏ С‚РµС…РЅРёС‡РµСЃРєР°СЏ РїРѕРґРґРµСЂР¶РєР° РєР»РёРµРЅС‚РѕРІ", Unit: "С‡.", Rate: 350, Category: CategoryPrimary},
-		{Name: "РЈРґР°Р»С‘РЅРЅС‹Р№ РјРѕРЅРёС‚РѕСЂРёРЅРі СЃРµС‚Рё", Unit: "С‡.", Rate: 200, Category: CategoryPrimary},
-		{Name: "Р”РёР°РіРЅРѕСЃС‚РёРєР° Рё СѓСЃС‚СЂР°РЅРµРЅРёРµ РІРЅРµС€С‚Р°С‚РЅС‹С… РїСЂРѕР±Р»РµРј РєРѕРјРјСѓС‚Р°С†РёРѕРЅРЅРѕРіРѕ РѕР±РѕСЂСѓРґРѕРІР°РЅРёСЏ", Unit: "С‡.", Rate: 100, Category: CategoryPrimary},
-		{Name: "РЈРґР°Р»С‘РЅРЅР°СЏ РЅР°СЃС‚СЂРѕР№РєР° СЃРµС‚РµРІРѕРіРѕ РѕР±РѕСЂСѓРґРѕРІР°РЅРёСЏ (Eltex MES2124M)", Unit: "С€С‚.", Rate: 505, Category: CategorySecondary},
-		{Name: "РЈРґР°Р»С‘РЅРЅР°СЏ РЅР°СЃС‚СЂРѕР№РєР° СЃРµС‚РµРІРѕРіРѕ РѕР±РѕСЂСѓРґРѕРІР°РЅРёСЏ (TP-Link TL-SG3428X)", Unit: "С€С‚.", Rate: 1015, Category: CategorySecondary},
-		{Name: "РќР°СЃС‚СЂРѕР№РєР° Рё РѕР±СЃР»СѓР¶РёРІР°РЅРёРµ СЃРµС‚РµРІРѕРіРѕ РѕР±РѕСЂСѓРґРѕРІР°РЅРёСЏ (Linksys SPS 224G4)", Unit: "С€С‚.", Rate: 1010, Category: CategorySecondary},
-		{Name: "РќР°СЃС‚СЂРѕР№РєР° VLAN РїРѕ Р·Р°РїСЂРѕСЃСѓ", Unit: "С€С‚.", Rate: 15, Category: CategoryClosing},
-		{Name: "РР·РјРµРЅРµРЅРёРµ РѕРїРёСЃР°РЅРёСЏ РїРѕСЂС‚Р° РЅР° РѕР±РѕСЂСѓРґРѕРІР°РЅРёРё", Unit: "С€С‚.", Rate: 12, Category: CategoryClosing},
+		{Name: "\u0423\u0434\u0430\u043b\u0451\u043d\u043d\u0430\u044f \u0442\u0435\u0445\u043d\u0438\u0447\u0435\u0441\u043a\u0430\u044f \u043f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0430 \u043a\u043b\u0438\u0435\u043d\u0442\u043e\u0432", Unit: "\u0447.", Rate: 350, Category: CategoryPrimary},
+		{Name: "\u0423\u0434\u0430\u043b\u0451\u043d\u043d\u044b\u0439 \u043c\u043e\u043d\u0438\u0442\u043e\u0440\u0438\u043d\u0433 \u0441\u0435\u0442\u0438", Unit: "\u0447.", Rate: 200, Category: CategoryPrimary},
+		{Name: "\u0414\u0438\u0430\u0433\u043d\u043e\u0441\u0442\u0438\u043a\u0430 \u0438 \u0443\u0441\u0442\u0440\u0430\u043d\u0435\u043d\u0438\u0435 \u0432\u043d\u0435\u0448\u0442\u0430\u0442\u043d\u044b\u0445 \u043f\u0440\u043e\u0431\u043b\u0435\u043c \u043a\u043e\u043c\u043c\u0443\u0442\u0430\u0446\u0438\u043e\u043d\u043d\u043e\u0433\u043e \u043e\u0431\u043e\u0440\u0443\u0434\u043e\u0432\u0430\u043d\u0438\u044f", Unit: "\u0447.", Rate: 100, Category: CategoryPrimary},
+		{Name: "\u0423\u0434\u0430\u043b\u0451\u043d\u043d\u0430\u044f \u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0430 \u0441\u0435\u0442\u0435\u0432\u043e\u0433\u043e \u043e\u0431\u043e\u0440\u0443\u0434\u043e\u0432\u0430\u043d\u0438\u044f (Eltex MES2124M)", Unit: "\u0448\u0442.", Rate: 505, Category: CategorySecondary},
+		{Name: "\u0423\u0434\u0430\u043b\u0451\u043d\u043d\u0430\u044f \u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0430 \u0441\u0435\u0442\u0435\u0432\u043e\u0433\u043e \u043e\u0431\u043e\u0440\u0443\u0434\u043e\u0432\u0430\u043d\u0438\u044f (TP-Link TL-SG3428X)", Unit: "\u0448\u0442.", Rate: 1015, Category: CategorySecondary},
+		{Name: "\u041d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0430 \u0438 \u043e\u0431\u0441\u043b\u0443\u0436\u0438\u0432\u0430\u043d\u0438\u0435 \u0441\u0435\u0442\u0435\u0432\u043e\u0433\u043e \u043e\u0431\u043e\u0440\u0443\u0434\u043e\u0432\u0430\u043d\u0438\u044f (Linksys SPS 224G4)", Unit: "\u0448\u0442.", Rate: 1010, Category: CategorySecondary},
+		{Name: "\u041d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0430 VLAN \u043f\u043e \u0437\u0430\u043f\u0440\u043e\u0441\u0443", Unit: "\u0448\u0442.", Rate: 15, Category: CategoryClosing},
+		{Name: "\u0418\u0437\u043c\u0435\u043d\u0435\u043d\u0438\u0435 \u043e\u043f\u0438\u0441\u0430\u043d\u0438\u044f \u043f\u043e\u0440\u0442\u0430 \u043d\u0430 \u043e\u0431\u043e\u0440\u0443\u0434\u043e\u0432\u0430\u043d\u0438\u0438", Unit: "\u0448\u0442.", Rate: 12, Category: CategoryClosing},
 	}
 
 	for _, service := range defaults {

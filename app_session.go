@@ -133,7 +133,8 @@ func (a *App) Login(req LoginRequest) (SessionState, error) {
 
 	var user User
 	var passwordHash string
-	err := a.db.QueryRow(`SELECT id, username, password_hash, role, created_at FROM users WHERE username = ?`, username).Scan(&user.ID, &user.Username, &passwordHash, &user.Role, &user.CreatedAt)
+	err := a.db.QueryRow(`SELECT id, username, password_hash, full_name, last_act_number, contract_spbks_number, contract_grizabl_number, contract_signed_at, role, created_at FROM users WHERE username = ?`, username).
+		Scan(&user.ID, &user.Username, &passwordHash, &user.FullName, &user.LastActNumber, &user.ContractSPBKSNumber, &user.ContractGrizablNumber, &user.ContractSignedAt, &user.Role, &user.CreatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return SessionState{}, errors.New("РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ РЅРµ РЅР°Р№РґРµРЅ.")

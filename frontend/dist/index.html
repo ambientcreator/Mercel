@@ -64,13 +64,22 @@
             </label>
 
             <label class="field">
-              <span>&#1044;&#1072;&#1090;&#1072; &#1089;&#1086;&#1093;&#1088;&#1072;&#1085;&#1077;&#1085;&#1080;&#1103;</span>
+              <span>Дата расчёта</span>
               <input id="archive-date-input" type="text" readonly />
             </label>
 
-            <div class="actions">
+            <input id="act-number-input" type="hidden" value="1" />
+            <input id="employee-full-name-input" type="hidden" />
+            <input id="contract-code-input" type="hidden" value="1" />
+            <input id="contract-spbks-number-input" type="hidden" />
+            <input id="contract-grizabl-number-input" type="hidden" />
+            <input id="contract-date-input" type="hidden" />
+
+            <div class="compact-actions">
               <button id="calculate-button" class="primary">&#1056;&#1072;&#1089;&#1089;&#1095;&#1080;&#1090;&#1072;&#1090;&#1100;</button>
+              <button id="contract-details-button" type="button" class="secondary">&#1059;&#1082;&#1072;&#1079;&#1072;&#1090;&#1100; &#1076;&#1086;&#1075;&#1086;&#1074;&#1086;&#1088;</button>
             </div>
+            <div id="contract-details-summary" class="message muted compact-note">&#1044;&#1083;&#1103; &#1074;&#1099;&#1075;&#1088;&#1091;&#1079;&#1082;&#1080; &#1072;&#1082;&#1090;&#1072; &#1091;&#1082;&#1072;&#1078;&#1080;&#1090;&#1077; &#1085;&#1086;&#1084;&#1077;&#1088; &#1076;&#1086;&#1075;&#1086;&#1074;&#1086;&#1088;&#1072;, &#1076;&#1072;&#1090;&#1091; &#1087;&#1086;&#1076;&#1087;&#1080;&#1089;&#1072;&#1085;&#1080;&#1103; &#1080; &#1074;&#1072;&#1096;&#1077; &#1060;&#1048;&#1054;.</div>
             <div id="message" class="message muted">Введите сумму и задайте веса для нужных услуг.</div>
 
             <div class="summary-grid">
@@ -103,11 +112,8 @@
                 <h2>Структура расчёта</h2>
               </div>
               <div class="result-head-actions">
-
                 <button id="randomize-button" type="button" class="ghost-button randomize-button">Рандомизировать расчёт</button>
-
-                <div id="result-total" class="total-pill">0 ?</div>
-
+                <div id="result-total" class="total-pill">0 р</div>
               </div>
             </div>
 
@@ -128,6 +134,14 @@
                   <tr><td colspan="7" class="placeholder">Результаты появятся здесь после расчёта.</td></tr>
                 </tbody>
               </table>
+            </div>
+            <div class="result-actions">
+              <label class="act-number-control">
+                <span>&#1053;&#1086;&#1084;&#1077;&#1088; &#1072;&#1082;&#1090;&#1072;</span>
+                <input id="act-number-visible-input" type="number" min="1" step="1" value="1" disabled />
+              </label>
+              <div id="previous-act-number" class="act-number-meta">&#1053;&#1086;&#1084;&#1077;&#1088; &#1087;&#1088;&#1077;&#1076;. &#1072;&#1082;&#1090;&#1072;: &#8212;</div>
+              <button id="download-pdf-button" type="button" class="secondary" disabled>&#1057;&#1082;&#1072;&#1095;&#1072;&#1090;&#1100; &#1072;&#1082;&#1090; PDF</button>
             </div>
           </section>
         </main>
@@ -259,50 +273,72 @@
                 </label>
                 <label class="field">
                   <span>Роль</span>
-                  <select id="user-role" class="input-select">
-                    <option value="employee">Специалист Тех. Поддержки</option>
-                    <option value="senior_specialist">Старший специалист ТП</option>
-                    <option value="manager">Руководитель</option>
-                  </select>
+                  <select id="user-role" class="input-select"></select>
                 </label>
                 <div class="actions">
                   <button id="create-user-button" type="button" class="primary">Создать пользователя</button>
                 </div>
-                <div id="user-form-message" class="message muted">Создавать пользователей могут старший специалист ТП, руководитель и администратор. Доступные роли зависят от текущего уровня доступа.</div>
+                <div id="user-form-message" class="message muted">Пользователи отображаются и создаются только в пределах вашего отдела и уровня доступа.</div>
               </div>
             </div>
           </section>
         </section>
       </section>
+    </div>    <div id="contract-modal" class="confirm-modal hidden" aria-hidden="true">
+      <div id="contract-backdrop" class="confirm-backdrop"></div>
+      <section class="confirm-dialog contract-dialog glass" role="dialog" aria-modal="true" aria-labelledby="contract-title">
+        <div class="panel-kicker">&#1044;&#1072;&#1085;&#1085;&#1099;&#1077; &#1076;&#1083;&#1103; &#1072;&#1082;&#1090;&#1072;</div>
+        <h3 id="contract-title">&#1059;&#1082;&#1072;&#1079;&#1072;&#1090;&#1100; &#1076;&#1086;&#1075;&#1086;&#1074;&#1086;&#1088;</h3>
+        <p class="confirm-text">&#1069;&#1090;&#1080; &#1076;&#1072;&#1085;&#1085;&#1099;&#1077; &#1085;&#1091;&#1078;&#1085;&#1099; &#1076;&#1083;&#1103; &#1074;&#1099;&#1075;&#1088;&#1091;&#1079;&#1082;&#1080; &#1072;&#1082;&#1090;&#1072; &#1087;&#1088;&#1080;&#1105;&#1084;&#1072;-&#1089;&#1076;&#1072;&#1095;&#1080; &#1086;&#1082;&#1072;&#1079;&#1072;&#1085;&#1085;&#1099;&#1093; &#1091;&#1089;&#1083;&#1091;&#1075;. &#1044;&#1072;&#1085;&#1085;&#1099;&#1077; &#1089;&#1086;&#1093;&#1088;&#1072;&#1085;&#1103;&#1102;&#1090;&#1089;&#1103;, &#1087;&#1086;&#1101;&#1090;&#1086;&#1084;&#1091; &#1080;&#1093; &#1084;&#1086;&#1078;&#1085;&#1086; &#1088;&#1077;&#1076;&#1072;&#1082;&#1090;&#1080;&#1088;&#1086;&#1074;&#1072;&#1090;&#1100; &#1087;&#1086;&#1079;&#1078;&#1077;.</p>
+        <div class="contract-choice-grid">
+          <label class="field contract-choice-card">
+            <span>&#171;&#1057;&#1072;&#1085;&#1082;&#1090;-&#1055;&#1077;&#1090;&#1077;&#1088;&#1073;&#1091;&#1088;&#1075;&#1089;&#1082;&#1080;&#1077; &#1082;&#1086;&#1084;&#1087;&#1100;&#1102;&#1090;&#1077;&#1088;&#1085;&#1099;&#1077; &#1089;&#1077;&#1090;&#1080;&#187;</span>
+            <input id="contract-modal-spbks-number-input" type="text" placeholder="&#1059;&#1082;&#1072;&#1078;&#1080;&#1090;&#1077; &#1085;&#1086;&#1084;&#1077;&#1088; &#1076;&#1086;&#1075;&#1086;&#1074;&#1086;&#1088;&#1072;" />
+            <label class="radio-inline">
+              <input id="contract-modal-code-spbks" type="radio" name="contract-company" value="1" checked />
+              <span>&#1048;&#1089;&#1087;&#1086;&#1083;&#1100;&#1079;&#1086;&#1074;&#1072;&#1090;&#1100; &#1101;&#1090;&#1086;&#1090; &#1076;&#1086;&#1075;&#1086;&#1074;&#1086;&#1088;</span>
+            </label>
+          </label>
+          <label class="field contract-choice-card">
+            <span>&#171;&#1043;&#1088;&#1080;&#1079;&#1072;&#1073;&#1083;&#1100;&#187;</span>
+            <input id="contract-modal-grizabl-number-input" type="text" placeholder="&#1059;&#1082;&#1072;&#1078;&#1080;&#1090;&#1077; &#1085;&#1086;&#1084;&#1077;&#1088; &#1076;&#1086;&#1075;&#1086;&#1074;&#1086;&#1088;&#1072;" />
+            <label class="radio-inline">
+              <input id="contract-modal-code-grizabl" type="radio" name="contract-company" value="2" />
+              <span>&#1048;&#1089;&#1087;&#1086;&#1083;&#1100;&#1079;&#1086;&#1074;&#1072;&#1090;&#1100; &#1101;&#1090;&#1086;&#1090; &#1076;&#1086;&#1075;&#1086;&#1074;&#1086;&#1088;</span>
+            </label>
+          </label>
+        </div>
+        <label class="field">
+          <span>&#1059;&#1082;&#1072;&#1078;&#1080;&#1090;&#1077; &#1076;&#1072;&#1090;&#1091; &#1087;&#1086;&#1076;&#1087;&#1080;&#1089;&#1072;&#1085;&#1080;&#1103; &#1076;&#1086;&#1075;&#1086;&#1074;&#1086;&#1088;&#1072;</span>
+          <input id="contract-modal-date-input" type="date" />
+        </label>
+        <label class="field">
+          <span>&#1059;&#1082;&#1072;&#1078;&#1080;&#1090;&#1077; &#1074;&#1072;&#1096;&#1077; &#1060;&#1048;&#1054;</span>
+          <input id="contract-modal-fullname-input" type="text" placeholder="&#1042;&#1074;&#1077;&#1076;&#1080;&#1090;&#1077; &#1074;&#1072;&#1096;&#1077; &#1060;&#1048;&#1054; &#1087;&#1086;&#1083;&#1085;&#1086;&#1089;&#1090;&#1100;&#1102;" />
+        </label>
+        <div class="confirm-actions">
+          <button id="contract-cancel" type="button" class="secondary">&#1054;&#1090;&#1084;&#1077;&#1085;&#1072;</button>
+          <button id="contract-save" type="button" class="primary">&#1057;&#1086;&#1093;&#1088;&#1072;&#1085;&#1080;&#1090;&#1100; &#1076;&#1072;&#1085;&#1085;&#1099;&#1077;</button>
+        </div>
+      </section>
     </div>
 
-      <div id="confirm-modal" class="confirm-modal hidden" aria-hidden="true">
-        <div id="confirm-backdrop" class="confirm-backdrop"></div>
-
-        <section class="confirm-dialog glass" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
-
-          <div class="panel-kicker">Подтверждение</div>
-
-          <h3 id="confirm-title">Подтвердите удаление</h3>
-
-          <p id="confirm-text" class="confirm-text">Вы действительно хотите удалить этот элемент?</p>
-
-          <div class="confirm-actions">
-
-            <button id="confirm-cancel" type="button" class="secondary">Отмена</button>
-
-            <button id="confirm-submit" type="button" class="danger-button">Удалить</button>
-
-          </div>
-
-        </section>
-      </div>
+    <div id="confirm-modal" class="confirm-modal hidden" aria-hidden="true">
+      <div id="confirm-backdrop" class="confirm-backdrop"></div>
+      <section class="confirm-dialog glass" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+        <div class="panel-kicker">Подтверждение</div>
+        <h3 id="confirm-title">Подтвердите удаление</h3>
+        <p id="confirm-text" class="confirm-text">Вы действительно хотите удалить этот элемент?</p>
+        <div class="confirm-actions">
+          <button id="confirm-cancel" type="button" class="secondary">Отмена</button>
+          <button id="confirm-submit" type="button" class="danger-button">Удалить</button>
+        </div>
+      </section>
+    </div>
 
     <script src="./assets/app.js"></script>
   </body>
 </html>
-
-
 
 
 

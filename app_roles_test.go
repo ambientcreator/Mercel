@@ -110,6 +110,40 @@ func TestResetUserPasswordRejectsEmptyPassword(t *testing.T) {
 	}
 }
 
+func TestUpdateOwnLastActNumberPersistsInSessionAndDatabase(t *testing.T) {
+	app := withTempDB(t)
+	loginAsAdmin1(t, app)
+
+	current, err := app.requireAuth()
+	if err != nil {
+		t.Fatalf("requireAuth() error = %v", err)
+	}
+
+	updated, err := app.UpdateUserLastActNumber(UpdateUserLastActNumberRequest{
+		UserID:        current.ID,
+		LastActNumber: 12,
+	})
+	if err != nil {
+		t.Fatalf("UpdateUserLastActNumber() error = %v", err)
+	}
+	if updated.LastActNumber != 12 {
+		t.Fatalf("updated.LastActNumber = %d, want 12", updated.LastActNumber)
+	}
+
+	session := app.GetSession()
+	if session.User == nil || session.User.LastActNumber != 12 {
+		t.Fatalf("session user last act number = %+v, want 12", session.User)
+	}
+
+	stored, err := app.getUserByID(current.ID)
+	if err != nil {
+		t.Fatalf("getUserByID() error = %v", err)
+	}
+	if stored.LastActNumber != 12 {
+		t.Fatalf("stored.LastActNumber = %d, want 12", stored.LastActNumber)
+	}
+}
+
 func TestCreateUserRejectsUnsafeUsername(t *testing.T) {
 	app := withTempDB(t)
 	loginAsAdmin(t, app)

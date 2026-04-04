@@ -10,6 +10,14 @@
   weights: {},
   editingServiceId: 0,
   defaultGroupPercent: { primary: 0.79, secondary: 0.2, closing: 0.01 },
+  exportDraft: {
+    actNumber: 1,
+    employeeFullName: "",
+    contractCode: "1",
+    contractSpbksNumber: "",
+    contractGrizablNumber: "",
+    contractDate: "",
+  },
 };
 
 const api = window.go?.main?.App;
@@ -26,9 +34,23 @@ const logoutButton = document.getElementById("logout-button");
 const settingsTabButton = document.getElementById("settings-tab-button");
 const amountInput = document.getElementById("amount-input");
 const archiveDateInput = document.getElementById("archive-date-input");
+const actNumberInput = document.getElementById("act-number-input");
+const employeeFullNameInput = document.getElementById("employee-full-name-input");
+const contractCodeInput = document.getElementById("contract-code-input");
+
+const contractSPBKSNumberInput = document.getElementById("contract-spbks-number-input");
+
+const contractGrizablNumberInput = document.getElementById("contract-grizabl-number-input");
+const contractDateInput = document.getElementById("contract-date-input");
+const contractDetailsButton = document.getElementById("contract-details-button");
+const contractDetailsSummary = document.getElementById("contract-details-summary");
+const saveOwnFullNameButton = document.getElementById("save-own-fullname-button");
 const calculateButton = document.getElementById("calculate-button");
 const resetWeightsButton = document.getElementById("reset-weights-button");
 const deleteArchiveButton = document.getElementById("delete-archive-button");
+const downloadPdfButton = document.getElementById("download-pdf-button");
+const actNumberVisibleInput = document.getElementById("act-number-visible-input");
+const previousActNumber = document.getElementById("previous-act-number");
 const copyArchiveServicesButton = document.getElementById("copy-archive-services-button");
 const messageNode = document.getElementById("message");
 const resultBody = document.getElementById("result-body");
@@ -76,8 +98,39 @@ const confirmTitle = document.getElementById("confirm-title");
 const confirmText = document.getElementById("confirm-text");
 const confirmCancel = document.getElementById("confirm-cancel");
 const confirmSubmit = document.getElementById("confirm-submit");
+const contractModal = document.getElementById("contract-modal");
+const contractBackdrop = document.getElementById("contract-backdrop");
+const contractCancel = document.getElementById("contract-cancel");
+const contractSave = document.getElementById("contract-save");
+const contractModalSPBKSNumberInput = document.getElementById("contract-modal-spbks-number-input");
+const contractModalGrizablNumberInput = document.getElementById("contract-modal-grizabl-number-input");
+const contractModalCodeSPBKS = document.getElementById("contract-modal-code-spbks");
+const contractModalCodeGrizabl = document.getElementById("contract-modal-code-grizabl");
+const contractModalDateInput = document.getElementById("contract-modal-date-input");
+const contractModalFullNameInput = document.getElementById("contract-modal-fullname-input");
 
 let confirmResolver = null;
+
+function renderActNumberControls() {
+  const actNumber = clampPositiveInteger(appState.exportDraft.actNumber, appState.session?.user?.lastActNumber ?? 1);
+  appState.exportDraft.actNumber = actNumber;
+  if (actNumberVisibleInput) {
+    actNumberVisibleInput.value = String(actNumber);
+    actNumberVisibleInput.disabled = !appState.session?.authenticated;
+  }
+  if (previousActNumber) {
+    previousActNumber.textContent = `\u041d\u043e\u043c\u0435\u0440 \u043f\u0440\u0435\u0434. \u0430\u043a\u0442\u0430: ${actNumber > 1 ? actNumber - 1 : "\u2014"}`;
+  }
+}
+
+function clampPositiveInteger(value, fallback = 1) {
+  const normalized = Number(value);
+  if (Number.isInteger(normalized) && normalized > 0) {
+    return normalized;
+  }
+  const safeFallback = Number(fallback);
+  return Number.isInteger(safeFallback) && safeFallback > 0 ? safeFallback : 1;
+}
 
 function formatMoney(value) {
   return `${new Intl.NumberFormat("ru-RU").format(value)} р`;
@@ -127,6 +180,317 @@ function syncArchiveDateInput() {
   if (archiveDateInput) {
     archiveDateInput.value = formatArchiveTitle(new Date());
   }
+}
+
+async function persistActNumber() {
+  const currentUser = appState.session?.user;
+  if (!currentUser?.id) {
+    return;
+  }
+
+  const nextValue = clampPositiveInteger(actNumberVisibleInput?.value, appState.exportDraft.actNumber || 1);
+  appState.exportDraft.actNumber = nextValue;
+  updateHiddenExportInputs();
+
+  if (currentUser.lastActNumber === nextValue) {
+    return;
+  }
+
+  try {
+    const updated = await api.UpdateUserLastActNumber({
+      userID: currentUser.id,
+      lastActNumber: nextValue,
+    });
+    if (updated && appState.session?.user?.id === updated.id) {
+      appState.session.user = { ...appState.session.user, ...updated };
+      appState.exportDraft.actNumber = clampPositiveInteger(updated.lastActNumber, nextValue);
+      updateHiddenExportInputs();
+    }
+  } catch (error) {
+    setMessage(error, "error");
+  }
+}
+
+function updateHiddenExportInputs() {
+
+  if (actNumberInput) {
+
+    actNumberInput.value = String(appState.exportDraft.actNumber || 1);
+
+  }
+
+  if (employeeFullNameInput) {
+
+    employeeFullNameInput.value = appState.exportDraft.employeeFullName || "";
+
+  }
+
+  if (contractCodeInput) {
+
+    contractCodeInput.value = appState.exportDraft.contractCode || "1";
+
+  }
+
+  if (contractSPBKSNumberInput) {
+
+    contractSPBKSNumberInput.value = appState.exportDraft.contractSpbksNumber || "";
+
+  }
+
+  if (contractGrizablNumberInput) {
+
+    contractGrizablNumberInput.value = appState.exportDraft.contractGrizablNumber || "";
+
+  }
+
+  if (contractDateInput) {
+
+    contractDateInput.value = appState.exportDraft.contractDate || "";
+
+  }
+
+  renderActNumberControls();
+}
+
+function contractTemplateLabel(code) {
+
+  return code === "2" ? "«Гризабль»" : "«Санкт-Петербургские компьютерные сети»";
+
+}
+
+
+
+function getSelectedContractNumber() {
+
+  return appState.exportDraft.contractCode === "2"
+
+    ? String(appState.exportDraft.contractGrizablNumber || "").trim()
+
+    : String(appState.exportDraft.contractSpbksNumber || "").trim();
+
+}
+
+
+
+function renderContractDetailsSummary() {
+
+  if (!contractDetailsSummary) {
+
+    return;
+
+  }
+
+  const fullName = String(appState.exportDraft.employeeFullName || "").trim();
+
+  const contractDate = String(appState.exportDraft.contractDate || "").trim();
+
+  const selectedNumber = getSelectedContractNumber();
+
+  if (!selectedNumber || !contractDate || !fullName) {
+
+    contractDetailsSummary.textContent = "Для выгрузки акта укажите номер договора, дату подписания и ваше ФИО.";
+
+    contractDetailsSummary.className = "message muted compact-note";
+
+    return;
+
+  }
+
+  contractDetailsSummary.textContent = `Выбран договор: ${contractTemplateLabel(appState.exportDraft.contractCode)} №${selectedNumber} от ${formatArchiveTitle(new Date(contractDate))}. ФИО: ${fullName}.`;
+
+  contractDetailsSummary.className = "message success compact-note";
+
+}
+
+function syncExportFields() {
+
+  const sessionUser = appState.session?.user;
+
+  appState.exportDraft.actNumber = clampPositiveInteger(sessionUser?.lastActNumber, appState.exportDraft.actNumber || 1);
+
+  const currentFullName = String(sessionUser?.fullName ?? "").trim();
+
+  if (!String(appState.exportDraft.employeeFullName || "").trim() && currentFullName) {
+
+    appState.exportDraft.employeeFullName = currentFullName;
+
+  }
+
+  if (!String(appState.exportDraft.contractSpbksNumber || "").trim()) {
+
+    appState.exportDraft.contractSpbksNumber = String(sessionUser?.contractSPBKSNumber ?? "").trim();
+
+  }
+
+  if (!String(appState.exportDraft.contractGrizablNumber || "").trim()) {
+
+    appState.exportDraft.contractGrizablNumber = String(sessionUser?.contractGrizablNumber ?? "").trim();
+
+  }
+
+  if (!String(appState.exportDraft.contractDate || "").trim()) {
+
+    appState.exportDraft.contractDate = String(sessionUser?.contractSignedAt ?? "").trim() || new Date().toISOString().slice(0, 10);
+
+  }
+
+  if (!["1", "2"].includes(String(appState.exportDraft.contractCode || ""))) {
+
+    appState.exportDraft.contractCode = "1";
+
+  }
+
+  updateHiddenExportInputs();
+
+  renderContractDetailsSummary();
+
+}
+
+function openContractModal() {
+
+  if (contractModalSPBKSNumberInput) {
+
+    contractModalSPBKSNumberInput.value = appState.exportDraft.contractSpbksNumber || "";
+
+  }
+
+  if (contractModalGrizablNumberInput) {
+
+    contractModalGrizablNumberInput.value = appState.exportDraft.contractGrizablNumber || "";
+
+  }
+
+  if (contractModalDateInput) {
+
+    contractModalDateInput.value = appState.exportDraft.contractDate || new Date().toISOString().slice(0, 10);
+
+  }
+
+  if (contractModalFullNameInput) {
+
+    contractModalFullNameInput.value = appState.exportDraft.employeeFullName || appState.session?.user?.fullName || "";
+
+  }
+
+  if (contractModalCodeGrizabl && contractModalCodeSPBKS) {
+
+    contractModalCodeGrizabl.checked = appState.exportDraft.contractCode === "2";
+
+    contractModalCodeSPBKS.checked = appState.exportDraft.contractCode !== "2";
+
+  }
+
+  contractModal?.classList.remove("hidden");
+
+  contractModal?.setAttribute("aria-hidden", "false");
+
+  contractModalSPBKSNumberInput?.focus();
+
+}
+
+function closeContractModal() {
+  contractModal?.classList.add("hidden");
+  contractModal?.setAttribute("aria-hidden", "true");
+}
+
+async function saveContractDetails() {
+
+  const contractSpbksNumber = String(contractModalSPBKSNumberInput?.value ?? "").trim();
+
+  const contractGrizablNumber = String(contractModalGrizablNumberInput?.value ?? "").trim();
+
+  const contractDate = String(contractModalDateInput?.value ?? "").trim();
+
+  const fullName = String(contractModalFullNameInput?.value ?? "").trim();
+
+  const contractCode = contractModalCodeGrizabl?.checked ? "2" : "1";
+
+
+
+  if (!contractSpbksNumber && !contractGrizablNumber) {
+
+    setMessage("Укажите номер хотя бы одного договора.", "error");
+
+    contractModalSPBKSNumberInput?.focus();
+
+    return;
+
+  }
+
+  if (!contractDate) {
+
+    setMessage("Укажите дату подписания договора.", "error");
+
+    contractModalDateInput?.focus();
+
+    return;
+
+  }
+
+  if (!fullName) {
+
+    setMessage("Укажите ваше ФИО для акта.", "error");
+
+    contractModalFullNameInput?.focus();
+
+    return;
+
+  }
+
+
+
+  try {
+
+    const currentUser = appState.session?.user;
+
+    const updated = await api.UpdateUserContractDetails({
+
+      userID: currentUser?.id ?? 0,
+
+      fullName,
+
+      contractSPBKSNumber: contractSpbksNumber,
+
+      contractGrizablNumber: contractGrizablNumber,
+
+      contractSignedAt: contractDate,
+
+    });
+
+    if (updated) {
+
+      if (appState.session?.user?.id === updated.id) {
+
+        appState.session.user = { ...appState.session.user, ...updated };
+
+      }
+
+      appState.exportDraft.contractCode = contractCode;
+
+      appState.exportDraft.contractSpbksNumber = contractSpbksNumber;
+
+      appState.exportDraft.contractGrizablNumber = contractGrizablNumber;
+
+      appState.exportDraft.contractDate = contractDate;
+
+      appState.exportDraft.employeeFullName = fullName;
+
+      updateHiddenExportInputs();
+
+      renderContractDetailsSummary();
+
+      closeContractModal();
+
+      setMessage("Данные договора сохранены. Теперь можно скачать акт PDF.", "success");
+
+    }
+
+  } catch (error) {
+
+    setMessage(error, "error");
+
+  }
+
 }
 
 function formatDate(value) {
@@ -319,29 +683,29 @@ function roleCanCreateUsers(role) {
 function departmentLabel(department) {
   switch (department) {
     case "global":
-      return "Глобальные роли";
+      return "\u0413\u043b\u043e\u0431\u0430\u043b\u044c\u043d\u044b\u0435 \u0440\u043e\u043b\u0438";
     case "support":
-      return "Техподдержка";
+      return "\u0422\u0435\u0445\u043f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0430";
     case "technical":
-      return "Технический отдел";
+      return "\u0422\u0435\u0445\u043d\u0438\u0447\u0435\u0441\u043a\u0438\u0439 \u043e\u0442\u0434\u0435\u043b";
     case "telecom":
-      return "Телеком / ВОЛС / ЛВС";
+      return "\u0422\u0435\u043b\u0435\u043a\u043e\u043c / \u0412\u041e\u041b\u0421 / \u041b\u0412\u0421";
     case "skud":
-      return "СКУД";
+      return "\u0421\u041a\u0423\u0414";
     case "approval":
-      return "Согласование";
+      return "\u0421\u043e\u0433\u043b\u0430\u0441\u043e\u0432\u0430\u043d\u0438\u0435";
     case "marketing":
-      return "Маркетинг";
+      return "\u041c\u0430\u0440\u043a\u0435\u0442\u0438\u043d\u0433";
     case "commercial":
-      return "Коммерческий блок";
+      return "\u041a\u043e\u043c\u043c\u0435\u0440\u0447\u0435\u0441\u043a\u0438\u0439 \u0431\u043b\u043e\u043a";
     case "finance":
-      return "Финансы";
+      return "\u0424\u0438\u043d\u0430\u043d\u0441\u044b";
     case "legal":
-      return "Юридический отдел";
+      return "\u042e\u0440\u0438\u0434\u0438\u0447\u0435\u0441\u043a\u0438\u0439 \u043e\u0442\u0434\u0435\u043b";
     case "development":
-      return "Разработка";
+      return "\u0420\u0430\u0437\u0440\u0430\u0431\u043e\u0442\u043a\u0430";
     default:
-      return "Отдел";
+      return "\u041e\u0442\u0434\u0435\u043b";
   }
 }
 
@@ -516,7 +880,19 @@ function setActiveTab(tab) {
 }
 
 function applyBootstrap(data) {
+  const previousUserID = appState.session?.user?.id ?? 0;
   appState.session = data.session ?? { authenticated: false, canManage: false, canAdmin: false, canModerate: false, user: null };
+  const currentUserID = appState.session?.user?.id ?? 0;
+  if (previousUserID !== currentUserID) {
+    appState.exportDraft = {
+      actNumber: 1,
+      employeeFullName: String(appState.session?.user?.fullName ?? "").trim(),
+      contractCode: "1",
+      contractSpbksNumber: String(appState.session?.user?.contractSPBKSNumber ?? "").trim(),
+      contractGrizablNumber: String(appState.session?.user?.contractGrizablNumber ?? "").trim(),
+      contractDate: String(appState.session?.user?.contractSignedAt ?? "").trim(),
+    };
+  }
   appState.services = Array.isArray(data.services) ? data.services : [];
   appState.users = Array.isArray(data.users) ? data.users : [];
   appState.savedCalculations = Array.isArray(data.savedCalculations) ? data.savedCalculations : [];
@@ -538,6 +914,7 @@ function applyBootstrap(data) {
   }
 
   syncArchiveDateInput();
+  syncExportFields();
 }
 
 function renderShellState() {
@@ -719,7 +1096,7 @@ function percentText(service, percentMap) {
 function resetServiceForm() {
   appState.editingServiceId = 0;
   serviceNameInput.value = "";
-  serviceUnitInput.value = "Часы";
+  serviceUnitInput.value = "ч.";
   serviceRateInput.value = "";
   serviceCategoryInput.value = "primary";
   servicePercentInput.value = "";
@@ -733,16 +1110,31 @@ function renderResult(result) {
     summaryTotal.textContent = "0 р";
     summaryItems.textContent = `0/${appState.services.length}`;
     exactStatus.textContent = "Ожидание расчёта";
+    if (downloadPdfButton) {
+      downloadPdfButton.disabled = true;
+    }
+    if (actNumberVisibleInput) {
+      actNumberVisibleInput.disabled = true;
+    }
+    renderActNumberControls();
     resultBody.innerHTML = '<tr><td colspan="7" class="placeholder">Результаты появятся здесь после расчёта.</td></tr>';
     return;
   }
 
   const weightMap = Object.fromEntries(result.items.map((item) => [item.serviceCode, item.weight ?? appState.weights[item.serviceCode] ?? 0]));
   const effectivePercentMap = buildEffectivePercentMap(result.items, weightMap);
+  const isExact = Boolean(result.foundExact ?? result.exactMatch ?? (result.totalAmount === result.targetAmount));
   resultTotal.textContent = formatMoney(result.totalAmount);
   summaryTotal.textContent = formatMoney(result.totalAmount);
   summaryItems.textContent = `${result.activeServices}/${result.items.length}`;
-  exactStatus.textContent = result.exactMatch ? "Точное совпадение найдено" : "Есть отклонение от целевой суммы";
+  exactStatus.textContent = isExact ? "Точное совпадение найдено" : "Есть отклонение от целевой суммы";
+  if (downloadPdfButton) {
+    downloadPdfButton.disabled = !isExact;
+  }
+  if (actNumberVisibleInput) {
+    actNumberVisibleInput.disabled = false;
+  }
+  renderActNumberControls();
   resultBody.innerHTML = result.items.map((item, index) => `
     <tr class="${item.quantity === 0 ? "muted-row" : ""}">
       <td>${index + 1}</td>
@@ -758,7 +1150,6 @@ function renderResult(result) {
     </tr>
   `).join("");
 }
-
 function renderDefaultPercentages() {
   const groups = appState.defaultGroupPercent;
   defaultPercentages.textContent = `По умолчанию: основные ${Math.round((groups.primary ?? 0) * 100)}%, вторичные ${Math.round((groups.secondary ?? 0) * 100)}%, закрывающие ${Math.round((groups.closing ?? 0) * 100)}%. Внутри группы этот процент делится равномерно, если для услуги не задан свой процент. Вес можно задавать от -10 до 10: плюс усиливает услугу, минус ослабляет.`;
@@ -859,6 +1250,137 @@ function renderServicesAdmin() {
   updateServicePercentHint();
 }
 
+async function updateUserFullName(userId, fullName, options = {}) {
+  const normalized = String(fullName ?? "").trim();
+  const focusNode = options.focusNode ?? null;
+  if (!normalized) {
+    const fallbackMessage = options.emptyMessage ?? "Введите ФИО сотрудника.";
+    if (options.self) {
+      setMessage(fallbackMessage, "error");
+    } else {
+      setUserFormMessage(fallbackMessage, "error");
+    }
+    focusNode?.focus?.();
+    return null;
+  }
+
+  try {
+    const updated = await api.UpdateUserFullName({ userID: userId, fullName: normalized });
+    await refreshBootstrap({ keepArchiveSelection: true });
+    const successMessage = options.successMessage ?? "ФИО сотрудника обновлено.";
+    if (options.self) {
+      setMessage(successMessage, "success");
+    } else {
+      setUserFormMessage(successMessage, "success");
+    }
+    return updated;
+  } catch (error) {
+    if (options.self) {
+      setMessage(error, "error");
+    } else {
+      setUserFormMessage(error, "error");
+    }
+    return null;
+  }
+}
+
+async function saveOwnFullName() {
+  const currentUser = appState.session?.user;
+  if (!currentUser?.id) {
+    return;
+  }
+  await updateUserFullName(currentUser.id, employeeFullNameInput?.value ?? "", {
+    self: true,
+    focusNode: employeeFullNameInput,
+    emptyMessage: "Введите ФИО сотрудника для акта.",
+    successMessage: "ФИО сотрудника сохранено.",
+  });
+}
+
+async function downloadCurrentCalculationPDF() {
+
+  const currentUser = appState.session?.user;
+
+  const result = appState.currentCalculation;
+
+  if (!currentUser?.id || !result) {
+
+    setMessage("Сначала выполните точный расчёт, а затем скачайте акт.", "error");
+
+    return;
+
+  }
+
+
+
+  const isExact = Boolean(result.foundExact ?? result.exactMatch ?? (result.totalAmount === result.targetAmount));
+
+  if (!isExact) {
+
+    setMessage("Скачать акт можно только для точного расчёта без отклонений.", "error");
+
+    return;
+
+  }
+
+
+
+  const actNumber = Number(appState.exportDraft.actNumber || 1);
+
+  const fullName = String(appState.exportDraft.employeeFullName || "").trim();
+
+  const contractCode = String(appState.exportDraft.contractCode || "1").trim();
+
+  const contractNumber = getSelectedContractNumber();
+
+  const contractDate = String(appState.exportDraft.contractDate || "").trim();
+
+
+
+  if (!fullName || !contractDate || !contractNumber) {
+
+    setMessage("Сначала укажите договор, дату подписания и ФИО для формирования акта.", "error");
+
+    openContractModal();
+
+    return;
+
+  }
+
+
+
+  try {
+
+    const path = await api.ExportCurrentCalculationPDF({
+
+      actNumber,
+
+      employeeFullName: fullName,
+
+      contractCode,
+
+      contractNumber,
+
+      contractDate,
+
+      generatedAt: result.generatedAt,
+
+      targetAmount: result.targetAmount,
+
+      items: result.items,
+
+    });
+
+    setMessage(`Акт сохранён: ${path}`, "success");
+
+  } catch (error) {
+
+    setMessage(error, "error");
+
+  }
+
+}
+
 function renderUsers() {
   const sortedUsers = [...appState.users].sort((left, right) => {
     const leftPriority = userSortPriority(left.role);
@@ -900,10 +1422,10 @@ function renderUsers() {
 
   usersList.innerHTML = sortedUsers.map((user) => {
     const canChangeRole = Boolean(appState.session?.canAdmin)
-      || (appState.session.canManage
-        && roleDepartment(viewerRole) === roleDepartment(user.role));
+      || (appState.session.canManage && roleDepartment(viewerRole) === roleDepartment(user.role));
     const canDelete = canDeleteManagedUser(appState.session.user?.role, user.role);
     const canResetPassword = roleCanCreateUsers(appState.session.user?.role) && canDeleteManagedUser(appState.session.user?.role, user.role);
+    const canEditFullName = Boolean(appState.session?.canAdmin) || canResetPassword || canDelete;
     const roleOptions = renderRoleOptions(roleChoices, user.role);
 
     return `
@@ -912,6 +1434,7 @@ function renderUsers() {
           <strong>${escapeHtml(user.username)}</strong>
           <div class="service-meta">${roleLabel(user.role)}</div>
           <div class="service-meta">Создан: ${formatDate(user.createdAt)}</div>
+          ${canEditFullName ? `<div class="user-fullname-row"><input type="text" class="input-select compact-select inline-fullname-input" placeholder="ФИО сотрудника" value="${escapeHtml(user.fullName || "")}" data-user-fullname-id="${user.id}" /><button type="button" class="ghost-button compact-action-button" data-save-fullname-id="${user.id}">Сохранить ФИО</button></div>` : ""}
           ${canResetPassword ? `<div class="user-password-row"><input type="password" class="input-select compact-select inline-password-input" placeholder="Новый пароль" data-user-password-id="${user.id}" /><button type="button" class="ghost-button compact-action-button" data-apply-password-id="${user.id}">Сменить пароль</button></div>` : ""}
         </div>
         <div class="settings-item-actions stacked-actions">
@@ -930,13 +1453,24 @@ function renderUsers() {
     });
   });
 
+  usersList.querySelectorAll("[data-save-fullname-id]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const userId = Number(button.dataset.saveFullnameId);
+      const fullNameInput = usersList.querySelector(`[data-user-fullname-id="${userId}"]`);
+      await updateUserFullName(userId, fullNameInput?.value ?? "", {
+        focusNode: fullNameInput,
+        successMessage: "ФИО сотрудника сохранено.",
+      });
+    });
+  });
+
   usersList.querySelectorAll("[data-apply-password-id]").forEach((button) => {
     button.addEventListener("click", async () => {
       const userId = Number(button.dataset.applyPasswordId);
       const passwordInput = usersList.querySelector(`[data-user-password-id="${userId}"]`);
       const nextPassword = stripSpaces(passwordInput?.value ?? "");
       if (!nextPassword) {
-        setUserFormMessage("\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u043d\u043e\u0432\u044b\u0439 \u043f\u0430\u0440\u043e\u043b\u044c.", "error");
+        setUserFormMessage("Введите новый пароль.", "error");
         passwordInput?.focus();
         return;
       }
@@ -1430,6 +1964,11 @@ loginPassword.addEventListener("keydown", (event) => {
   }
 });
 calculateButton.addEventListener("click", calculate);
+contractDetailsButton?.addEventListener("click", openContractModal);
+saveOwnFullNameButton?.addEventListener("click", saveOwnFullName);
+actNumberVisibleInput?.addEventListener("change", persistActNumber);
+actNumberVisibleInput?.addEventListener("blur", persistActNumber);
+downloadPdfButton?.addEventListener("click", downloadCurrentCalculationPDF);
 randomizeButton?.addEventListener("click", randomizeCalculation);
 resetWeightsButton.addEventListener("click", resetWeights);
 archiveOwnerFilter?.addEventListener("change", () => {
@@ -1462,9 +2001,22 @@ confirmSubmit.addEventListener("click", () => {
 confirmBackdrop.addEventListener("click", () => {
   closeConfirmModal(false);
 });
+contractCancel?.addEventListener("click", () => {
+  closeContractModal();
+});
+contractSave?.addEventListener("click", () => {
+  saveContractDetails();
+});
+contractBackdrop?.addEventListener("click", () => {
+  closeContractModal();
+});
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !confirmModal.classList.contains("hidden")) {
     closeConfirmModal(false);
+    return;
+  }
+  if (event.key === "Escape" && contractModal && !contractModal.classList.contains("hidden")) {
+    closeContractModal();
     return;
   }
 
@@ -1523,6 +2075,14 @@ window.addEventListener("DOMContentLoaded", async () => {
     setLoginMessage(error, "error");
   }
 });
+
+
+
+
+
+
+
+
 
 
 

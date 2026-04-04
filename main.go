@@ -3,9 +3,12 @@ package main
 import (
 	"context"
 	"embed"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
+	"time"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -34,17 +37,45 @@ var assets embed.FS
 // RU: Ключевые моменты: использует один и тот же каталог `MercelData`; предотвращает создание новых папок при переименовании приложения; создаёт каталог заранее.
 // EN: Key points: uses the fixed `MercelData` directory; prevents extra folders from appearing after renaming the executable; creates the directory ahead of time.
 func resolveWebviewUserDataPath() (string, error) {
-	configDir, err := os.UserConfigDir()
+	// WebView2 is more stable when its user-data folder lives in LocalAppData,
+	// while our SQLite database remains in Roaming.
+	cacheDir, err := os.UserCacheDir()
 	if err != nil {
-		return "", err
+		configDir, fallbackErr := os.UserConfigDir()
+		if fallbackErr != nil {
+			return "", fmt.Errorf("resolve local app data: %w; fallback config dir: %v", err, fallbackErr)
+		}
+		cacheDir = configDir
 	}
 
-	webviewDir := filepath.Join(configDir, AppStorageDirName, "webview2")
+	webviewDir := filepath.Join(cacheDir, AppStorageDirName, "webview2")
 	if err := os.MkdirAll(webviewDir, 0o755); err != nil {
 		return "", err
 	}
 
 	return webviewDir, nil
+}
+
+func resolveStartupLogPath() string {
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		return "mercel-startup.log"
+	}
+	logDir := filepath.Join(configDir, AppStorageDirName)
+	if mkErr := os.MkdirAll(logDir, 0o755); mkErr != nil {
+		return "mercel-startup.log"
+	}
+	return filepath.Join(logDir, "startup.log")
+}
+
+func appendStartupLog(message string) {
+	line := fmt.Sprintf("[%s] %s%s", time.Now().Format(time.RFC3339), message, "\n")
+	file, err := os.OpenFile(resolveStartupLogPath(), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+	_, _ = file.WriteString(line)
 }
 
 // RU: Функция `main`.
@@ -56,16 +87,21 @@ func resolveWebviewUserDataPath() (string, error) {
 // RU: Ключевые моменты: важен для устойчивости логики; может использоваться сразу в нескольких местах; изменения стоит делать осознанно.
 // EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
 func main() {
+	appendStartupLog(fmt.Sprintf("starting app on %s", runtime.GOOS))
+
 	app, err := NewApp()
 	if err != nil {
+		appendStartupLog(fmt.Sprintf("NewApp failed: %v", err))
 		log.Fatalf("failed to initialize app: %v", err)
 	}
 	defer app.Close()
 
 	webviewUserDataPath, err := resolveWebviewUserDataPath()
 	if err != nil {
+		appendStartupLog(fmt.Sprintf("resolveWebviewUserDataPath failed: %v", err))
 		log.Fatalf("failed to resolve webview user data path: %v", err)
 	}
+	appendStartupLog(fmt.Sprintf("webview path: %s", webviewUserDataPath))
 
 	err = wails.Run(&options.App{
 		Title:            "Mercel",
@@ -90,6 +126,8 @@ func main() {
 		},
 	})
 	if err != nil {
+		appendStartupLog(fmt.Sprintf("wails.Run failed: %v", err))
 		log.Fatalf("failed to run app: %v", err)
 	}
+	appendStartupLog("app stopped normally")
 }

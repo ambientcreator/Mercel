@@ -53,6 +53,54 @@ func TestMigrationAddsCreatedByColumnForLegacyDatabase(t *testing.T) {
 	}
 }
 
+func TestNewAppStartsWithEmptyDatabaseAndSeedsDefaultServices(t *testing.T) {
+	originalResolver := resolveDatabasePath
+	originalLegacyResolver := resolveLegacyDatabasePath
+	originalPreviousMercelResolver := resolvePreviousMercelDatabasePath
+	tempDir := t.TempDir()
+	newPath := filepath.Join(tempDir, AppStorageDirName, AppStorageDBName)
+	resolveDatabasePath = func() (string, error) {
+		return newPath, nil
+	}
+	resolveLegacyDatabasePath = func() (string, error) {
+		return filepath.Join(tempDir, "missing-statistic.sqlite"), nil
+	}
+	resolvePreviousMercelDatabasePath = func() (string, error) {
+		return filepath.Join(tempDir, "missing-mercel.sqlite"), nil
+	}
+	t.Cleanup(func() {
+		resolveDatabasePath = originalResolver
+		resolveLegacyDatabasePath = originalLegacyResolver
+		resolvePreviousMercelDatabasePath = originalPreviousMercelResolver
+	})
+	if err := os.MkdirAll(filepath.Dir(newPath), 0o755); err != nil {
+		t.Fatalf("MkdirAll() error = %v", err)
+	}
+
+	app, err := NewApp()
+	if err != nil {
+		t.Fatalf("NewApp() on empty database error = %v", err)
+	}
+	defer app.Close()
+
+	loginAsAdmin(t, app)
+	services, err := app.GetServices()
+	if err != nil {
+		t.Fatalf("GetServices() error = %v", err)
+	}
+	if len(services) != 8 {
+		t.Fatalf("expected 8 seeded admin services, got %d", len(services))
+	}
+	for _, service := range services {
+		if service.Unit != "ч." && service.Unit != "шт." {
+			t.Fatalf("unexpected seeded unit %q for service %+v", service.Unit, service)
+		}
+		if service.Rate <= 0 {
+			t.Fatalf("unexpected seeded rate %d for service %+v", service.Rate, service)
+		}
+	}
+}
+
 // RU: РўРµСЃС‚ `TestNewDatabasePathCopiesLegacyData`.
 // EN: Test `TestNewDatabasePathCopiesLegacyData`.
 //
