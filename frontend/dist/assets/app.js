@@ -1,4 +1,4 @@
-﻿const appState = {
+const appState = {
   session: { authenticated: false, canManage: false, canAdmin: false, canModerate: false, user: null },
   services: [],
   users: [],
@@ -20,7 +20,7 @@
   },
 };
 
-const api = window.go?.main?.App;
+const api = window.go?.appcore?.App || window.go?.main?.App;
 
 const loginScreen = document.getElementById("login-screen");
 const appShell = document.getElementById("app-shell");

@@ -1,6 +1,7 @@
-package main
+package appcore_test
 
 import (
+	. "statistic/appcore"
 	"strings"
 	"testing"
 	"time"
@@ -17,7 +18,7 @@ func sampleExportItems() []CalculationItem {
 }
 
 func TestBuildActPDFDataRequiresActNumber(t *testing.T) {
-	_, err := buildActPDFData(ExportCalculationRequest{
+	_, err := BuildActPDFDataForTest(ExportCalculationRequest{
 		ActNumber:        0,
 		EmployeeFullName: "\u0418\u0432\u0430\u043d\u043e\u0432 \u0418\u0432\u0430\u043d \u0418\u0432\u0430\u043d\u043e\u0432\u0438\u0447",
 		ContractCode:     "2",
@@ -32,7 +33,7 @@ func TestBuildActPDFDataRequiresActNumber(t *testing.T) {
 }
 
 func TestBuildActPDFDataRequiresFullName(t *testing.T) {
-	_, err := buildActPDFData(ExportCalculationRequest{
+	_, err := BuildActPDFDataForTest(ExportCalculationRequest{
 		ActNumber:      1,
 		ContractCode:   "2",
 		ContractNumber: "15",
@@ -46,7 +47,7 @@ func TestBuildActPDFDataRequiresFullName(t *testing.T) {
 }
 
 func TestBuildActPDFDataRequiresContractNumber(t *testing.T) {
-	_, err := buildActPDFData(ExportCalculationRequest{
+	_, err := BuildActPDFDataForTest(ExportCalculationRequest{
 		ActNumber:        1,
 		EmployeeFullName: "\u0418\u0432\u0430\u043d\u043e\u0432 \u0418\u0432\u0430\u043d \u0418\u0432\u0430\u043d\u043e\u0432\u0438\u0447",
 		ContractCode:     "2",
@@ -60,7 +61,7 @@ func TestBuildActPDFDataRequiresContractNumber(t *testing.T) {
 }
 
 func TestBuildActPDFDataRejectsUnknownContract(t *testing.T) {
-	_, err := buildActPDFData(ExportCalculationRequest{
+	_, err := BuildActPDFDataForTest(ExportCalculationRequest{
 		ActNumber:        1,
 		EmployeeFullName: "\u0418\u0432\u0430\u043d\u043e\u0432 \u0418\u0432\u0430\u043d \u0418\u0432\u0430\u043d\u043e\u0432\u0438\u0447",
 		ContractCode:     "999",
@@ -75,7 +76,7 @@ func TestBuildActPDFDataRejectsUnknownContract(t *testing.T) {
 }
 
 func TestBuildActPDFDataRequiresContractDate(t *testing.T) {
-	_, err := buildActPDFData(ExportCalculationRequest{
+	_, err := BuildActPDFDataForTest(ExportCalculationRequest{
 		ActNumber:        1,
 		EmployeeFullName: "\u0418\u0432\u0430\u043d\u043e\u0432 \u0418\u0432\u0430\u043d \u0418\u0432\u0430\u043d\u043e\u0432\u0438\u0447",
 		ContractCode:     "2",
@@ -89,7 +90,7 @@ func TestBuildActPDFDataRequiresContractDate(t *testing.T) {
 }
 
 func TestBuildActPDFDataRequiresExactTotal(t *testing.T) {
-	_, err := buildActPDFData(ExportCalculationRequest{
+	_, err := BuildActPDFDataForTest(ExportCalculationRequest{
 		ActNumber:        1,
 		EmployeeFullName: "\u0418\u0432\u0430\u043d\u043e\u0432 \u0418\u0432\u0430\u043d \u0418\u0432\u0430\u043d\u043e\u0432\u0438\u0447",
 		ContractCode:     "2",
@@ -105,7 +106,7 @@ func TestBuildActPDFDataRequiresExactTotal(t *testing.T) {
 
 func TestBuildActPDFDataUsesCurrentUserFullNameFallback(t *testing.T) {
 	generatedAt := time.Date(2026, time.March, 30, 12, 0, 0, 0, time.UTC)
-	data, err := buildActPDFData(ExportCalculationRequest{
+	data, err := BuildActPDFDataForTest(ExportCalculationRequest{
 		ActNumber:      7,
 		ContractCode:   "2",
 		ContractNumber: "15",
@@ -144,7 +145,7 @@ func TestBuildActPDFDataUsesCurrentUserFullNameFallback(t *testing.T) {
 }
 
 func TestResolveContractInfo(t *testing.T) {
-	info, err := resolveContractInfo("1")
+	info, err := ResolveContractInfoForTest("1")
 	if err != nil {
 		t.Fatalf("resolveContractInfo error = %v", err)
 	}
@@ -154,7 +155,7 @@ func TestResolveContractInfo(t *testing.T) {
 }
 
 func TestNumberToRussianWordsSimple(t *testing.T) {
-	actual, err := numberToRussianWords(69960)
+	actual, err := NumberToRussianWordsForTest(69960)
 	if err != nil {
 		t.Fatalf("numberToRussianWords error = %v", err)
 	}

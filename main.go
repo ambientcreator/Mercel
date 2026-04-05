@@ -14,27 +14,28 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 	windowsoptions "github.com/wailsapp/wails/v2/pkg/options/windows"
+	"statistic/appcore"
 )
 
-// RU: Переменная `assets`.
+// RU: РџРµСЂРµРјРµРЅРЅР°СЏ `assets`.
 // EN: Variable `assets`.
 //
-// RU: Что делает: хранит ресурсы или глобальное состояние, которое нужно другим частям программы.
+// RU: Р§С‚Рѕ РґРµР»Р°РµС‚: С…СЂР°РЅРёС‚ СЂРµСЃСѓСЂСЃС‹ РёР»Рё РіР»РѕР±Р°Р»СЊРЅРѕРµ СЃРѕСЃС‚РѕСЏРЅРёРµ, РєРѕС‚РѕСЂРѕРµ РЅСѓР¶РЅРѕ РґСЂСѓРіРёРј С‡Р°СЃС‚СЏРј РїСЂРѕРіСЂР°РјРјС‹.
 // EN: What it does: assets bundles the prebuilt frontend so Wails can serve it from the executable without external files.
 //
-// RU: Ключевые моменты: важен как контракт или опорная точка для других частей проекта; изменения здесь часто требуют осторожности.
+// RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: РІР°Р¶РµРЅ РєР°Рє РєРѕРЅС‚СЂР°РєС‚ РёР»Рё РѕРїРѕСЂРЅР°СЏ С‚РѕС‡РєР° РґР»СЏ РґСЂСѓРіРёС… С‡Р°СЃС‚РµР№ РїСЂРѕРµРєС‚Р°; РёР·РјРµРЅРµРЅРёСЏ Р·РґРµСЃСЊ С‡Р°СЃС‚Рѕ С‚СЂРµР±СѓСЋС‚ РѕСЃС‚РѕСЂРѕР¶РЅРѕСЃС‚Рё.
 // EN: Key points: serves as a shared contract or reference point; is reused across multiple areas of the project; changes here should be made carefully.
 //
 //go:embed all:frontend/dist
 var assets embed.FS
 
-// RU: Функция `resolveWebviewUserDataPath`.
+// RU: Р¤СѓРЅРєС†РёСЏ `resolveWebviewUserDataPath`.
 // EN: Function `resolveWebviewUserDataPath`.
 //
-// RU: Что делает: вычисляет стабильный путь для данных WebView2, который не зависит от имени `.exe`.
+// RU: Р§С‚Рѕ РґРµР»Р°РµС‚: РІС‹С‡РёСЃР»СЏРµС‚ СЃС‚Р°Р±РёР»СЊРЅС‹Р№ РїСѓС‚СЊ РґР»СЏ РґР°РЅРЅС‹С… WebView2, РєРѕС‚РѕСЂС‹Р№ РЅРµ Р·Р°РІРёСЃРёС‚ РѕС‚ РёРјРµРЅРё `.exe`.
 // EN: What it does: resolves a stable WebView2 user data path that does not depend on the current executable name.
 //
-// RU: Ключевые моменты: использует один и тот же каталог `MercelData`; предотвращает создание новых папок при переименовании приложения; создаёт каталог заранее.
+// RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: РёСЃРїРѕР»СЊР·СѓРµС‚ РѕРґРёРЅ Рё С‚РѕС‚ Р¶Рµ РєР°С‚Р°Р»РѕРі `MercelData`; РїСЂРµРґРѕС‚РІСЂР°С‰Р°РµС‚ СЃРѕР·РґР°РЅРёРµ РЅРѕРІС‹С… РїР°РїРѕРє РїСЂРё РїРµСЂРµРёРјРµРЅРѕРІР°РЅРёРё РїСЂРёР»РѕР¶РµРЅРёСЏ; СЃРѕР·РґР°С‘С‚ РєР°С‚Р°Р»РѕРі Р·Р°СЂР°РЅРµРµ.
 // EN: Key points: uses the fixed `MercelData` directory; prevents extra folders from appearing after renaming the executable; creates the directory ahead of time.
 func resolveWebviewUserDataPath() (string, error) {
 	// WebView2 is more stable when its user-data folder lives in LocalAppData,
@@ -48,7 +49,7 @@ func resolveWebviewUserDataPath() (string, error) {
 		cacheDir = configDir
 	}
 
-	webviewDir := filepath.Join(cacheDir, AppStorageDirName, "webview2")
+	webviewDir := filepath.Join(cacheDir, appcore.AppStorageDirName, "webview2")
 	if err := os.MkdirAll(webviewDir, 0o755); err != nil {
 		return "", err
 	}
@@ -61,7 +62,7 @@ func resolveStartupLogPath() string {
 	if err != nil {
 		return "mercel-startup.log"
 	}
-	logDir := filepath.Join(configDir, AppStorageDirName)
+	logDir := filepath.Join(configDir, appcore.AppStorageDirName)
 	if mkErr := os.MkdirAll(logDir, 0o755); mkErr != nil {
 		return "mercel-startup.log"
 	}
@@ -78,18 +79,18 @@ func appendStartupLog(message string) {
 	_, _ = file.WriteString(line)
 }
 
-// RU: Функция `main`.
+// RU: Р¤СѓРЅРєС†РёСЏ `main`.
 // EN: Function `main`.
 //
-// RU: Что делает: выполняет вспомогательное преобразование, проверку или подготовку данных.
+// RU: Р§С‚Рѕ РґРµР»Р°РµС‚: РІС‹РїРѕР»РЅСЏРµС‚ РІСЃРїРѕРјРѕРіР°С‚РµР»СЊРЅРѕРµ РїСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёРµ, РїСЂРѕРІРµСЂРєСѓ РёР»Рё РїРѕРґРіРѕС‚РѕРІРєСѓ РґР°РЅРЅС‹С….
 // EN: What it does: main bootstraps the backend application, wires it into Wails, and starts the desktop window lifecycle.
 //
-// RU: Ключевые моменты: важен для устойчивости логики; может использоваться сразу в нескольких местах; изменения стоит делать осознанно.
+// RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: РІР°Р¶РµРЅ РґР»СЏ СѓСЃС‚РѕР№С‡РёРІРѕСЃС‚Рё Р»РѕРіРёРєРё; РјРѕР¶РµС‚ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ СЃСЂР°Р·Сѓ РІ РЅРµСЃРєРѕР»СЊРєРёС… РјРµСЃС‚Р°С…; РёР·РјРµРЅРµРЅРёСЏ СЃС‚РѕРёС‚ РґРµР»Р°С‚СЊ РѕСЃРѕР·РЅР°РЅРЅРѕ.
 // EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
 func main() {
 	appendStartupLog(fmt.Sprintf("starting app on %s", runtime.GOOS))
 
-	app, err := NewApp()
+	app, err := appcore.NewApp()
 	if err != nil {
 		appendStartupLog(fmt.Sprintf("NewApp failed: %v", err))
 		log.Fatalf("failed to initialize app: %v", err)
@@ -119,7 +120,7 @@ func main() {
 			WebviewUserDataPath: webviewUserDataPath,
 		},
 		OnStartup: func(ctx context.Context) {
-			app.startup(ctx)
+			app.Startup(ctx)
 		},
 		Bind: []interface{}{
 			app,

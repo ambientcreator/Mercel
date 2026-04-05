@@ -1,0 +1,389 @@
+package appcore_test
+
+import (
+	"bytes"
+	"os"
+	"path/filepath"
+	. "statistic/appcore"
+	"testing"
+)
+
+func TestConfirmModalMarkupUsesReadableUTF8(t *testing.T) {
+	content, err := os.ReadFile(filepath.Join("..", "frontend", "dist", "index.html"))
+	if err != nil {
+		t.Fatalf("ReadFile index.html error = %v", err)
+	}
+
+	expectedWords := [][]byte{
+		{0xD0, 0x9F, 0xD0, 0xBE, 0xD0, 0xB4, 0xD1, 0x82, 0xD0, 0xB2, 0xD0, 0xB5, 0xD1, 0x80, 0xD0, 0xB6, 0xD0, 0xB4, 0xD0, 0xB5, 0xD0, 0xBD, 0xD0, 0xB8, 0xD0, 0xB5},
+		{0xD0, 0x9F, 0xD0, 0xBE, 0xD0, 0xB4, 0xD1, 0x82, 0xD0, 0xB2, 0xD0, 0xB5, 0xD1, 0x80, 0xD0, 0xB4, 0xD0, 0xB8, 0xD1, 0x82, 0xD0, 0xB5, 0x20, 0xD1, 0x83, 0xD0, 0xB4, 0xD0, 0xB0, 0xD0, 0xBB, 0xD0, 0xB5, 0xD0, 0xBD, 0xD0, 0xB8, 0xD0, 0xB5},
+		{0xD0, 0x9E, 0xD1, 0x82, 0xD0, 0xBC, 0xD0, 0xB5, 0xD0, 0xBD, 0xD0, 0xB0},
+		{0xD0, 0xA3, 0xD0, 0xB4, 0xD0, 0xB0, 0xD0, 0xBB, 0xD0, 0xB8, 0xD1, 0x82, 0xD1, 0x8C},
+	}
+	for _, expected := range expectedWords {
+		if !bytes.Contains(content, expected) {
+			t.Fatalf("confirm modal is missing expected utf-8 bytes %v", expected)
+		}
+	}
+	for _, broken := range [][]byte{{0xC3, 0x90}, {0xC3, 0x91}} {
+		if bytes.Contains(content, broken) {
+			t.Fatalf("confirm modal still contains mojibake marker bytes %v", broken)
+		}
+	}
+}
+
+// RU: Р В Р’В Р РЋРЎвЂєР В Р’В Р вЂ™Р’ВµР В Р Р‹Р В РЎвЂњР В Р Р‹Р Р†Р вЂљРЎв„ў `TestDepartmentIsolationForUsersAndArchives`.
+// EN: Test `TestDepartmentIsolationForUsersAndArchives`.
+//
+// RU: Р В Р’В Р вЂ™Р’В§Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р РЋРІР‚Сћ Р В Р’В Р СћРІР‚ВР В Р’В Р вЂ™Р’ВµР В Р’В Р вЂ™Р’В»Р В Р’В Р вЂ™Р’В°Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р Р†Р вЂљРЎв„ў: Р В Р’В Р РЋРІР‚вЂќР В Р Р‹Р В РІР‚С™Р В Р’В Р РЋРІР‚СћР В Р’В Р В РІР‚В Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р В РІР‚С™Р В Р Р‹Р В Р РЏР В Р’В Р вЂ™Р’ВµР В Р Р‹Р Р†Р вЂљРЎв„ў, Р В Р Р‹Р Р†Р вЂљР Р‹Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р РЋРІР‚Сћ Р В Р Р‹Р В РІР‚С™Р В Р Р‹Р РЋРІР‚СљР В Р’В Р РЋРІР‚СњР В Р’В Р РЋРІР‚СћР В Р’В Р В РІР‚В Р В Р’В Р РЋРІР‚СћР В Р’В Р СћРІР‚ВР В Р’В Р РЋРІР‚ВР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’ВµР В Р’В Р вЂ™Р’В»Р В Р’В Р РЋРІР‚В Р В Р’В Р РЋРІР‚В Р В Р Р‹Р В РЎвЂњР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’В°Р В Р Р‹Р В РІР‚С™Р В Р Р‹Р Р†РІР‚С™Р’В¬Р В Р’В Р РЋРІР‚ВР В Р’В Р вЂ™Р’Вµ Р В Р Р‹Р В РЎвЂњР В Р’В Р РЋРІР‚СћР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р Р‹Р В РІР‚С™Р В Р Р‹Р РЋРІР‚СљР В Р’В Р СћРІР‚ВР В Р’В Р В РІР‚В¦Р В Р’В Р РЋРІР‚ВР В Р’В Р РЋРІР‚СњР В Р’В Р РЋРІР‚В Р В Р’В Р В РІР‚В Р В Р’В Р РЋРІР‚ВР В Р’В Р СћРІР‚ВР В Р Р‹Р В Р РЏР В Р Р‹Р Р†Р вЂљРЎв„ў Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р РЋРІР‚СћР В Р’В Р вЂ™Р’В»Р В Р Р‹Р В Р вЂ°Р В Р’В Р РЋРІР‚СњР В Р’В Р РЋРІР‚Сћ Р В Р’В Р РЋРІР‚вЂќР В Р’В Р РЋРІР‚СћР В Р’В Р вЂ™Р’В»Р В Р Р‹Р В Р вЂ°Р В Р’В Р вЂ™Р’В·Р В Р’В Р РЋРІР‚СћР В Р’В Р В РІР‚В Р В Р’В Р вЂ™Р’В°Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’ВµР В Р’В Р вЂ™Р’В»Р В Р’В Р вЂ™Р’ВµР В Р’В Р Р†РІР‚С›РІР‚вЂњ Р В Р’В Р РЋРІР‚В Р В Р’В Р вЂ™Р’В°Р В Р Р‹Р В РІР‚С™Р В Р Р‹Р Р†Р вЂљР’В¦Р В Р’В Р РЋРІР‚ВР В Р’В Р В РІР‚В Р В Р Р‹Р Р†Р вЂљРІвЂћвЂ“ Р В Р Р‹Р В РЎвЂњР В Р’В Р В РІР‚В Р В Р’В Р РЋРІР‚СћР В Р’В Р вЂ™Р’ВµР В Р’В Р РЋРІР‚вЂњР В Р’В Р РЋРІР‚Сћ Р В Р’В Р РЋРІР‚СћР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р СћРІР‚ВР В Р’В Р вЂ™Р’ВµР В Р’В Р вЂ™Р’В»Р В Р’В Р вЂ™Р’В°.
+// EN: What it does: verifies that managers and seniors only see users and archives from their own department.
+//
+// RU: Р В Р’В Р РЋРІвЂћСћР В Р’В Р вЂ™Р’В»Р В Р Р‹Р В РІР‚в„–Р В Р Р‹Р Р†Р вЂљР Р‹Р В Р’В Р вЂ™Р’ВµР В Р’В Р В РІР‚В Р В Р Р‹Р Р†Р вЂљРІвЂћвЂ“Р В Р’В Р вЂ™Р’Вµ Р В Р’В Р РЋР’ВР В Р’В Р РЋРІР‚СћР В Р’В Р РЋР’ВР В Р’В Р вЂ™Р’ВµР В Р’В Р В РІР‚В¦Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р Р‹Р Р†Р вЂљРІвЂћвЂ“: Р В Р’В Р РЋРІР‚вЂќР В Р’В Р РЋРІР‚СћР В Р’В Р РЋРІР‚СњР В Р Р‹Р В РІР‚С™Р В Р Р‹Р Р†Р вЂљРІвЂћвЂ“Р В Р’В Р В РІР‚В Р В Р’В Р вЂ™Р’В°Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р Р†Р вЂљРЎв„ў Р В Р’В Р В РІР‚В¦Р В Р’В Р РЋРІР‚СћР В Р’В Р В РІР‚В Р В Р Р‹Р РЋРІР‚СљР В Р Р‹Р В РІР‚в„– Р В Р’В Р РЋР’ВР В Р’В Р РЋРІР‚СћР В Р’В Р СћРІР‚ВР В Р’В Р вЂ™Р’ВµР В Р’В Р вЂ™Р’В»Р В Р Р‹Р В Р вЂ° Р В Р Р‹Р В РІР‚С™Р В Р’В Р РЋРІР‚СћР В Р’В Р вЂ™Р’В»Р В Р’В Р вЂ™Р’ВµР В Р’В Р Р†РІР‚С›РІР‚вЂњ Р В Р’В Р РЋРІР‚вЂќР В Р’В Р РЋРІР‚Сћ Р В Р’В Р РЋРІР‚СћР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р СћРІР‚ВР В Р’В Р вЂ™Р’ВµР В Р’В Р вЂ™Р’В»Р В Р’В Р вЂ™Р’В°Р В Р’В Р РЋР’В Р В Р’В Р РЋРЎвЂєР В Р’В Р РЋРЎСџ, Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’ВµР В Р Р‹Р Р†Р вЂљР’В¦Р В Р’В Р РЋРІР‚СћР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р СћРІР‚ВР В Р’В Р вЂ™Р’ВµР В Р’В Р вЂ™Р’В»Р В Р’В Р вЂ™Р’В° Р В Р’В Р РЋРІР‚В Р В Р’В Р РЋРЎв„ўР В Р’В Р вЂ™Р’В Р В Р’В Р РЋРІвЂћСћ; Р В Р’В Р вЂ™Р’В·Р В Р’В Р вЂ™Р’В°Р В Р Р‹Р Р†Р вЂљР’В°Р В Р’В Р РЋРІР‚ВР В Р Р‹Р Р†Р вЂљР’В°Р В Р’В Р вЂ™Р’В°Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р Р†Р вЂљРЎв„ў Р В Р’В Р РЋРІР‚СћР В Р Р‹Р Р†Р вЂљРЎв„ў Р В Р’В Р РЋР’ВР В Р’В Р вЂ™Р’ВµР В Р’В Р вЂ™Р’В¶Р В Р’В Р РЋРІР‚СћР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р СћРІР‚ВР В Р’В Р вЂ™Р’ВµР В Р’В Р вЂ™Р’В»Р В Р Р‹Р В Р вЂ°Р В Р’В Р В РІР‚В¦Р В Р Р‹Р Р†Р вЂљРІвЂћвЂ“Р В Р Р‹Р Р†Р вЂљР’В¦ Р В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’ВµР В Р’В Р РЋРІР‚вЂњР В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р В РЎвЂњР В Р Р‹Р В РЎвЂњР В Р’В Р РЋРІР‚ВР В Р’В Р Р†РІР‚С›РІР‚вЂњ Р В Р’В Р В РІР‚В Р В Р’В Р РЋРІР‚ВР В Р’В Р СћРІР‚ВР В Р’В Р РЋРІР‚ВР В Р’В Р РЋР’ВР В Р’В Р РЋРІР‚СћР В Р Р‹Р В РЎвЂњР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р РЋРІР‚В.
+// EN: Key points: covers the new department-based role model across support, tech and MRK; prevents cross-department visibility regressions.
+func TestDepartmentIsolationForUsersAndArchives(t *testing.T) {
+	app := withTempDB(t)
+	loginAsAdmin(t, app)
+
+	supportEmployee, err := app.CreateUser(UserWithPassword{Username: "support_emp", Password: "secret", Role: RoleSupportEmployee})
+	if err != nil {
+		t.Fatalf("CreateUser support employee error = %v", err)
+	}
+	supportSenior, err := app.CreateUser(UserWithPassword{Username: "support_senior", Password: "secret", Role: RoleSupportSeniorSpecialist})
+	if err != nil {
+		t.Fatalf("CreateUser support senior error = %v", err)
+	}
+	supportManager, err := app.CreateUser(UserWithPassword{Username: "support_manager", Password: "secret", Role: RoleSupportManager})
+	if err != nil {
+		t.Fatalf("CreateUser support manager error = %v", err)
+	}
+	techEmployee, err := app.CreateUser(UserWithPassword{Username: "tech_emp", Password: "secret", Role: RoleTechnician})
+	if err != nil {
+		t.Fatalf("CreateUser technician error = %v", err)
+	}
+	techSenior, err := app.CreateUser(UserWithPassword{Username: "tech_senior", Password: "secret", Role: RoleSeniorTech})
+	if err != nil {
+		t.Fatalf("CreateUser senior technician error = %v", err)
+	}
+	mrkManager, err := app.CreateUser(UserWithPassword{Username: "mrk_manager", Password: "secret", Role: RoleMRKManager})
+	if err != nil {
+		t.Fatalf("CreateUser mrk manager error = %v", err)
+	}
+
+	for _, tc := range []struct {
+		username string
+		password string
+		service  string
+		target   int
+	}{
+		{supportEmployee.Username, "secret", "support service", 1000},
+		{supportSenior.Username, "secret", "support senior service", 1100},
+		{supportManager.Username, "secret", "support manager service", 1200},
+		{techEmployee.Username, "secret", "tech service", 1300},
+		{techSenior.Username, "secret", "tech senior service", 1400},
+		{mrkManager.Username, "secret", "mrk service", 1500},
+	} {
+		loginAsUser(t, app, tc.username, tc.password)
+		createUserService(t, app, tc.username, tc.password, tc.service, 100, CategoryPrimary)
+		result, err := app.CalculateAmount(CalculationRequest{TargetAmount: tc.target, Weights: map[string]int{}})
+		if err != nil {
+			t.Fatalf("CalculateAmount %s error = %v", tc.username, err)
+		}
+		if _, err := app.SaveCalculation(SaveCalculationRequest{TargetAmount: result.TargetAmount, Items: result.Items}); err != nil {
+			t.Fatalf("SaveCalculation %s error = %v", tc.username, err)
+		}
+	}
+
+	loginAsUser(t, app, supportManager.Username, "secret")
+	supportUsers, err := app.ListUsers()
+	if err != nil {
+		t.Fatalf("ListUsers support manager error = %v", err)
+	}
+	for _, item := range supportUsers {
+		if RoleDepartmentForTest(item.Role) != RoleDepartmentForTest(RoleSupportManager) {
+			t.Fatalf("support manager must not see other departments: %+v", supportUsers)
+		}
+	}
+	supportArchives, err := app.ListCalculations()
+	if err != nil {
+		t.Fatalf("ListCalculations support manager error = %v", err)
+	}
+	for _, item := range supportArchives {
+		if item.CreatedBy == techEmployee.Username || item.CreatedBy == techSenior.Username || item.CreatedBy == mrkManager.Username {
+			t.Fatalf("support manager must not see foreign archives: %+v", supportArchives)
+		}
+	}
+
+	loginAsUser(t, app, mrkManager.Username, "secret")
+	mrkUsers, err := app.ListUsers()
+	if err != nil {
+		t.Fatalf("ListUsers mrk manager error = %v", err)
+	}
+	if len(mrkUsers) != 0 {
+		t.Fatalf("mrk manager should not see support or tech users, got %+v", mrkUsers)
+	}
+	mrkArchives, err := app.ListCalculations()
+	if err != nil {
+		t.Fatalf("ListCalculations mrk manager error = %v", err)
+	}
+	if len(mrkArchives) != 1 || mrkArchives[0].CreatedBy != mrkManager.Username {
+		t.Fatalf("mrk manager should see only own archive, got %+v", mrkArchives)
+	}
+}
+
+// RU: Р В Р’В Р РЋРЎвЂєР В Р’В Р вЂ™Р’ВµР В Р Р‹Р В РЎвЂњР В Р Р‹Р Р†Р вЂљРЎв„ў `TestDepartmentRoleChangesStayInsideDepartment`.
+// EN: Test `TestDepartmentRoleChangesStayInsideDepartment`.
+//
+// RU: Р В Р’В Р вЂ™Р’В§Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р РЋРІР‚Сћ Р В Р’В Р СћРІР‚ВР В Р’В Р вЂ™Р’ВµР В Р’В Р вЂ™Р’В»Р В Р’В Р вЂ™Р’В°Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р Р†Р вЂљРЎв„ў: Р В Р’В Р РЋРІР‚вЂќР В Р Р‹Р В РІР‚С™Р В Р’В Р РЋРІР‚СћР В Р’В Р В РІР‚В Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р В РІР‚С™Р В Р Р‹Р В Р РЏР В Р’В Р вЂ™Р’ВµР В Р Р‹Р Р†Р вЂљРЎв„ў, Р В Р Р‹Р Р†Р вЂљР Р‹Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р РЋРІР‚Сћ Р В Р Р‹Р В РІР‚С™Р В Р Р‹Р РЋРІР‚СљР В Р’В Р РЋРІР‚СњР В Р’В Р РЋРІР‚СћР В Р’В Р В РІР‚В Р В Р’В Р РЋРІР‚СћР В Р’В Р СћРІР‚ВР В Р’В Р РЋРІР‚ВР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’ВµР В Р’В Р вЂ™Р’В»Р В Р Р‹Р В Р вЂ° Р В Р’В Р В РІР‚В¦Р В Р’В Р вЂ™Р’Вµ Р В Р’В Р РЋР’ВР В Р’В Р РЋРІР‚СћР В Р’В Р вЂ™Р’В¶Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р Р†Р вЂљРЎв„ў Р В Р’В Р РЋР’ВР В Р’В Р вЂ™Р’ВµР В Р’В Р В РІР‚В¦Р В Р Р‹Р В Р РЏР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р Р‹Р В Р вЂ° Р В Р Р‹Р В РІР‚С™Р В Р’В Р РЋРІР‚СћР В Р’В Р вЂ™Р’В»Р В Р’В Р РЋРІР‚В Р В Р’В Р РЋРІР‚вЂќР В Р’В Р РЋРІР‚СћР В Р’В Р вЂ™Р’В»Р В Р Р‹Р В Р вЂ°Р В Р’В Р вЂ™Р’В·Р В Р’В Р РЋРІР‚СћР В Р’В Р В РІР‚В Р В Р’В Р вЂ™Р’В°Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’ВµР В Р’В Р вЂ™Р’В»Р В Р’В Р вЂ™Р’ВµР В Р’В Р Р†РІР‚С›РІР‚вЂњ Р В Р’В Р РЋРІР‚ВР В Р’В Р вЂ™Р’В· Р В Р’В Р СћРІР‚ВР В Р Р‹Р В РІР‚С™Р В Р Р‹Р РЋРІР‚СљР В Р’В Р РЋРІР‚вЂњР В Р’В Р РЋРІР‚СћР В Р’В Р РЋРІР‚вЂњР В Р’В Р РЋРІР‚Сћ Р В Р’В Р РЋРІР‚СћР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р СћРІР‚ВР В Р’В Р вЂ™Р’ВµР В Р’В Р вЂ™Р’В»Р В Р’В Р вЂ™Р’В°.
+// EN: What it does: ensures a manager cannot reassign roles for users from another department.
+func TestTechnicalDirectorSeesOnlyTechnicalAndTelecom(t *testing.T) {
+	app := withTempDB(t)
+	loginAsAdmin(t, app)
+
+	techDirector, err := app.CreateUser(UserWithPassword{Username: "tech_director_1", Password: "secret", Role: RoleTechnicalDirector})
+	if err != nil {
+		t.Fatalf("CreateUser technical director error = %v", err)
+	}
+	techUser, err := app.CreateUser(UserWithPassword{Username: "tech_visible_1", Password: "secret", Role: RoleTechnicalEmployee})
+	if err != nil {
+		t.Fatalf("CreateUser technical employee error = %v", err)
+	}
+	telecomUser, err := app.CreateUser(UserWithPassword{Username: "telecom_visible_1", Password: "secret", Role: RoleTelecomEmployeeVOLS})
+	if err != nil {
+		t.Fatalf("CreateUser telecom employee error = %v", err)
+	}
+	skudUser, err := app.CreateUser(UserWithPassword{Username: "skud_hidden_1", Password: "secret", Role: RoleSKUDInstaller})
+	if err != nil {
+		t.Fatalf("CreateUser skud employee error = %v", err)
+	}
+
+	createUserService(t, app, techUser.Username, "secret", "tech service", 100, CategoryPrimary)
+	loginAsUser(t, app, techUser.Username, "secret")
+	if _, err := app.SaveCalculation(SaveCalculationRequest{TargetAmount: 100, Items: []CalculationItem{{Name: "tech service", Unit: "Р В Р Р‹Р Р†Р вЂљР Р‹.", Rate: 100, Quantity: 1, LineTotal: 100, Category: CategoryPrimary, ServiceCode: "tech-service"}}}); err != nil {
+		t.Fatalf("SaveCalculation technical employee error = %v", err)
+	}
+
+	createUserService(t, app, telecomUser.Username, "secret", "telecom service", 110, CategorySecondary)
+	loginAsUser(t, app, telecomUser.Username, "secret")
+	if _, err := app.SaveCalculation(SaveCalculationRequest{TargetAmount: 110, Items: []CalculationItem{{Name: "telecom service", Unit: "Р В Р Р‹Р Р†РІР‚С™Р’В¬Р В Р Р‹Р Р†Р вЂљРЎв„ў.", Rate: 110, Quantity: 1, LineTotal: 110, Category: CategorySecondary, ServiceCode: "telecom-service"}}}); err != nil {
+		t.Fatalf("SaveCalculation telecom employee error = %v", err)
+	}
+
+	createUserService(t, app, skudUser.Username, "secret", "skud service", 120, CategoryClosing)
+	loginAsUser(t, app, skudUser.Username, "secret")
+	if _, err := app.SaveCalculation(SaveCalculationRequest{TargetAmount: 120, Items: []CalculationItem{{Name: "skud service", Unit: "Р В Р Р‹Р Р†РІР‚С™Р’В¬Р В Р Р‹Р Р†Р вЂљРЎв„ў.", Rate: 120, Quantity: 1, LineTotal: 120, Category: CategoryClosing, ServiceCode: "skud-service"}}}); err != nil {
+		t.Fatalf("SaveCalculation skud employee error = %v", err)
+	}
+
+	loginAsUser(t, app, techDirector.Username, "secret")
+	users, err := app.ListUsers()
+	if err != nil {
+		t.Fatalf("ListUsers technical director error = %v", err)
+	}
+	seen := map[string]bool{}
+	for _, user := range users {
+		seen[user.Username] = true
+		if dept := RoleDepartmentForTest(user.Role); dept != DepartmentTechnical && dept != DepartmentTelecom {
+			t.Fatalf("technical director must not see foreign department user: %+v", users)
+		}
+	}
+	if !seen[techUser.Username] || !seen[telecomUser.Username] {
+		t.Fatalf("technical director must see technical and telecom users, got %+v", users)
+	}
+	if seen[skudUser.Username] {
+		t.Fatalf("technical director must not see skud users, got %+v", users)
+	}
+
+	archives, err := app.ListCalculations()
+	if err != nil {
+		t.Fatalf("ListCalculations technical director error = %v", err)
+	}
+	archiveSeen := map[string]bool{}
+	for _, item := range archives {
+		archiveSeen[item.CreatedBy] = true
+		if dept := RoleDepartmentForTest(item.CreatedRole); dept != DepartmentTechnical && dept != DepartmentTelecom {
+			t.Fatalf("technical director must not see foreign archive: %+v", archives)
+		}
+	}
+	if !archiveSeen[techUser.Username] || !archiveSeen[telecomUser.Username] {
+		t.Fatalf("technical director must see technical and telecom archives, got %+v", archives)
+	}
+	if archiveSeen[skudUser.Username] {
+		t.Fatalf("technical director must not see skud archives, got %+v", archives)
+	}
+}
+
+func TestDepartmentRoleChangesStayInsideDepartment(t *testing.T) {
+	app := withTempDB(t)
+	loginAsAdmin(t, app)
+
+	supportManager, err := app.CreateUser(UserWithPassword{Username: "support_manager2", Password: "secret", Role: RoleSupportManager})
+	if err != nil {
+		t.Fatalf("CreateUser support manager error = %v", err)
+	}
+	techEmployee, err := app.CreateUser(UserWithPassword{Username: "tech_employee2", Password: "secret", Role: RoleTechnician})
+	if err != nil {
+		t.Fatalf("CreateUser technician error = %v", err)
+	}
+
+	loginAsUser(t, app, supportManager.Username, "secret")
+	if _, err := app.UpdateUserRole(techEmployee.ID, RoleSeniorTech); err == nil {
+		t.Fatalf("expected support manager to be blocked from changing tech department role")
+	}
+	if err := app.DeleteUser(techEmployee.ID); err == nil {
+		t.Fatalf("expected support manager to be blocked from deleting tech department user")
+	}
+}
+
+// RU: Р В Р’В Р РЋРЎвЂєР В Р’В Р вЂ™Р’ВµР В Р Р‹Р В РЎвЂњР В Р Р‹Р Р†Р вЂљРЎв„ў `TestFrontendRoleLabelsStayReadable`.
+// EN: Test `TestFrontendRoleLabelsStayReadable`.
+//
+// RU: Р В Р’В Р вЂ™Р’В§Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р РЋРІР‚Сћ Р В Р’В Р СћРІР‚ВР В Р’В Р вЂ™Р’ВµР В Р’В Р вЂ™Р’В»Р В Р’В Р вЂ™Р’В°Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р Р†Р вЂљРЎв„ў: Р В Р’В Р РЋРІР‚вЂќР В Р Р‹Р В РІР‚С™Р В Р’В Р РЋРІР‚СћР В Р’В Р В РІР‚В Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р В РІР‚С™Р В Р Р‹Р В Р РЏР В Р’В Р вЂ™Р’ВµР В Р Р‹Р Р†Р вЂљРЎв„ў, Р В Р Р‹Р Р†Р вЂљР Р‹Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р РЋРІР‚Сћ Р В Р’В Р РЋРІР‚вЂќР В Р’В Р РЋРІР‚СћР В Р’В Р СћРІР‚ВР В Р’В Р РЋРІР‚вЂќР В Р’В Р РЋРІР‚ВР В Р Р‹Р В РЎвЂњР В Р’В Р РЋРІР‚В Р В Р Р‹Р В РІР‚С™Р В Р’В Р РЋРІР‚СћР В Р’В Р вЂ™Р’В»Р В Р’В Р вЂ™Р’ВµР В Р’В Р Р†РІР‚С›РІР‚вЂњ Р В Р’В Р РЋРІР‚В Р В Р’В Р В РІР‚В Р В Р’В Р вЂ™Р’В°Р В Р Р‹Р В РІР‚С™Р В Р’В Р РЋРІР‚ВР В Р’В Р вЂ™Р’В°Р В Р’В Р В РІР‚В¦Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р Р‹Р Р†Р вЂљРІвЂћвЂ“ Р В Р’В Р В РІР‚В Р В Р Р‹Р Р†Р вЂљРІвЂћвЂ“Р В Р’В Р вЂ™Р’В±Р В Р’В Р РЋРІР‚СћР В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’В° Р В Р Р‹Р В РІР‚С™Р В Р’В Р РЋРІР‚СћР В Р’В Р вЂ™Р’В»Р В Р’В Р вЂ™Р’ВµР В Р’В Р Р†РІР‚С›РІР‚вЂњ Р В Р’В Р В РІР‚В Р В Р’В Р РЋРІР‚Сћ Р В Р Р‹Р Р†Р вЂљРЎвЂєР В Р Р‹Р В РІР‚С™Р В Р’В Р РЋРІР‚СћР В Р’В Р В РІР‚В¦Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’ВµР В Р’В Р В РІР‚В¦Р В Р’В Р СћРІР‚ВР В Р’В Р вЂ™Р’Вµ Р В Р’В Р РЋРІР‚СћР В Р Р‹Р В РЎвЂњР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’В°Р В Р Р‹Р В РІР‚в„–Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р Р‹Р В РЎвЂњР В Р Р‹Р В Р РЏ Р В Р Р‹Р Р†Р вЂљР Р‹Р В Р’В Р РЋРІР‚ВР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’В°Р В Р’В Р вЂ™Р’ВµР В Р’В Р РЋР’ВР В Р Р‹Р Р†Р вЂљРІвЂћвЂ“Р В Р’В Р РЋР’ВР В Р’В Р РЋРІР‚В.
+// EN: What it does: verifies that frontend role labels and role choice captions remain readable text.
+//
+// RU: Р В Р’В Р РЋРІвЂћСћР В Р’В Р вЂ™Р’В»Р В Р Р‹Р В РІР‚в„–Р В Р Р‹Р Р†Р вЂљР Р‹Р В Р’В Р вЂ™Р’ВµР В Р’В Р В РІР‚В Р В Р Р‹Р Р†Р вЂљРІвЂћвЂ“Р В Р’В Р вЂ™Р’Вµ Р В Р’В Р РЋР’ВР В Р’В Р РЋРІР‚СћР В Р’В Р РЋР’ВР В Р’В Р вЂ™Р’ВµР В Р’В Р В РІР‚В¦Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р Р‹Р Р†Р вЂљРІвЂћвЂ“: Р В Р’В Р вЂ™Р’В·Р В Р’В Р вЂ™Р’В°Р В Р Р‹Р Р†Р вЂљР’В°Р В Р’В Р РЋРІР‚ВР В Р Р‹Р Р†Р вЂљР’В°Р В Р’В Р вЂ™Р’В°Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р Р†Р вЂљРЎв„ў Р В Р’В Р РЋРІР‚СћР В Р Р‹Р Р†Р вЂљРЎв„ў Р В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’ВµР В Р’В Р РЋРІР‚вЂњР В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р В РЎвЂњР В Р Р‹Р В РЎвЂњР В Р’В Р РЋРІР‚ВР В Р’В Р Р†РІР‚С›РІР‚вЂњ, Р В Р’В Р РЋРІР‚СњР В Р’В Р РЋРІР‚СћР В Р’В Р РЋРІР‚вЂњР В Р’В Р СћРІР‚ВР В Р’В Р вЂ™Р’В° Р В Р Р‹Р В РІР‚С™Р В Р Р‹Р РЋРІР‚СљР В Р Р‹Р В РЎвЂњР В Р Р‹Р В РЎвЂњР В Р’В Р РЋРІР‚СњР В Р’В Р РЋРІР‚ВР В Р’В Р вЂ™Р’Вµ Р В Р Р‹Р В РЎвЂњР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р Р‹Р В РІР‚С™Р В Р’В Р РЋРІР‚СћР В Р’В Р РЋРІР‚СњР В Р’В Р РЋРІР‚В Р В Р’В Р В РІР‚В Р В Р’В Р РЋРІР‚Сћ Р В Р Р‹Р Р†Р вЂљРЎвЂєР В Р Р‹Р В РІР‚С™Р В Р’В Р РЋРІР‚СћР В Р’В Р В РІР‚В¦Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’ВµР В Р’В Р В РІР‚В¦Р В Р’В Р СћРІР‚ВР В Р’В Р вЂ™Р’Вµ Р В Р’В Р РЋРІР‚вЂќР В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’ВµР В Р’В Р В РІР‚В Р В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’В°Р В Р Р‹Р Р†Р вЂљР’В°Р В Р’В Р вЂ™Р’В°Р В Р Р‹Р В РІР‚в„–Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р Р‹Р В РЎвЂњР В Р Р‹Р В Р РЏ Р В Р’В Р В РІР‚В  `????`.
+// EN: Key points: protects against regressions where frontend Russian strings degrade into `????`.
+func TestFrontendRoleLabelsStayReadable(t *testing.T) {
+	content, err := os.ReadFile(filepath.Join("..", "frontend", "dist", "assets", "app.js"))
+	if err != nil {
+		t.Fatalf("ReadFile app.js error = %v", err)
+	}
+
+	requiredSnippets := [][]byte{
+		[]byte(`global_director`),
+		[]byte(`executive_director`),
+		[]byte(`technical_director`),
+		[]byte(`support_head`),
+		[]byte(`support_sysadmin`),
+		[]byte(`technical_senior`),
+		[]byte(`telecom_construction_director`),
+		[]byte(`telecom_senior_vols`),
+		[]byte(`skud_head`),
+		[]byte(`approval_employee`),
+		[]byte(`marketing_courier`),
+		[]byte(`commercial_senior_mrk`),
+		[]byte(`finance_head`),
+		[]byte(`legal_employee`),
+		[]byte(`development_head`),
+		[]byte(`Р В Р’В Р Р†Р вЂљРЎС™Р В Р’В Р вЂ™Р’ВµР В Р’В Р В РІР‚В¦Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’В°Р В Р’В Р вЂ™Р’В»Р В Р Р‹Р В Р вЂ°Р В Р’В Р В РІР‚В¦Р В Р Р‹Р Р†Р вЂљРІвЂћвЂ“Р В Р’В Р Р†РІР‚С›РІР‚вЂњ Р В Р’В Р СћРІР‚ВР В Р’В Р РЋРІР‚ВР В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’ВµР В Р’В Р РЋРІР‚СњР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р РЋРІР‚СћР В Р Р‹Р В РІР‚С™`),
+		[]byte(`Р В Р’В Р В Р вЂ№Р В Р’В Р РЋРІР‚ВР В Р Р‹Р В РЎвЂњР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’ВµР В Р’В Р РЋР’ВР В Р’В Р В РІР‚В¦Р В Р Р‹Р Р†Р вЂљРІвЂћвЂ“Р В Р’В Р Р†РІР‚С›РІР‚вЂњ Р В Р’В Р вЂ™Р’В°Р В Р’В Р СћРІР‚ВР В Р’В Р РЋР’ВР В Р’В Р РЋРІР‚ВР В Р’В Р В РІР‚В¦Р В Р’В Р РЋРІР‚ВР В Р Р‹Р В РЎвЂњР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’В°Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р РЋРІР‚СћР В Р Р‹Р В РІР‚С™`),
+		[]byte(`Р В Р’В Р В Р вЂ№Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’В°Р В Р Р‹Р В РІР‚С™Р В Р Р‹Р Р†РІР‚С™Р’В¬Р В Р’В Р РЋРІР‚ВР В Р’В Р Р†РІР‚С›РІР‚вЂњ Р В Р’В Р РЋР’ВР В Р’В Р РЋРІР‚СћР В Р’В Р В РІР‚В¦Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’В°Р В Р’В Р вЂ™Р’В¶Р В Р’В Р В РІР‚В¦Р В Р’В Р РЋРІР‚ВР В Р’В Р РЋРІР‚Сњ Р В Р’В Р Р†Р вЂљРІвЂћСћР В Р’В Р РЋРІР‚С”Р В Р’В Р Р†Р вЂљРЎвЂќР В Р’В Р В Р вЂ№`),
+		[]byte(`Р В Р’В Р вЂ™Р’В Р В Р Р‹Р РЋРІР‚СљР В Р’В Р РЋРІР‚СњР В Р’В Р РЋРІР‚СћР В Р’В Р В РІР‚В Р В Р’В Р РЋРІР‚СћР В Р’В Р СћРІР‚ВР В Р’В Р РЋРІР‚ВР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’ВµР В Р’В Р вЂ™Р’В»Р В Р Р‹Р В Р вЂ° Р В Р’В Р РЋРІР‚вЂњР В Р Р‹Р В РІР‚С™Р В Р Р‹Р РЋРІР‚СљР В Р’В Р РЋРІР‚вЂќР В Р’В Р РЋРІР‚вЂќР В Р Р‹Р Р†Р вЂљРІвЂћвЂ“ Р В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’В°Р В Р’В Р вЂ™Р’В·Р В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’В°Р В Р’В Р вЂ™Р’В±Р В Р’В Р РЋРІР‚СћР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р РЋРІР‚СњР В Р’В Р РЋРІР‚В`),
+	}
+	for _, snippet := range requiredSnippets {
+		if !bytes.Contains(content, snippet) {
+			t.Fatalf("app.js is missing readable role label %q", string(snippet))
+		}
+	}
+	if bytes.Contains(content, []byte("????")) {
+		t.Fatalf("app.js still contains placeholder question marks in role labels")
+	}
+}
+
+// RU: Р В Р’В Р РЋРЎвЂєР В Р’В Р вЂ™Р’ВµР В Р Р‹Р В РЎвЂњР В Р Р‹Р Р†Р вЂљРЎв„ў `TestFrontendCoreUiFunctionsExist`.
+// EN: Test `TestFrontendCoreUiFunctionsExist`.
+//
+// RU: Р В Р’В Р вЂ™Р’В§Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р РЋРІР‚Сћ Р В Р’В Р СћРІР‚ВР В Р’В Р вЂ™Р’ВµР В Р’В Р вЂ™Р’В»Р В Р’В Р вЂ™Р’В°Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р Р†Р вЂљРЎв„ў: Р В Р’В Р РЋРІР‚вЂќР В Р Р‹Р В РІР‚С™Р В Р’В Р РЋРІР‚СћР В Р’В Р В РІР‚В Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р В РІР‚С™Р В Р Р‹Р В Р РЏР В Р’В Р вЂ™Р’ВµР В Р Р‹Р Р†Р вЂљРЎв„ў, Р В Р Р‹Р Р†Р вЂљР Р‹Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р РЋРІР‚Сћ Р В Р’В Р В РІР‚В Р В Р’В Р РЋРІР‚Сћ Р В Р Р‹Р Р†Р вЂљРЎвЂєР В Р Р‹Р В РІР‚С™Р В Р’В Р РЋРІР‚СћР В Р’В Р В РІР‚В¦Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’ВµР В Р’В Р В РІР‚В¦Р В Р’В Р СћРІР‚В-Р В Р Р‹Р В РЎвЂњР В Р’В Р РЋРІР‚СњР В Р Р‹Р В РІР‚С™Р В Р’В Р РЋРІР‚ВР В Р’В Р РЋРІР‚вЂќР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’Вµ Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р В РЎвЂњР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р Р‹Р В Р вЂ° Р В Р’В Р РЋРІР‚СњР В Р’В Р вЂ™Р’В»Р В Р Р‹Р В РІР‚в„–Р В Р Р‹Р Р†Р вЂљР Р‹Р В Р’В Р вЂ™Р’ВµР В Р’В Р В РІР‚В Р В Р Р‹Р Р†Р вЂљРІвЂћвЂ“Р В Р’В Р вЂ™Р’Вµ Р В Р Р‹Р Р†Р вЂљРЎвЂєР В Р Р‹Р РЋРІР‚СљР В Р’В Р В РІР‚В¦Р В Р’В Р РЋРІР‚СњР В Р Р‹Р Р†Р вЂљР’В Р В Р’В Р РЋРІР‚ВР В Р’В Р РЋРІР‚В Р В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’В°Р В Р Р‹Р В РЎвЂњР В Р Р‹Р Р†Р вЂљР Р‹Р В Р Р‹Р Р†Р вЂљР’ВР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’В°,
+// RU: Р В Р Р‹Р Р†Р вЂљРЎвЂєР В Р’В Р РЋРІР‚СћР В Р Р‹Р В РІР‚С™Р В Р’В Р РЋР’ВР В Р Р‹Р Р†Р вЂљРІвЂћвЂ“ Р В Р Р‹Р РЋРІР‚СљР В Р Р‹Р В РЎвЂњР В Р’В Р вЂ™Р’В»Р В Р Р‹Р РЋРІР‚СљР В Р’В Р РЋРІР‚вЂњ Р В Р’В Р РЋРІР‚В Р В Р’В Р вЂ™Р’В°Р В Р Р‹Р В РІР‚С™Р В Р Р‹Р Р†Р вЂљР’В¦Р В Р’В Р РЋРІР‚ВР В Р’В Р В РІР‚В Р В Р’В Р вЂ™Р’В°, Р В Р’В Р вЂ™Р’В° Р В Р’В Р РЋРІР‚вЂќР В Р’В Р РЋРІР‚СћР В Р’В Р СћРІР‚ВР В Р’В Р РЋРІР‚вЂќР В Р’В Р РЋРІР‚ВР В Р Р‹Р В РЎвЂњР В Р’В Р РЋРІР‚В Р В Р’В Р вЂ™Р’В°Р В Р Р‹Р В РІР‚С™Р В Р Р‹Р Р†Р вЂљР’В¦Р В Р’В Р РЋРІР‚ВР В Р’В Р В РІР‚В Р В Р’В Р вЂ™Р’В° Р В Р’В Р РЋРІР‚СћР В Р Р‹Р В РЎвЂњР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’В°Р В Р Р‹Р В РІР‚в„–Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р Р‹Р В РЎвЂњР В Р Р‹Р В Р РЏ Р В Р Р‹Р Р†Р вЂљР Р‹Р В Р’В Р РЋРІР‚ВР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’В°Р В Р’В Р вЂ™Р’ВµР В Р’В Р РЋР’ВР В Р Р‹Р Р†Р вЂљРІвЂћвЂ“Р В Р’В Р РЋР’ВР В Р’В Р РЋРІР‚В.
+// EN: What it does: verifies that the frontend script still contains the core
+// EN: calculator, service-form, and archive functions, and that archive labels remain readable.
+//
+// RU: Р В Р’В Р РЋРІвЂћСћР В Р’В Р вЂ™Р’В»Р В Р Р‹Р В РІР‚в„–Р В Р Р‹Р Р†Р вЂљР Р‹Р В Р’В Р вЂ™Р’ВµР В Р’В Р В РІР‚В Р В Р Р‹Р Р†Р вЂљРІвЂћвЂ“Р В Р’В Р вЂ™Р’Вµ Р В Р’В Р РЋР’ВР В Р’В Р РЋРІР‚СћР В Р’В Р РЋР’ВР В Р’В Р вЂ™Р’ВµР В Р’В Р В РІР‚В¦Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р Р‹Р Р†Р вЂљРІвЂћвЂ“: Р В Р’В Р вЂ™Р’В»Р В Р’В Р РЋРІР‚СћР В Р’В Р В РІР‚В Р В Р’В Р РЋРІР‚ВР В Р Р‹Р Р†Р вЂљРЎв„ў Р В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’ВµР В Р’В Р РЋРІР‚вЂњР В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р В РЎвЂњР В Р Р‹Р В РЎвЂњР В Р’В Р РЋРІР‚ВР В Р’В Р РЋРІР‚В Р В Р’В Р РЋРІР‚вЂќР В Р’В Р РЋРІР‚СћР В Р Р‹Р В РЎвЂњР В Р’В Р вЂ™Р’В»Р В Р’В Р вЂ™Р’Вµ Р В Р Р‹Р В РІР‚С™Р В Р Р‹Р РЋРІР‚СљР В Р Р‹Р Р†Р вЂљР Р‹Р В Р’В Р В РІР‚В¦Р В Р Р‹Р Р†Р вЂљРІвЂћвЂ“Р В Р Р‹Р Р†Р вЂљР’В¦ Р В Р’В Р РЋРІР‚вЂќР В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’В°Р В Р’В Р В РІР‚В Р В Р’В Р РЋРІР‚СћР В Р’В Р РЋРІР‚Сњ app.js; Р В Р’В Р вЂ™Р’В·Р В Р’В Р вЂ™Р’В°Р В Р Р‹Р Р†Р вЂљР’В°Р В Р’В Р РЋРІР‚ВР В Р Р‹Р Р†Р вЂљР’В°Р В Р’В Р вЂ™Р’В°Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р Р†Р вЂљРЎв„ў Р В Р’В Р РЋРІР‚СћР В Р Р‹Р Р†Р вЂљРЎв„ў
+// RU: Р В Р’В Р РЋРІР‚вЂќР В Р Р‹Р В РІР‚С™Р В Р’В Р РЋРІР‚СћР В Р’В Р РЋРІР‚вЂќР В Р’В Р вЂ™Р’В°Р В Р’В Р вЂ™Р’В¶Р В Р’В Р РЋРІР‚В Р В Р Р‹Р Р†Р вЂљРЎвЂєР В Р Р‹Р РЋРІР‚СљР В Р’В Р В РІР‚В¦Р В Р’В Р РЋРІР‚СњР В Р Р‹Р Р†Р вЂљР’В Р В Р’В Р РЋРІР‚ВР В Р’В Р Р†РІР‚С›РІР‚вЂњ Р В Р’В Р В РІР‚В Р В Р Р‹Р В РІР‚С™Р В Р’В Р РЋРІР‚СћР В Р’В Р СћРІР‚ВР В Р’В Р вЂ™Р’Вµ renderResult/resetServiceForm Р В Р’В Р РЋРІР‚В Р В Р’В Р РЋРІР‚СћР В Р Р‹Р Р†Р вЂљРЎв„ў Р В Р’В Р В РІР‚В Р В Р’В Р РЋРІР‚СћР В Р’В Р вЂ™Р’В·Р В Р’В Р В РІР‚В Р В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’В°Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’В° Р В Р’В Р вЂ™Р’В±Р В Р’В Р РЋРІР‚ВР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р Р‹Р Р†Р вЂљРІвЂћвЂ“Р В Р Р‹Р Р†Р вЂљР’В¦ Р В Р Р‹Р В РЎвЂњР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р Р‹Р В РІР‚С™Р В Р’В Р РЋРІР‚СћР В Р’В Р РЋРІР‚Сњ.
+// EN: Key points: catches regressions after manual edits to app.js; protects against
+// EN: missing functions such as renderResult/resetServiceForm and against broken strings.
+func TestFrontendCoreUiFunctionsExist(t *testing.T) {
+	content, err := os.ReadFile(filepath.Join("..", "frontend", "dist", "assets", "app.js"))
+	if err != nil {
+		t.Fatalf("ReadFile app.js error = %v", err)
+	}
+
+	requiredSnippets := [][]byte{
+		[]byte("function resetServiceForm()"),
+		[]byte("function renderResult(result)"),
+		[]byte("function renderArchiveDetails(saved)"),
+		[]byte("function randomizeCalculation()"),
+		[]byte("const randomizeButton = document.getElementById(\"randomize-button\")"),
+		[]byte("function renderRoleOptions(roleChoices, selectedValue = \"\")"),
+		[]byte("function departmentSortPriority(department)"),
+		[]byte("<optgroup label=\"${departmentLabel(group.department)}\">${options}</optgroup>"),
+		[]byte("Р В Р’В Р Р†Р вЂљРІвЂћСћР В Р Р‹Р Р†Р вЂљРІвЂћвЂ“Р В Р’В Р вЂ™Р’В±Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р В РІР‚С™Р В Р’В Р РЋРІР‚ВР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’Вµ Р В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’В°Р В Р Р‹Р В РЎвЂњР В Р Р‹Р Р†Р вЂљР Р‹Р В Р Р‹Р Р†Р вЂљР’ВР В Р Р‹Р Р†Р вЂљРЎв„ў Р В Р’В Р РЋРІР‚ВР В Р’В Р вЂ™Р’В· Р В Р’В Р вЂ™Р’В°Р В Р Р‹Р В РІР‚С™Р В Р Р‹Р Р†Р вЂљР’В¦Р В Р’В Р РЋРІР‚ВР В Р’В Р В РІР‚В Р В Р’В Р вЂ™Р’В°"),
+		[]byte("Р В Р’В Р РЋРІР‚в„ўР В Р Р‹Р В РІР‚С™Р В Р Р‹Р Р†Р вЂљР’В¦Р В Р’В Р РЋРІР‚ВР В Р’В Р В РІР‚В  Р В Р’В Р РЋРІР‚вЂќР В Р’В Р РЋРІР‚СћР В Р’В Р РЋРІР‚СњР В Р’В Р вЂ™Р’В° Р В Р’В Р РЋРІР‚вЂќР В Р Р‹Р РЋРІР‚СљР В Р Р‹Р В РЎвЂњР В Р Р‹Р Р†Р вЂљРЎв„ў Р В Р’В Р РЋРІР‚ВР В Р’В Р вЂ™Р’В»Р В Р’В Р РЋРІР‚В Р В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’В°Р В Р Р‹Р В РЎвЂњР В Р Р‹Р Р†Р вЂљР Р‹Р В Р Р‹Р Р†Р вЂљР’ВР В Р Р‹Р Р†Р вЂљРЎв„ў Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р Р†Р вЂљР’В°Р В Р Р‹Р Р†Р вЂљР’В Р В Р’В Р В РІР‚В¦Р В Р’В Р вЂ™Р’Вµ Р В Р’В Р В РІР‚В Р В Р Р‹Р Р†Р вЂљРІвЂћвЂ“Р В Р’В Р вЂ™Р’В±Р В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’В°Р В Р’В Р В РІР‚В¦."),
+	}
+	for _, snippet := range requiredSnippets {
+		if !bytes.Contains(content, snippet) {
+			t.Fatalf("app.js is missing required readable snippet %q", string(snippet))
+		}
+	}
+
+	if bytes.Contains(content, []byte("ReferenceError")) {
+		t.Fatalf("app.js should not contain runtime error text leftovers")
+	}
+}
+
+// RU: ???? `TestFrontendAdminUsersCanSeeRoleControls`.
+// EN: Test `TestFrontendAdminUsersCanSeeRoleControls`.
+//
+// RU: ??? ??????: ?????????, ??? ???????? ??????? canAdmin ??????????? ???????? ??? ?????? ?????????? ??????.
+// EN: What it does: verifies that the frontend treats canAdmin as sufficient for rendering role management controls.
+//
+// RU: ???????? ???????: ???????? ???????? test-admin `admin1`, ? ???????? ???? admin, ?? UI ?? ?????? ???????? ?????? ?? canManage.
+// EN: Key points: protects the admin1 scenario where the user has the admin role and the UI must not depend on canManage alone.
+func TestFrontendAdminUsersCanSeeRoleControls(t *testing.T) {
+	content, err := os.ReadFile(filepath.Join("..", "frontend", "dist", "assets", "app.js"))
+	if err != nil {
+		t.Fatalf("ReadFile app.js error = %v", err)
+	}
+
+	required := []byte("const canChangeRole = Boolean(appState.session?.canAdmin)")
+	if !bytes.Contains(content, required) {
+		t.Fatalf("app.js should allow admin users to see role controls")
+	}
+}
+
+func TestFrontendExportControlsExist(t *testing.T) {
+	indexContent, err := os.ReadFile(filepath.Join("..", "frontend", "dist", "index.html"))
+	if err != nil {
+		t.Fatalf("ReadFile index.html error = %v", err)
+	}
+	for _, snippet := range [][]byte{
+		[]byte(`id="archive-date-input"`),
+		[]byte(`id="act-number-input"`),
+		[]byte(`id="employee-full-name-input"`),
+		[]byte(`id="contract-details-button"`),
+		[]byte(`id="contract-details-summary"`),
+		[]byte(`id="contract-modal-spbks-number-input"`),
+		[]byte(`id="contract-modal-grizabl-number-input"`),
+		[]byte(`id="contract-modal-code-spbks"`),
+		[]byte(`id="contract-modal-code-grizabl"`),
+		[]byte(`id="contract-modal-date-input"`),
+		[]byte(`id="contract-modal-fullname-input"`),
+		[]byte(`id="act-number-visible-input"`),
+		[]byte(`id="previous-act-number"`),
+		[]byte(`id="download-pdf-button"`),
+	} {
+		if !bytes.Contains(indexContent, snippet) {
+			t.Fatalf("index.html is missing export control %q", string(snippet))
+		}
+	}
+
+	jsContent, err := os.ReadFile(filepath.Join("..", "frontend", "dist", "assets", "app.js"))
+	if err != nil {
+		t.Fatalf("ReadFile app.js error = %v", err)
+	}
+	for _, snippet := range [][]byte{
+		[]byte("UpdateUserFullName"),
+		[]byte("ExportCurrentCalculationPDF"),
+		[]byte("openContractModal"),
+		[]byte("saveContractDetails"),
+		[]byte("downloadCurrentCalculationPDF"),
+		[]byte("persistActNumber"),
+		[]byte("renderActNumberControls"),
+		[]byte("renderResult(result)"),
+		[]byte("\u0414\u043b\u044f \u0432\u044b\u0433\u0440\u0443\u0437\u043a\u0438 \u0430\u043a\u0442\u0430 \u0443\u043a\u0430\u0436\u0438\u0442\u0435 \u043d\u043e\u043c\u0435\u0440 \u0434\u043e\u0433\u043e\u0432\u043e\u0440\u0430"),
+		[]byte("\u0412\u044b\u0431\u0440\u0430\u043d \u0434\u043e\u0433\u043e\u0432\u043e\u0440:"),
+	} {
+		if !bytes.Contains(jsContent, snippet) {
+			t.Fatalf("app.js is missing export-related snippet %q", string(snippet))
+		}
+	}
+}
