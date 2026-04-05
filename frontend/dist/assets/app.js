@@ -112,14 +112,15 @@ const contractModalFullNameInput = document.getElementById("contract-modal-fulln
 let confirmResolver = null;
 
 function renderActNumberControls() {
-  const actNumber = clampPositiveInteger(appState.exportDraft.actNumber, appState.session?.user?.lastActNumber ?? 1);
+  const actNumber = clampPositiveInteger(appState.exportDraft.actNumber, (appState.session?.user?.lastActNumber || 0) + 1);
+  const lastActNumber = Number.isInteger(Number(appState.session?.user?.lastActNumber)) ? Number(appState.session?.user?.lastActNumber) : 0;
   appState.exportDraft.actNumber = actNumber;
   if (actNumberVisibleInput) {
     actNumberVisibleInput.value = String(actNumber);
     actNumberVisibleInput.disabled = !appState.session?.authenticated;
   }
   if (previousActNumber) {
-    previousActNumber.textContent = `\u041d\u043e\u043c\u0435\u0440 \u043f\u0440\u0435\u0434. \u0430\u043a\u0442\u0430: ${actNumber > 1 ? actNumber - 1 : "\u2014"}`;
+    previousActNumber.textContent = `Последний номер акта: ${lastActNumber > 0 ? lastActNumber : "—"}`;
   }
 }
 
@@ -188,27 +189,10 @@ async function persistActNumber() {
     return;
   }
 
-  const nextValue = clampPositiveInteger(actNumberVisibleInput?.value, appState.exportDraft.actNumber || 1);
+  const nextValue = clampPositiveInteger(actNumberVisibleInput?.value, appState.exportDraft.actNumber || ((currentUser.lastActNumber || 0) + 1));
   appState.exportDraft.actNumber = nextValue;
   updateHiddenExportInputs();
-
-  if (currentUser.lastActNumber === nextValue) {
-    return;
-  }
-
-  try {
-    const updated = await api.UpdateUserLastActNumber({
-      userID: currentUser.id,
-      lastActNumber: nextValue,
-    });
-    if (updated && appState.session?.user?.id === updated.id) {
-      appState.session.user = { ...appState.session.user, ...updated };
-      appState.exportDraft.actNumber = clampPositiveInteger(updated.lastActNumber, nextValue);
-      updateHiddenExportInputs();
-    }
-  } catch (error) {
-    setMessage(error, "error");
-  }
+  renderActNumberControls();
 }
 
 function updateHiddenExportInputs() {
@@ -1371,6 +1355,18 @@ async function downloadCurrentCalculationPDF() {
 
     });
 
+    const updated = await api.UpdateUserLastActNumber({
+      userID: currentUser.id,
+      lastActNumber: actNumber,
+    });
+    if (updated && appState.session?.user?.id === updated.id) {
+      appState.session.user = { ...appState.session.user, ...updated };
+    } else if (appState.session?.user) {
+      appState.session.user.lastActNumber = actNumber;
+    }
+    appState.exportDraft.actNumber = actNumber + 1;
+    updateHiddenExportInputs();
+    renderActNumberControls();
     setMessage(`Акт сохранён: ${path}`, "success");
 
   } catch (error) {
@@ -2075,6 +2071,9 @@ window.addEventListener("DOMContentLoaded", async () => {
     setLoginMessage(error, "error");
   }
 });
+
+
+
 
 
 

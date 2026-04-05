@@ -1,4 +1,4 @@
-﻿package main
+package main
 
 import (
 	"errors"
@@ -32,7 +32,7 @@ func (a *App) CreateUser(req UserWithPassword) (User, error) {
 		return User{}, errors.New("Р вЂ™РЎвЂ№ Р Р…Р Вµ Р СР С•Р В¶Р ВµРЎвЂљР Вµ РЎРѓР С•Р В·Р Т‘Р В°РЎвЂљРЎРЉ Р С—Р С•Р В»РЎРЉР В·Р С•Р Р†Р В°РЎвЂљР ВµР В»РЎРЏ РЎРѓ РЎРЊРЎвЂљР С•Р в„– РЎР‚Р С•Р В»РЎРЉРЎР‹.")
 	}
 	createdAt := time.Now().Format(time.RFC3339)
-	result, err := a.db.Exec(`INSERT INTO users(username, password_hash, full_name, last_act_number, contract_spbks_number, contract_grizabl_number, contract_signed_at, role, created_at) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)`, username, hashPassword(password), "", 1, "", "", "", role, createdAt)
+	result, err := a.db.Exec(`INSERT INTO users(username, password_hash, full_name, last_act_number, preferred_contract_code, contract_spbks_number, contract_grizabl_number, contract_signed_at, role, created_at) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, username, hashPassword(password), "", 1, "1", "", "", "", role, createdAt)
 	if err != nil {
 		return User{}, fmt.Errorf("create user: %w", err)
 	}
@@ -42,8 +42,8 @@ func (a *App) CreateUser(req UserWithPassword) (User, error) {
 
 func (a *App) getUserByID(id int64) (User, error) {
 	var user User
-	err := a.db.QueryRow(`SELECT id, username, full_name, last_act_number, contract_spbks_number, contract_grizabl_number, contract_signed_at, role, created_at FROM users WHERE id = ?`, id).
-		Scan(&user.ID, &user.Username, &user.FullName, &user.LastActNumber, &user.ContractSPBKSNumber, &user.ContractGrizablNumber, &user.ContractSignedAt, &user.Role, &user.CreatedAt)
+	err := a.db.QueryRow(`SELECT id, username, full_name, last_act_number, preferred_contract_code, contract_spbks_number, contract_grizabl_number, contract_signed_at, role, created_at FROM users WHERE id = ?`, id).
+		Scan(&user.ID, &user.Username, &user.FullName, &user.LastActNumber, &user.PreferredContractCode, &user.ContractSPBKSNumber, &user.ContractGrizablNumber, &user.ContractSignedAt, &user.Role, &user.CreatedAt)
 	if err != nil {
 		return User{}, err
 	}
@@ -66,7 +66,7 @@ func (a *App) ListUsers() ([]User, error) {
 	if !canViewManagedUsers(user.Role) {
 		return []User{}, nil
 	}
-	rows, err := a.db.Query(`SELECT id, username, full_name, last_act_number, contract_spbks_number, contract_grizabl_number, contract_signed_at, role, created_at FROM users WHERE username <> 'admin' ORDER BY id ASC`)
+	rows, err := a.db.Query(`SELECT id, username, full_name, last_act_number, preferred_contract_code, contract_spbks_number, contract_grizabl_number, contract_signed_at, role, created_at FROM users WHERE username <> 'admin' ORDER BY id ASC`)
 	if err != nil {
 		return nil, fmt.Errorf("list users: %w", err)
 	}
@@ -75,7 +75,7 @@ func (a *App) ListUsers() ([]User, error) {
 	users := make([]User, 0)
 	for rows.Next() {
 		var item User
-		if err := rows.Scan(&item.ID, &item.Username, &item.FullName, &item.LastActNumber, &item.ContractSPBKSNumber, &item.ContractGrizablNumber, &item.ContractSignedAt, &item.Role, &item.CreatedAt); err != nil {
+		if err := rows.Scan(&item.ID, &item.Username, &item.FullName, &item.LastActNumber, &item.PreferredContractCode, &item.ContractSPBKSNumber, &item.ContractGrizablNumber, &item.ContractSignedAt, &item.Role, &item.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scan user: %w", err)
 		}
 		item.Role = normalizeRole(item.Role)
@@ -230,10 +230,14 @@ func (a *App) UpdateUserContractDetails(req UpdateUserContractDetailsRequest) (U
 
 	spbksNumber := strings.TrimSpace(req.ContractSPBKSNumber)
 	grizablNumber := strings.TrimSpace(req.ContractGrizablNumber)
+	preferredContractCode := strings.TrimSpace(req.PreferredContractCode)
+	if preferredContractCode != "1" && preferredContractCode != "2" {
+		preferredContractCode = "1"
+	}
 
 	if _, err := a.db.Exec(
-		`UPDATE users SET full_name = ?, contract_spbks_number = ?, contract_grizabl_number = ?, contract_signed_at = ? WHERE id = ?`,
-		fullName, spbksNumber, grizablNumber, signedAt, req.UserID,
+		`UPDATE users SET full_name = ?, preferred_contract_code = ?, contract_spbks_number = ?, contract_grizabl_number = ?, contract_signed_at = ? WHERE id = ?`,
+		fullName, preferredContractCode, spbksNumber, grizablNumber, signedAt, req.UserID,
 	); err != nil {
 		return User{}, fmt.Errorf("update user contract details: %w", err)
 	}
@@ -247,6 +251,7 @@ func (a *App) UpdateUserContractDetails(req UpdateUserContractDetailsRequest) (U
 		a.mu.Lock()
 		if a.currentSession != nil && a.currentSession.ID == updated.ID {
 			a.currentSession.FullName = updated.FullName
+			a.currentSession.PreferredContractCode = updated.PreferredContractCode
 			a.currentSession.ContractSPBKSNumber = updated.ContractSPBKSNumber
 			a.currentSession.ContractGrizablNumber = updated.ContractGrizablNumber
 			a.currentSession.ContractSignedAt = updated.ContractSignedAt
@@ -320,5 +325,3 @@ func (a *App) DeleteUser(userID int64) error {
 	}
 	return nil
 }
-
-

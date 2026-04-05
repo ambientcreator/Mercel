@@ -162,3 +162,40 @@ func TestNumberToRussianWordsSimple(t *testing.T) {
 		t.Fatalf("unexpected words: %q", actual)
 	}
 }
+
+func TestUpdateUserContractDetailsPersistsPreferredContract(t *testing.T) {
+	app := withTempDB(t)
+	loginAsAdmin1(t, app)
+
+	session := app.GetSession()
+	if session.User == nil {
+		t.Fatal("expected authenticated user session")
+	}
+
+	updated, err := app.UpdateUserContractDetails(UpdateUserContractDetailsRequest{
+		UserID:                session.User.ID,
+		FullName:              "\u0418\u0432\u0430\u043d\u043e\u0432 \u0418\u0432\u0430\u043d \u0418\u0432\u0430\u043d\u043e\u0432\u0438\u0447",
+		PreferredContractCode: "2",
+		ContractSPBKSNumber:   "11",
+		ContractGrizablNumber: "22",
+		ContractSignedAt:      "2026-04-05",
+	})
+	if err != nil {
+		t.Fatalf("UpdateUserContractDetails() error = %v", err)
+	}
+	if updated.PreferredContractCode != "2" {
+		t.Fatalf("expected preferred contract code 2, got %q", updated.PreferredContractCode)
+	}
+
+	current := app.GetSession()
+	if current.User == nil || current.User.PreferredContractCode != "2" {
+		t.Fatalf("expected in-memory session preferred contract code 2, got %+v", current.User)
+	}
+
+	app.Logout()
+	loginAsAdmin1(t, app)
+	reloaded := app.GetSession()
+	if reloaded.User == nil || reloaded.User.PreferredContractCode != "2" {
+		t.Fatalf("expected persisted preferred contract code 2 after relogin, got %+v", reloaded.User)
+	}
+}

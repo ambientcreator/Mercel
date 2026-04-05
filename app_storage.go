@@ -36,13 +36,13 @@ func NewApp() (*App, error) {
 	return app, nil
 }
 
-// RU: РџРµСЂРµРјРµРЅРЅР°СЏ `resolveDatabasePath`.
+// RU: Р СџР ВµРЎР‚Р ВµР СР ВµР Р…Р Р…Р В°РЎРЏ `resolveDatabasePath`.
 // EN: Variable `resolveDatabasePath`.
 //
-// RU: Р§С‚Рѕ РґРµР»Р°РµС‚: С…СЂР°РЅРёС‚ СЂРµСЃСѓСЂСЃС‹ РёР»Рё РіР»РѕР±Р°Р»СЊРЅРѕРµ СЃРѕСЃС‚РѕСЏРЅРёРµ, РєРѕС‚РѕСЂРѕРµ РЅСѓР¶РЅРѕ РґСЂСѓРіРёРј С‡Р°СЃС‚СЏРј РїСЂРѕРіСЂР°РјРјС‹.
+// RU: Р В§РЎвЂљР С• Р Т‘Р ВµР В»Р В°Р ВµРЎвЂљ: РЎвЂ¦РЎР‚Р В°Р Р…Р С‘РЎвЂљ РЎР‚Р ВµРЎРѓРЎС“РЎР‚РЎРѓРЎвЂ№ Р С‘Р В»Р С‘ Р С–Р В»Р С•Р В±Р В°Р В»РЎРЉР Р…Р С•Р Вµ РЎРѓР С•РЎРѓРЎвЂљР С•РЎРЏР Р…Р С‘Р Вµ, Р С”Р С•РЎвЂљР С•РЎР‚Р С•Р Вµ Р Р…РЎС“Р В¶Р Р…Р С• Р Т‘РЎР‚РЎС“Р С–Р С‘Р С РЎвЂЎР В°РЎРѓРЎвЂљРЎРЏР С Р С—РЎР‚Р С•Р С–РЎР‚Р В°Р СР СРЎвЂ№.
 // EN: What it does: resolveDatabasePath returns the canonical SQLite path for the current Mercel installation.
 //
-// RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: РІР°Р¶РµРЅ РєР°Рє РєРѕРЅС‚СЂР°РєС‚ РёР»Рё РѕРїРѕСЂРЅР°СЏ С‚РѕС‡РєР° РґР»СЏ РґСЂСѓРіРёС… С‡Р°СЃС‚РµР№ РїСЂРѕРµРєС‚Р°; РёР·РјРµРЅРµРЅРёСЏ Р·РґРµСЃСЊ С‡Р°СЃС‚Рѕ С‚СЂРµР±СѓСЋС‚ РѕСЃС‚РѕСЂРѕР¶РЅРѕСЃС‚Рё.
+// RU: Р С™Р В»РЎР‹РЎвЂЎР ВµР Р†РЎвЂ№Р Вµ Р СР С•Р СР ВµР Р…РЎвЂљРЎвЂ№: Р Р†Р В°Р В¶Р ВµР Р… Р С”Р В°Р С” Р С”Р С•Р Р…РЎвЂљРЎР‚Р В°Р С”РЎвЂљ Р С‘Р В»Р С‘ Р С•Р С—Р С•РЎР‚Р Р…Р В°РЎРЏ РЎвЂљР С•РЎвЂЎР С”Р В° Р Т‘Р В»РЎРЏ Р Т‘РЎР‚РЎС“Р С–Р С‘РЎвЂ¦ РЎвЂЎР В°РЎРѓРЎвЂљР ВµР в„– Р С—РЎР‚Р С•Р ВµР С”РЎвЂљР В°; Р С‘Р В·Р СР ВµР Р…Р ВµР Р…Р С‘РЎРЏ Р В·Р Т‘Р ВµРЎРѓРЎРЉ РЎвЂЎР В°РЎРѓРЎвЂљР С• РЎвЂљРЎР‚Р ВµР В±РЎС“РЎР‹РЎвЂљ Р С•РЎРѓРЎвЂљР С•РЎР‚Р С•Р В¶Р Р…Р С•РЎРѓРЎвЂљР С‘.
 // EN: Key points: serves as a shared contract or reference point; is reused across multiple areas of the project; changes here should be made carefully.
 var resolveDatabasePath = func() (string, error) {
 	baseDir, err := os.UserConfigDir()
@@ -56,13 +56,13 @@ var resolveDatabasePath = func() (string, error) {
 	return filepath.Join(appDir, AppStorageDBName), nil
 }
 
-// RU: РџРµСЂРµРјРµРЅРЅР°СЏ `resolveLegacyDatabasePath`.
+// RU: Р СџР ВµРЎР‚Р ВµР СР ВµР Р…Р Р…Р В°РЎРЏ `resolveLegacyDatabasePath`.
 // EN: Variable `resolveLegacyDatabasePath`.
 //
-// RU: Р§С‚Рѕ РґРµР»Р°РµС‚: С…СЂР°РЅРёС‚ СЂРµСЃСѓСЂСЃС‹ РёР»Рё РіР»РѕР±Р°Р»СЊРЅРѕРµ СЃРѕСЃС‚РѕСЏРЅРёРµ, РєРѕС‚РѕСЂРѕРµ РЅСѓР¶РЅРѕ РґСЂСѓРіРёРј С‡Р°СЃС‚СЏРј РїСЂРѕРіСЂР°РјРјС‹.
+// RU: Р В§РЎвЂљР С• Р Т‘Р ВµР В»Р В°Р ВµРЎвЂљ: РЎвЂ¦РЎР‚Р В°Р Р…Р С‘РЎвЂљ РЎР‚Р ВµРЎРѓРЎС“РЎР‚РЎРѓРЎвЂ№ Р С‘Р В»Р С‘ Р С–Р В»Р С•Р В±Р В°Р В»РЎРЉР Р…Р С•Р Вµ РЎРѓР С•РЎРѓРЎвЂљР С•РЎРЏР Р…Р С‘Р Вµ, Р С”Р С•РЎвЂљР С•РЎР‚Р С•Р Вµ Р Р…РЎС“Р В¶Р Р…Р С• Р Т‘РЎР‚РЎС“Р С–Р С‘Р С РЎвЂЎР В°РЎРѓРЎвЂљРЎРЏР С Р С—РЎР‚Р С•Р С–РЎР‚Р В°Р СР СРЎвЂ№.
 // EN: What it does: resolveLegacyDatabasePath points to the pre-rename Statistic database so data can be recovered automatically.
 //
-// RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: РІР°Р¶РµРЅ РєР°Рє РєРѕРЅС‚СЂР°РєС‚ РёР»Рё РѕРїРѕСЂРЅР°СЏ С‚РѕС‡РєР° РґР»СЏ РґСЂСѓРіРёС… С‡Р°СЃС‚РµР№ РїСЂРѕРµРєС‚Р°; РёР·РјРµРЅРµРЅРёСЏ Р·РґРµСЃСЊ С‡Р°СЃС‚Рѕ С‚СЂРµР±СѓСЋС‚ РѕСЃС‚РѕСЂРѕР¶РЅРѕСЃС‚Рё.
+// RU: Р С™Р В»РЎР‹РЎвЂЎР ВµР Р†РЎвЂ№Р Вµ Р СР С•Р СР ВµР Р…РЎвЂљРЎвЂ№: Р Р†Р В°Р В¶Р ВµР Р… Р С”Р В°Р С” Р С”Р С•Р Р…РЎвЂљРЎР‚Р В°Р С”РЎвЂљ Р С‘Р В»Р С‘ Р С•Р С—Р С•РЎР‚Р Р…Р В°РЎРЏ РЎвЂљР С•РЎвЂЎР С”Р В° Р Т‘Р В»РЎРЏ Р Т‘РЎР‚РЎС“Р С–Р С‘РЎвЂ¦ РЎвЂЎР В°РЎРѓРЎвЂљР ВµР в„– Р С—РЎР‚Р С•Р ВµР С”РЎвЂљР В°; Р С‘Р В·Р СР ВµР Р…Р ВµР Р…Р С‘РЎРЏ Р В·Р Т‘Р ВµРЎРѓРЎРЉ РЎвЂЎР В°РЎРѓРЎвЂљР С• РЎвЂљРЎР‚Р ВµР В±РЎС“РЎР‹РЎвЂљ Р С•РЎРѓРЎвЂљР С•РЎР‚Р С•Р В¶Р Р…Р С•РЎРѓРЎвЂљР С‘.
 // EN: Key points: serves as a shared contract or reference point; is reused across multiple areas of the project; changes here should be made carefully.
 var resolveLegacyDatabasePath = func() (string, error) {
 	baseDir, err := os.UserConfigDir()
@@ -80,13 +80,13 @@ var resolvePreviousMercelDatabasePath = func() (string, error) {
 	return filepath.Join(baseDir, "Mercel", "mercel.sqlite"), nil
 }
 
-// RU: Р¤СѓРЅРєС†РёСЏ `ensureDatabasePath`.
+// RU: Р В¤РЎС“Р Р…Р С”РЎвЂ Р С‘РЎРЏ `ensureDatabasePath`.
 // EN: Function `ensureDatabasePath`.
 //
-// RU: Р§С‚Рѕ РґРµР»Р°РµС‚: РїРѕРјРѕРіР°РµС‚ СЂР°Р±РѕС‚Р°С‚СЊ СЃ С„Р°Р№Р»Р°РјРё, SQLite Рё РјРёРіСЂР°С†РёСЏРјРё.
+// RU: Р В§РЎвЂљР С• Р Т‘Р ВµР В»Р В°Р ВµРЎвЂљ: Р С—Р С•Р СР С•Р С–Р В°Р ВµРЎвЂљ РЎР‚Р В°Р В±Р С•РЎвЂљР В°РЎвЂљРЎРЉ РЎРѓ РЎвЂћР В°Р в„–Р В»Р В°Р СР С‘, SQLite Р С‘ Р СР С‘Р С–РЎР‚Р В°РЎвЂ Р С‘РЎРЏР СР С‘.
 // EN: What it does: ensureDatabasePath decides which database file should be used and performs legacy recovery when needed.
 //
-// RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: РІР°Р¶РµРЅ РґР»СЏ СѓСЃС‚РѕР№С‡РёРІРѕСЃС‚Рё Р»РѕРіРёРєРё; РјРѕР¶РµС‚ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ СЃСЂР°Р·Сѓ РІ РЅРµСЃРєРѕР»СЊРєРёС… РјРµСЃС‚Р°С…; РёР·РјРµРЅРµРЅРёСЏ СЃС‚РѕРёС‚ РґРµР»Р°С‚СЊ РѕСЃРѕР·РЅР°РЅРЅРѕ.
+// RU: Р С™Р В»РЎР‹РЎвЂЎР ВµР Р†РЎвЂ№Р Вµ Р СР С•Р СР ВµР Р…РЎвЂљРЎвЂ№: Р Р†Р В°Р В¶Р ВµР Р… Р Т‘Р В»РЎРЏ РЎС“РЎРѓРЎвЂљР С•Р в„–РЎвЂЎР С‘Р Р†Р С•РЎРѓРЎвЂљР С‘ Р В»Р С•Р С–Р С‘Р С”Р С‘; Р СР С•Р В¶Р ВµРЎвЂљ Р С‘РЎРѓР С—Р С•Р В»РЎРЉР В·Р С•Р Р†Р В°РЎвЂљРЎРЉРЎРѓРЎРЏ РЎРѓРЎР‚Р В°Р В·РЎС“ Р Р† Р Р…Р ВµРЎРѓР С”Р С•Р В»РЎРЉР С”Р С‘РЎвЂ¦ Р СР ВµРЎРѓРЎвЂљР В°РЎвЂ¦; Р С‘Р В·Р СР ВµР Р…Р ВµР Р…Р С‘РЎРЏ РЎРѓРЎвЂљР С•Р С‘РЎвЂљ Р Т‘Р ВµР В»Р В°РЎвЂљРЎРЉ Р С•РЎРѓР С•Р В·Р Р…Р В°Р Р…Р Р…Р С•.
 // EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
 func ensureDatabasePath() (string, error) {
 	dbPath, err := resolveDatabasePath()
@@ -159,13 +159,13 @@ func ensureDatabasePath() (string, error) {
 	return dbPath, nil
 }
 
-// RU: Р¤СѓРЅРєС†РёСЏ `shouldRecoverFromLegacy`.
+// RU: Р В¤РЎС“Р Р…Р С”РЎвЂ Р С‘РЎРЏ `shouldRecoverFromLegacy`.
 // EN: Function `shouldRecoverFromLegacy`.
 //
-// RU: Р§С‚Рѕ РґРµР»Р°РµС‚: РІС‹РїРѕР»РЅСЏРµС‚ РІСЃРїРѕРјРѕРіР°С‚РµР»СЊРЅРѕРµ РїСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёРµ, РїСЂРѕРІРµСЂРєСѓ РёР»Рё РїРѕРґРіРѕС‚РѕРІРєСѓ РґР°РЅРЅС‹С….
+// RU: Р В§РЎвЂљР С• Р Т‘Р ВµР В»Р В°Р ВµРЎвЂљ: Р Р†РЎвЂ№Р С—Р С•Р В»Р Р…РЎРЏР ВµРЎвЂљ Р Р†РЎРѓР С—Р С•Р СР С•Р С–Р В°РЎвЂљР ВµР В»РЎРЉР Р…Р С•Р Вµ Р С—РЎР‚Р ВµР С•Р В±РЎР‚Р В°Р В·Р С•Р Р†Р В°Р Р…Р С‘Р Вµ, Р С—РЎР‚Р С•Р Р†Р ВµРЎР‚Р С”РЎС“ Р С‘Р В»Р С‘ Р С—Р С•Р Т‘Р С–Р С•РЎвЂљР С•Р Р†Р С”РЎС“ Р Т‘Р В°Р Р…Р Р…РЎвЂ№РЎвЂ¦.
 // EN: What it does: shouldRecoverFromLegacy compares the new and legacy databases to detect when the new DB is only a fresh shell.
 //
-// RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: РІР°Р¶РµРЅ РґР»СЏ СѓСЃС‚РѕР№С‡РёРІРѕСЃС‚Рё Р»РѕРіРёРєРё; РјРѕР¶РµС‚ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ СЃСЂР°Р·Сѓ РІ РЅРµСЃРєРѕР»СЊРєРёС… РјРµСЃС‚Р°С…; РёР·РјРµРЅРµРЅРёСЏ СЃС‚РѕРёС‚ РґРµР»Р°С‚СЊ РѕСЃРѕР·РЅР°РЅРЅРѕ.
+// RU: Р С™Р В»РЎР‹РЎвЂЎР ВµР Р†РЎвЂ№Р Вµ Р СР С•Р СР ВµР Р…РЎвЂљРЎвЂ№: Р Р†Р В°Р В¶Р ВµР Р… Р Т‘Р В»РЎРЏ РЎС“РЎРѓРЎвЂљР С•Р в„–РЎвЂЎР С‘Р Р†Р С•РЎРѓРЎвЂљР С‘ Р В»Р С•Р С–Р С‘Р С”Р С‘; Р СР С•Р В¶Р ВµРЎвЂљ Р С‘РЎРѓР С—Р С•Р В»РЎРЉР В·Р С•Р Р†Р В°РЎвЂљРЎРЉРЎРѓРЎРЏ РЎРѓРЎР‚Р В°Р В·РЎС“ Р Р† Р Р…Р ВµРЎРѓР С”Р С•Р В»РЎРЉР С”Р С‘РЎвЂ¦ Р СР ВµРЎРѓРЎвЂљР В°РЎвЂ¦; Р С‘Р В·Р СР ВµР Р…Р ВµР Р…Р С‘РЎРЏ РЎРѓРЎвЂљР С•Р С‘РЎвЂљ Р Т‘Р ВµР В»Р В°РЎвЂљРЎРЉ Р С•РЎРѓР С•Р В·Р Р…Р В°Р Р…Р Р…Р С•.
 // EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
 func shouldRecoverFromLegacy(targetPath string, legacyPath string) (bool, error) {
 	targetUsers, targetCalcs, targetServices, err := databaseCounts(targetPath)
@@ -182,13 +182,13 @@ func shouldRecoverFromLegacy(targetPath string, legacyPath string) (bool, error)
 	return targetLooksFresh && legacyHasMoreData, nil
 }
 
-// RU: Р¤СѓРЅРєС†РёСЏ `databaseCounts`.
+// RU: Р В¤РЎС“Р Р…Р С”РЎвЂ Р С‘РЎРЏ `databaseCounts`.
 // EN: Function `databaseCounts`.
 //
-// RU: Р§С‚Рѕ РґРµР»Р°РµС‚: РїРѕРјРѕРіР°РµС‚ СЂР°Р±РѕС‚Р°С‚СЊ СЃ С„Р°Р№Р»Р°РјРё, SQLite Рё РјРёРіСЂР°С†РёСЏРјРё.
+// RU: Р В§РЎвЂљР С• Р Т‘Р ВµР В»Р В°Р ВµРЎвЂљ: Р С—Р С•Р СР С•Р С–Р В°Р ВµРЎвЂљ РЎР‚Р В°Р В±Р С•РЎвЂљР В°РЎвЂљРЎРЉ РЎРѓ РЎвЂћР В°Р в„–Р В»Р В°Р СР С‘, SQLite Р С‘ Р СР С‘Р С–РЎР‚Р В°РЎвЂ Р С‘РЎРЏР СР С‘.
 // EN: What it does: databaseCounts opens a database file read-only enough for diagnostics and reports key table sizes.
 //
-// RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: РІР°Р¶РµРЅ РґР»СЏ СѓСЃС‚РѕР№С‡РёРІРѕСЃС‚Рё Р»РѕРіРёРєРё; РјРѕР¶РµС‚ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ СЃСЂР°Р·Сѓ РІ РЅРµСЃРєРѕР»СЊРєРёС… РјРµСЃС‚Р°С…; РёР·РјРµРЅРµРЅРёСЏ СЃС‚РѕРёС‚ РґРµР»Р°С‚СЊ РѕСЃРѕР·РЅР°РЅРЅРѕ.
+// RU: Р С™Р В»РЎР‹РЎвЂЎР ВµР Р†РЎвЂ№Р Вµ Р СР С•Р СР ВµР Р…РЎвЂљРЎвЂ№: Р Р†Р В°Р В¶Р ВµР Р… Р Т‘Р В»РЎРЏ РЎС“РЎРѓРЎвЂљР С•Р в„–РЎвЂЎР С‘Р Р†Р С•РЎРѓРЎвЂљР С‘ Р В»Р С•Р С–Р С‘Р С”Р С‘; Р СР С•Р В¶Р ВµРЎвЂљ Р С‘РЎРѓР С—Р С•Р В»РЎРЉР В·Р С•Р Р†Р В°РЎвЂљРЎРЉРЎРѓРЎРЏ РЎРѓРЎР‚Р В°Р В·РЎС“ Р Р† Р Р…Р ВµРЎРѓР С”Р С•Р В»РЎРЉР С”Р С‘РЎвЂ¦ Р СР ВµРЎРѓРЎвЂљР В°РЎвЂ¦; Р С‘Р В·Р СР ВµР Р…Р ВµР Р…Р С‘РЎРЏ РЎРѓРЎвЂљР С•Р С‘РЎвЂљ Р Т‘Р ВµР В»Р В°РЎвЂљРЎРЉ Р С•РЎРѓР С•Р В·Р Р…Р В°Р Р…Р Р…Р С•.
 // EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
 func databaseCounts(path string) (users int, calculations int, services int, err error) {
 	db, err := sql.Open("sqlite", path)
@@ -212,13 +212,13 @@ func databaseCounts(path string) (users int, calculations int, services int, err
 	return users, calculations, services, nil
 }
 
-// RU: Р¤СѓРЅРєС†РёСЏ `countTableRows`.
+// RU: Р В¤РЎС“Р Р…Р С”РЎвЂ Р С‘РЎРЏ `countTableRows`.
 // EN: Function `countTableRows`.
 //
-// RU: Р§С‚Рѕ РґРµР»Р°РµС‚: РїРѕРјРѕРіР°РµС‚ СЂР°Р±РѕС‚Р°С‚СЊ СЃ С„Р°Р№Р»Р°РјРё, SQLite Рё РјРёРіСЂР°С†РёСЏРјРё.
+// RU: Р В§РЎвЂљР С• Р Т‘Р ВµР В»Р В°Р ВµРЎвЂљ: Р С—Р С•Р СР С•Р С–Р В°Р ВµРЎвЂљ РЎР‚Р В°Р В±Р С•РЎвЂљР В°РЎвЂљРЎРЉ РЎРѓ РЎвЂћР В°Р в„–Р В»Р В°Р СР С‘, SQLite Р С‘ Р СР С‘Р С–РЎР‚Р В°РЎвЂ Р С‘РЎРЏР СР С‘.
 // EN: What it does: countTableRows is a small helper that counts rows in one table during migration and recovery checks.
 //
-// RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: РІР°Р¶РµРЅ РґР»СЏ СѓСЃС‚РѕР№С‡РёРІРѕСЃС‚Рё Р»РѕРіРёРєРё; РјРѕР¶РµС‚ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ СЃСЂР°Р·Сѓ РІ РЅРµСЃРєРѕР»СЊРєРёС… РјРµСЃС‚Р°С…; РёР·РјРµРЅРµРЅРёСЏ СЃС‚РѕРёС‚ РґРµР»Р°С‚СЊ РѕСЃРѕР·РЅР°РЅРЅРѕ.
+// RU: Р С™Р В»РЎР‹РЎвЂЎР ВµР Р†РЎвЂ№Р Вµ Р СР С•Р СР ВµР Р…РЎвЂљРЎвЂ№: Р Р†Р В°Р В¶Р ВµР Р… Р Т‘Р В»РЎРЏ РЎС“РЎРѓРЎвЂљР С•Р в„–РЎвЂЎР С‘Р Р†Р С•РЎРѓРЎвЂљР С‘ Р В»Р С•Р С–Р С‘Р С”Р С‘; Р СР С•Р В¶Р ВµРЎвЂљ Р С‘РЎРѓР С—Р С•Р В»РЎРЉР В·Р С•Р Р†Р В°РЎвЂљРЎРЉРЎРѓРЎРЏ РЎРѓРЎР‚Р В°Р В·РЎС“ Р Р† Р Р…Р ВµРЎРѓР С”Р С•Р В»РЎРЉР С”Р С‘РЎвЂ¦ Р СР ВµРЎРѓРЎвЂљР В°РЎвЂ¦; Р С‘Р В·Р СР ВµР Р…Р ВµР Р…Р С‘РЎРЏ РЎРѓРЎвЂљР С•Р С‘РЎвЂљ Р Т‘Р ВµР В»Р В°РЎвЂљРЎРЉ Р С•РЎРѓР С•Р В·Р Р…Р В°Р Р…Р Р…Р С•.
 // EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
 func countTableRows(db *sql.DB, table string) (int, error) {
 	var exists int
@@ -239,13 +239,13 @@ func countTableRows(db *sql.DB, table string) (int, error) {
 	return count, nil
 }
 
-// RU: Р¤СѓРЅРєС†РёСЏ `copyFile`.
+// RU: Р В¤РЎС“Р Р…Р С”РЎвЂ Р С‘РЎРЏ `copyFile`.
 // EN: Function `copyFile`.
 //
-// RU: Р§С‚Рѕ РґРµР»Р°РµС‚: РїРѕРјРѕРіР°РµС‚ СЂР°Р±РѕС‚Р°С‚СЊ СЃ С„Р°Р№Р»Р°РјРё, SQLite Рё РјРёРіСЂР°С†РёСЏРјРё.
+// RU: Р В§РЎвЂљР С• Р Т‘Р ВµР В»Р В°Р ВµРЎвЂљ: Р С—Р С•Р СР С•Р С–Р В°Р ВµРЎвЂљ РЎР‚Р В°Р В±Р С•РЎвЂљР В°РЎвЂљРЎРЉ РЎРѓ РЎвЂћР В°Р в„–Р В»Р В°Р СР С‘, SQLite Р С‘ Р СР С‘Р С–РЎР‚Р В°РЎвЂ Р С‘РЎРЏР СР С‘.
 // EN: What it does: copyFile copies a database file byte-for-byte into a destination path, creating parent folders first.
 //
-// RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: РІР°Р¶РµРЅ РґР»СЏ СѓСЃС‚РѕР№С‡РёРІРѕСЃС‚Рё Р»РѕРіРёРєРё; РјРѕР¶РµС‚ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ СЃСЂР°Р·Сѓ РІ РЅРµСЃРєРѕР»СЊРєРёС… РјРµСЃС‚Р°С…; РёР·РјРµРЅРµРЅРёСЏ СЃС‚РѕРёС‚ РґРµР»Р°С‚СЊ РѕСЃРѕР·РЅР°РЅРЅРѕ.
+// RU: Р С™Р В»РЎР‹РЎвЂЎР ВµР Р†РЎвЂ№Р Вµ Р СР С•Р СР ВµР Р…РЎвЂљРЎвЂ№: Р Р†Р В°Р В¶Р ВµР Р… Р Т‘Р В»РЎРЏ РЎС“РЎРѓРЎвЂљР С•Р в„–РЎвЂЎР С‘Р Р†Р С•РЎРѓРЎвЂљР С‘ Р В»Р С•Р С–Р С‘Р С”Р С‘; Р СР С•Р В¶Р ВµРЎвЂљ Р С‘РЎРѓР С—Р С•Р В»РЎРЉР В·Р С•Р Р†Р В°РЎвЂљРЎРЉРЎРѓРЎРЏ РЎРѓРЎР‚Р В°Р В·РЎС“ Р Р† Р Р…Р ВµРЎРѓР С”Р С•Р В»РЎРЉР С”Р С‘РЎвЂ¦ Р СР ВµРЎРѓРЎвЂљР В°РЎвЂ¦; Р С‘Р В·Р СР ВµР Р…Р ВµР Р…Р С‘РЎРЏ РЎРѓРЎвЂљР С•Р С‘РЎвЂљ Р Т‘Р ВµР В»Р В°РЎвЂљРЎРЉ Р С•РЎРѓР С•Р В·Р Р…Р В°Р Р…Р Р…Р С•.
 // EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
 func copyFile(src string, dst string) error {
 	sourceFile, err := os.Open(src)
@@ -279,25 +279,25 @@ func copyFile(src string, dst string) error {
 	return nil
 }
 
-// RU: РњРµС‚РѕРґ `startup`.
+// RU: Р СљР ВµРЎвЂљР С•Р Т‘ `startup`.
 // EN: Method `startup`.
 //
-// RU: Р§С‚Рѕ РґРµР»Р°РµС‚: РІС‹РїРѕР»РЅСЏРµС‚ РѕРґРёРЅ РёР· РєР»СЋС‡РµРІС‹С… С€Р°РіРѕРІ backend-Р»РѕРіРёРєРё РІРЅСѓС‚СЂРё РїСЂРёР»РѕР¶РµРЅРёСЏ.
+// RU: Р В§РЎвЂљР С• Р Т‘Р ВµР В»Р В°Р ВµРЎвЂљ: Р Р†РЎвЂ№Р С—Р С•Р В»Р Р…РЎРЏР ВµРЎвЂљ Р С•Р Т‘Р С‘Р Р… Р С‘Р В· Р С”Р В»РЎР‹РЎвЂЎР ВµР Р†РЎвЂ№РЎвЂ¦ РЎв‚¬Р В°Р С–Р С•Р Р† backend-Р В»Р С•Р С–Р С‘Р С”Р С‘ Р Р†Р Р…РЎС“РЎвЂљРЎР‚Р С‘ Р С—РЎР‚Р С‘Р В»Р С•Р В¶Р ВµР Р…Р С‘РЎРЏ.
 // EN: What it does: startup stores the Wails startup context so backend methods can interact with the runtime if needed later.
 //
-// RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: РІР°Р¶РµРЅ РґР»СЏ СѓСЃС‚РѕР№С‡РёРІРѕСЃС‚Рё Р»РѕРіРёРєРё; РјРѕР¶РµС‚ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ СЃСЂР°Р·Сѓ РІ РЅРµСЃРєРѕР»СЊРєРёС… РјРµСЃС‚Р°С…; РёР·РјРµРЅРµРЅРёСЏ СЃС‚РѕРёС‚ РґРµР»Р°С‚СЊ РѕСЃРѕР·РЅР°РЅРЅРѕ.
+// RU: Р С™Р В»РЎР‹РЎвЂЎР ВµР Р†РЎвЂ№Р Вµ Р СР С•Р СР ВµР Р…РЎвЂљРЎвЂ№: Р Р†Р В°Р В¶Р ВµР Р… Р Т‘Р В»РЎРЏ РЎС“РЎРѓРЎвЂљР С•Р в„–РЎвЂЎР С‘Р Р†Р С•РЎРѓРЎвЂљР С‘ Р В»Р С•Р С–Р С‘Р С”Р С‘; Р СР С•Р В¶Р ВµРЎвЂљ Р С‘РЎРѓР С—Р С•Р В»РЎРЉР В·Р С•Р Р†Р В°РЎвЂљРЎРЉРЎРѓРЎРЏ РЎРѓРЎР‚Р В°Р В·РЎС“ Р Р† Р Р…Р ВµРЎРѓР С”Р С•Р В»РЎРЉР С”Р С‘РЎвЂ¦ Р СР ВµРЎРѓРЎвЂљР В°РЎвЂ¦; Р С‘Р В·Р СР ВµР Р…Р ВµР Р…Р С‘РЎРЏ РЎРѓРЎвЂљР С•Р С‘РЎвЂљ Р Т‘Р ВµР В»Р В°РЎвЂљРЎРЉ Р С•РЎРѓР С•Р В·Р Р…Р В°Р Р…Р Р…Р С•.
 // EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 }
 
-// RU: РњРµС‚РѕРґ `Close`.
+// RU: Р СљР ВµРЎвЂљР С•Р Т‘ `Close`.
 // EN: Method `Close`.
 //
-// RU: Р§С‚Рѕ РґРµР»Р°РµС‚: РІС‹РїРѕР»РЅСЏРµС‚ РѕРґРёРЅ РёР· РєР»СЋС‡РµРІС‹С… С€Р°РіРѕРІ backend-Р»РѕРіРёРєРё РІРЅСѓС‚СЂРё РїСЂРёР»РѕР¶РµРЅРёСЏ.
+// RU: Р В§РЎвЂљР С• Р Т‘Р ВµР В»Р В°Р ВµРЎвЂљ: Р Р†РЎвЂ№Р С—Р С•Р В»Р Р…РЎРЏР ВµРЎвЂљ Р С•Р Т‘Р С‘Р Р… Р С‘Р В· Р С”Р В»РЎР‹РЎвЂЎР ВµР Р†РЎвЂ№РЎвЂ¦ РЎв‚¬Р В°Р С–Р С•Р Р† backend-Р В»Р С•Р С–Р С‘Р С”Р С‘ Р Р†Р Р…РЎС“РЎвЂљРЎР‚Р С‘ Р С—РЎР‚Р С‘Р В»Р С•Р В¶Р ВµР Р…Р С‘РЎРЏ.
 // EN: What it does: Close releases persistent resources such as the SQLite connection when the app shuts down.
 //
-// RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: РІР°Р¶РµРЅ РґР»СЏ СѓСЃС‚РѕР№С‡РёРІРѕСЃС‚Рё Р»РѕРіРёРєРё; РјРѕР¶РµС‚ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ СЃСЂР°Р·Сѓ РІ РЅРµСЃРєРѕР»СЊРєРёС… РјРµСЃС‚Р°С…; РёР·РјРµРЅРµРЅРёСЏ СЃС‚РѕРёС‚ РґРµР»Р°С‚СЊ РѕСЃРѕР·РЅР°РЅРЅРѕ.
+// RU: Р С™Р В»РЎР‹РЎвЂЎР ВµР Р†РЎвЂ№Р Вµ Р СР С•Р СР ВµР Р…РЎвЂљРЎвЂ№: Р Р†Р В°Р В¶Р ВµР Р… Р Т‘Р В»РЎРЏ РЎС“РЎРѓРЎвЂљР С•Р в„–РЎвЂЎР С‘Р Р†Р С•РЎРѓРЎвЂљР С‘ Р В»Р С•Р С–Р С‘Р С”Р С‘; Р СР С•Р В¶Р ВµРЎвЂљ Р С‘РЎРѓР С—Р С•Р В»РЎРЉР В·Р С•Р Р†Р В°РЎвЂљРЎРЉРЎРѓРЎРЏ РЎРѓРЎР‚Р В°Р В·РЎС“ Р Р† Р Р…Р ВµРЎРѓР С”Р С•Р В»РЎРЉР С”Р С‘РЎвЂ¦ Р СР ВµРЎРѓРЎвЂљР В°РЎвЂ¦; Р С‘Р В·Р СР ВµР Р…Р ВµР Р…Р С‘РЎРЏ РЎРѓРЎвЂљР С•Р С‘РЎвЂљ Р Т‘Р ВµР В»Р В°РЎвЂљРЎРЉ Р С•РЎРѓР С•Р В·Р Р…Р В°Р Р…Р Р…Р С•.
 // EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
 func (a *App) Close() error {
 	if a.db != nil {
@@ -306,13 +306,13 @@ func (a *App) Close() error {
 	return nil
 }
 
-// RU: РњРµС‚РѕРґ `initDatabase`.
+// RU: Р СљР ВµРЎвЂљР С•Р Т‘ `initDatabase`.
 // EN: Method `initDatabase`.
 //
-// RU: Р§С‚Рѕ РґРµР»Р°РµС‚: РІС‹РїРѕР»РЅСЏРµС‚ РѕРґРёРЅ РёР· РєР»СЋС‡РµРІС‹С… С€Р°РіРѕРІ backend-Р»РѕРіРёРєРё РІРЅСѓС‚СЂРё РїСЂРёР»РѕР¶РµРЅРёСЏ.
+// RU: Р В§РЎвЂљР С• Р Т‘Р ВµР В»Р В°Р ВµРЎвЂљ: Р Р†РЎвЂ№Р С—Р С•Р В»Р Р…РЎРЏР ВµРЎвЂљ Р С•Р Т‘Р С‘Р Р… Р С‘Р В· Р С”Р В»РЎР‹РЎвЂЎР ВµР Р†РЎвЂ№РЎвЂ¦ РЎв‚¬Р В°Р С–Р С•Р Р† backend-Р В»Р С•Р С–Р С‘Р С”Р С‘ Р Р†Р Р…РЎС“РЎвЂљРЎР‚Р С‘ Р С—РЎР‚Р С‘Р В»Р С•Р В¶Р ВµР Р…Р С‘РЎРЏ.
 // EN: What it does: initDatabase creates the schema, runs lightweight migrations and seeds baseline application data.
 //
-// RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: РІР°Р¶РµРЅ РґР»СЏ СѓСЃС‚РѕР№С‡РёРІРѕСЃС‚Рё Р»РѕРіРёРєРё; РјРѕР¶РµС‚ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ СЃСЂР°Р·Сѓ РІ РЅРµСЃРєРѕР»СЊРєРёС… РјРµСЃС‚Р°С…; РёР·РјРµРЅРµРЅРёСЏ СЃС‚РѕРёС‚ РґРµР»Р°С‚СЊ РѕСЃРѕР·РЅР°РЅРЅРѕ.
+// RU: Р С™Р В»РЎР‹РЎвЂЎР ВµР Р†РЎвЂ№Р Вµ Р СР С•Р СР ВµР Р…РЎвЂљРЎвЂ№: Р Р†Р В°Р В¶Р ВµР Р… Р Т‘Р В»РЎРЏ РЎС“РЎРѓРЎвЂљР С•Р в„–РЎвЂЎР С‘Р Р†Р С•РЎРѓРЎвЂљР С‘ Р В»Р С•Р С–Р С‘Р С”Р С‘; Р СР С•Р В¶Р ВµРЎвЂљ Р С‘РЎРѓР С—Р С•Р В»РЎРЉР В·Р С•Р Р†Р В°РЎвЂљРЎРЉРЎРѓРЎРЏ РЎРѓРЎР‚Р В°Р В·РЎС“ Р Р† Р Р…Р ВµРЎРѓР С”Р С•Р В»РЎРЉР С”Р С‘РЎвЂ¦ Р СР ВµРЎРѓРЎвЂљР В°РЎвЂ¦; Р С‘Р В·Р СР ВµР Р…Р ВµР Р…Р С‘РЎРЏ РЎРѓРЎвЂљР С•Р С‘РЎвЂљ Р Т‘Р ВµР В»Р В°РЎвЂљРЎРЉ Р С•РЎРѓР С•Р В·Р Р…Р В°Р Р…Р Р…Р С•.
 // EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
 func (a *App) initDatabase() error {
 	queries := []string{
@@ -322,6 +322,7 @@ func (a *App) initDatabase() error {
 			password_hash TEXT NOT NULL,
 			full_name TEXT NOT NULL DEFAULT '',
 			last_act_number INTEGER NOT NULL DEFAULT 1,
+			preferred_contract_code TEXT NOT NULL DEFAULT '1',
 			contract_spbks_number TEXT NOT NULL DEFAULT '',
 			contract_grizabl_number TEXT NOT NULL DEFAULT '',
 			contract_signed_at TEXT NOT NULL DEFAULT '',
@@ -361,13 +362,13 @@ func (a *App) initDatabase() error {
 	return nil
 }
 
-// RU: РњРµС‚РѕРґ `migrateDatabase`.
+// RU: Р СљР ВµРЎвЂљР С•Р Т‘ `migrateDatabase`.
 // EN: Method `migrateDatabase`.
 //
-// RU: Р§С‚Рѕ РґРµР»Р°РµС‚: РІС‹РїРѕР»РЅСЏРµС‚ РѕРґРёРЅ РёР· РєР»СЋС‡РµРІС‹С… С€Р°РіРѕРІ backend-Р»РѕРіРёРєРё РІРЅСѓС‚СЂРё РїСЂРёР»РѕР¶РµРЅРёСЏ.
+// RU: Р В§РЎвЂљР С• Р Т‘Р ВµР В»Р В°Р ВµРЎвЂљ: Р Р†РЎвЂ№Р С—Р С•Р В»Р Р…РЎРЏР ВµРЎвЂљ Р С•Р Т‘Р С‘Р Р… Р С‘Р В· Р С”Р В»РЎР‹РЎвЂЎР ВµР Р†РЎвЂ№РЎвЂ¦ РЎв‚¬Р В°Р С–Р С•Р Р† backend-Р В»Р С•Р С–Р С‘Р С”Р С‘ Р Р†Р Р…РЎС“РЎвЂљРЎР‚Р С‘ Р С—РЎР‚Р С‘Р В»Р С•Р В¶Р ВµР Р…Р С‘РЎРЏ.
 // EN: What it does: migrateDatabase upgrades older SQLite files by adding missing columns required by newer builds.
 //
-// RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: РІР°Р¶РµРЅ РґР»СЏ СѓСЃС‚РѕР№С‡РёРІРѕСЃС‚Рё Р»РѕРіРёРєРё; РјРѕР¶РµС‚ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ СЃСЂР°Р·Сѓ РІ РЅРµСЃРєРѕР»СЊРєРёС… РјРµСЃС‚Р°С…; РёР·РјРµРЅРµРЅРёСЏ СЃС‚РѕРёС‚ РґРµР»Р°С‚СЊ РѕСЃРѕР·РЅР°РЅРЅРѕ.
+// RU: Р С™Р В»РЎР‹РЎвЂЎР ВµР Р†РЎвЂ№Р Вµ Р СР С•Р СР ВµР Р…РЎвЂљРЎвЂ№: Р Р†Р В°Р В¶Р ВµР Р… Р Т‘Р В»РЎРЏ РЎС“РЎРѓРЎвЂљР С•Р в„–РЎвЂЎР С‘Р Р†Р С•РЎРѓРЎвЂљР С‘ Р В»Р С•Р С–Р С‘Р С”Р С‘; Р СР С•Р В¶Р ВµРЎвЂљ Р С‘РЎРѓР С—Р С•Р В»РЎРЉР В·Р С•Р Р†Р В°РЎвЂљРЎРЉРЎРѓРЎРЏ РЎРѓРЎР‚Р В°Р В·РЎС“ Р Р† Р Р…Р ВµРЎРѓР С”Р С•Р В»РЎРЉР С”Р С‘РЎвЂ¦ Р СР ВµРЎРѓРЎвЂљР В°РЎвЂ¦; Р С‘Р В·Р СР ВµР Р…Р ВµР Р…Р С‘РЎРЏ РЎРѓРЎвЂљР С•Р С‘РЎвЂљ Р Т‘Р ВµР В»Р В°РЎвЂљРЎРЉ Р С•РЎРѓР С•Р В·Р Р…Р В°Р Р…Р Р…Р С•.
 // EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
 func (a *App) migrateDatabase() error {
 	if err := ensureColumnExists(a.db, "users", "full_name", `ALTER TABLE users ADD COLUMN full_name TEXT NOT NULL DEFAULT ''`); err != nil {
@@ -375,6 +376,9 @@ func (a *App) migrateDatabase() error {
 	}
 	if err := ensureColumnExists(a.db, "users", "last_act_number", `ALTER TABLE users ADD COLUMN last_act_number INTEGER NOT NULL DEFAULT 1`); err != nil {
 		return fmt.Errorf("migrate users.last_act_number: %w", err)
+	}
+	if err := ensureColumnExists(a.db, "users", "preferred_contract_code", `ALTER TABLE users ADD COLUMN preferred_contract_code TEXT NOT NULL DEFAULT '1'`); err != nil {
+		return fmt.Errorf("migrate users.preferred_contract_code: %w", err)
 	}
 	if err := ensureColumnExists(a.db, "users", "contract_spbks_number", `ALTER TABLE users ADD COLUMN contract_spbks_number TEXT NOT NULL DEFAULT ''`); err != nil {
 		return fmt.Errorf("migrate users.contract_spbks_number: %w", err)
@@ -445,6 +449,9 @@ func (a *App) migrateDatabase() error {
 	if _, err := a.db.Exec(`UPDATE users SET last_act_number = 1 WHERE last_act_number IS NULL OR last_act_number <= 0`); err != nil {
 		return fmt.Errorf("backfill users.last_act_number: %w", err)
 	}
+	if _, err := a.db.Exec(`UPDATE users SET preferred_contract_code = '1' WHERE preferred_contract_code IS NULL OR TRIM(preferred_contract_code) = '' OR preferred_contract_code NOT IN ('1', '2')`); err != nil {
+		return fmt.Errorf("backfill users.preferred_contract_code: %w", err)
+	}
 	if _, err := a.db.Exec(`UPDATE calculations SET created_role = ? WHERE created_role = 'support_manager'`, RoleSupportHead); err != nil {
 		return fmt.Errorf("normalize calculations.support_manager role: %w", err)
 	}
@@ -502,13 +509,13 @@ func ensureColumnExists(db *sql.DB, table string, column string, alterSQL string
 	return err
 }
 
-// RU: РњРµС‚РѕРґ `seedDefaultData`.
+// RU: Р СљР ВµРЎвЂљР С•Р Т‘ `seedDefaultData`.
 // EN: Method `seedDefaultData`.
 //
-// RU: Р§С‚Рѕ РґРµР»Р°РµС‚: РІС‹РїРѕР»РЅСЏРµС‚ РѕРґРёРЅ РёР· РєР»СЋС‡РµРІС‹С… С€Р°РіРѕРІ backend-Р»РѕРіРёРєРё РІРЅСѓС‚СЂРё РїСЂРёР»РѕР¶РµРЅРёСЏ.
+// RU: Р В§РЎвЂљР С• Р Т‘Р ВµР В»Р В°Р ВµРЎвЂљ: Р Р†РЎвЂ№Р С—Р С•Р В»Р Р…РЎРЏР ВµРЎвЂљ Р С•Р Т‘Р С‘Р Р… Р С‘Р В· Р С”Р В»РЎР‹РЎвЂЎР ВµР Р†РЎвЂ№РЎвЂ¦ РЎв‚¬Р В°Р С–Р С•Р Р† backend-Р В»Р С•Р С–Р С‘Р С”Р С‘ Р Р†Р Р…РЎС“РЎвЂљРЎР‚Р С‘ Р С—РЎР‚Р С‘Р В»Р С•Р В¶Р ВµР Р…Р С‘РЎРЏ.
 // EN: What it does: seedDefaultData inserts baseline records that every installation expects to exist after startup.
 //
-// RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: РІР°Р¶РµРЅ РґР»СЏ СѓСЃС‚РѕР№С‡РёРІРѕСЃС‚Рё Р»РѕРіРёРєРё; РјРѕР¶РµС‚ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ СЃСЂР°Р·Сѓ РІ РЅРµСЃРєРѕР»СЊРєРёС… РјРµСЃС‚Р°С…; РёР·РјРµРЅРµРЅРёСЏ СЃС‚РѕРёС‚ РґРµР»Р°С‚СЊ РѕСЃРѕР·РЅР°РЅРЅРѕ.
+// RU: Р С™Р В»РЎР‹РЎвЂЎР ВµР Р†РЎвЂ№Р Вµ Р СР С•Р СР ВµР Р…РЎвЂљРЎвЂ№: Р Р†Р В°Р В¶Р ВµР Р… Р Т‘Р В»РЎРЏ РЎС“РЎРѓРЎвЂљР С•Р в„–РЎвЂЎР С‘Р Р†Р С•РЎРѓРЎвЂљР С‘ Р В»Р С•Р С–Р С‘Р С”Р С‘; Р СР С•Р В¶Р ВµРЎвЂљ Р С‘РЎРѓР С—Р С•Р В»РЎРЉР В·Р С•Р Р†Р В°РЎвЂљРЎРЉРЎРѓРЎРЏ РЎРѓРЎР‚Р В°Р В·РЎС“ Р Р† Р Р…Р ВµРЎРѓР С”Р С•Р В»РЎРЉР С”Р С‘РЎвЂ¦ Р СР ВµРЎРѓРЎвЂљР В°РЎвЂ¦; Р С‘Р В·Р СР ВµР Р…Р ВµР Р…Р С‘РЎРЏ РЎРѓРЎвЂљР С•Р С‘РЎвЂљ Р Т‘Р ВµР В»Р В°РЎвЂљРЎРЉ Р С•РЎРѓР С•Р В·Р Р…Р В°Р Р…Р Р…Р С•.
 // EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
 func (a *App) seedDefaultData() error {
 	if err := a.seedAdmin(); err != nil {
@@ -520,13 +527,13 @@ func (a *App) seedDefaultData() error {
 	return a.seedServices()
 }
 
-// RU: РњРµС‚РѕРґ `seedAdmin`.
+// RU: Р СљР ВµРЎвЂљР С•Р Т‘ `seedAdmin`.
 // EN: Method `seedAdmin`.
 //
-// RU: Р§С‚Рѕ РґРµР»Р°РµС‚: РІС‹РїРѕР»РЅСЏРµС‚ РѕРґРёРЅ РёР· РєР»СЋС‡РµРІС‹С… С€Р°РіРѕРІ backend-Р»РѕРіРёРєРё РІРЅСѓС‚СЂРё РїСЂРёР»РѕР¶РµРЅРёСЏ.
+// RU: Р В§РЎвЂљР С• Р Т‘Р ВµР В»Р В°Р ВµРЎвЂљ: Р Р†РЎвЂ№Р С—Р С•Р В»Р Р…РЎРЏР ВµРЎвЂљ Р С•Р Т‘Р С‘Р Р… Р С‘Р В· Р С”Р В»РЎР‹РЎвЂЎР ВµР Р†РЎвЂ№РЎвЂ¦ РЎв‚¬Р В°Р С–Р С•Р Р† backend-Р В»Р С•Р С–Р С‘Р С”Р С‘ Р Р†Р Р…РЎС“РЎвЂљРЎР‚Р С‘ Р С—РЎР‚Р С‘Р В»Р С•Р В¶Р ВµР Р…Р С‘РЎРЏ.
 // EN: What it does: seedAdmin guarantees the protected admin account exists with the expected credentials and role.
 //
-// RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: РІР°Р¶РµРЅ РґР»СЏ СѓСЃС‚РѕР№С‡РёРІРѕСЃС‚Рё Р»РѕРіРёРєРё; РјРѕР¶РµС‚ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ СЃСЂР°Р·Сѓ РІ РЅРµСЃРєРѕР»СЊРєРёС… РјРµСЃС‚Р°С…; РёР·РјРµРЅРµРЅРёСЏ СЃС‚РѕРёС‚ РґРµР»Р°С‚СЊ РѕСЃРѕР·РЅР°РЅРЅРѕ.
+// RU: Р С™Р В»РЎР‹РЎвЂЎР ВµР Р†РЎвЂ№Р Вµ Р СР С•Р СР ВµР Р…РЎвЂљРЎвЂ№: Р Р†Р В°Р В¶Р ВµР Р… Р Т‘Р В»РЎРЏ РЎС“РЎРѓРЎвЂљР С•Р в„–РЎвЂЎР С‘Р Р†Р С•РЎРѓРЎвЂљР С‘ Р В»Р С•Р С–Р С‘Р С”Р С‘; Р СР С•Р В¶Р ВµРЎвЂљ Р С‘РЎРѓР С—Р С•Р В»РЎРЉР В·Р С•Р Р†Р В°РЎвЂљРЎРЉРЎРѓРЎРЏ РЎРѓРЎР‚Р В°Р В·РЎС“ Р Р† Р Р…Р ВµРЎРѓР С”Р С•Р В»РЎРЉР С”Р С‘РЎвЂ¦ Р СР ВµРЎРѓРЎвЂљР В°РЎвЂ¦; Р С‘Р В·Р СР ВµР Р…Р ВµР Р…Р С‘РЎРЏ РЎРѓРЎвЂљР С•Р С‘РЎвЂљ Р Т‘Р ВµР В»Р В°РЎвЂљРЎРЉ Р С•РЎРѓР С•Р В·Р Р…Р В°Р Р…Р Р…Р С•.
 // EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
 func (a *App) seedAdmin() error {
 	var (
@@ -550,21 +557,21 @@ func (a *App) seedAdmin() error {
 	return nil
 }
 
-// RU: РњРµС‚РѕРґ `seedServices`.
+// RU: Р СљР ВµРЎвЂљР С•Р Т‘ `seedServices`.
 // EN: Method `seedServices`.
 //
-// RU: Р§С‚Рѕ РґРµР»Р°РµС‚: РІС‹РїРѕР»РЅСЏРµС‚ РѕРґРёРЅ РёР· РєР»СЋС‡РµРІС‹С… С€Р°РіРѕРІ backend-Р»РѕРіРёРєРё РІРЅСѓС‚СЂРё РїСЂРёР»РѕР¶РµРЅРёСЏ.
+// RU: Р В§РЎвЂљР С• Р Т‘Р ВµР В»Р В°Р ВµРЎвЂљ: Р Р†РЎвЂ№Р С—Р С•Р В»Р Р…РЎРЏР ВµРЎвЂљ Р С•Р Т‘Р С‘Р Р… Р С‘Р В· Р С”Р В»РЎР‹РЎвЂЎР ВµР Р†РЎвЂ№РЎвЂ¦ РЎв‚¬Р В°Р С–Р С•Р Р† backend-Р В»Р С•Р С–Р С‘Р С”Р С‘ Р Р†Р Р…РЎС“РЎвЂљРЎР‚Р С‘ Р С—РЎР‚Р С‘Р В»Р С•Р В¶Р ВµР Р…Р С‘РЎРЏ.
 // EN: What it does: seedServices populates default admin-owned services for first start and legacy empty databases.
 //
-// RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: РІР°Р¶РµРЅ РґР»СЏ СѓСЃС‚РѕР№С‡РёРІРѕСЃС‚Рё Р»РѕРіРёРєРё; РјРѕР¶РµС‚ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ СЃСЂР°Р·Сѓ РІ РЅРµСЃРєРѕР»СЊРєРёС… РјРµСЃС‚Р°С…; РёР·РјРµРЅРµРЅРёСЏ СЃС‚РѕРёС‚ РґРµР»Р°С‚СЊ РѕСЃРѕР·РЅР°РЅРЅРѕ.
+// RU: Р С™Р В»РЎР‹РЎвЂЎР ВµР Р†РЎвЂ№Р Вµ Р СР С•Р СР ВµР Р…РЎвЂљРЎвЂ№: Р Р†Р В°Р В¶Р ВµР Р… Р Т‘Р В»РЎРЏ РЎС“РЎРѓРЎвЂљР С•Р в„–РЎвЂЎР С‘Р Р†Р С•РЎРѓРЎвЂљР С‘ Р В»Р С•Р С–Р С‘Р С”Р С‘; Р СР С•Р В¶Р ВµРЎвЂљ Р С‘РЎРѓР С—Р С•Р В»РЎРЉР В·Р С•Р Р†Р В°РЎвЂљРЎРЉРЎРѓРЎРЏ РЎРѓРЎР‚Р В°Р В·РЎС“ Р Р† Р Р…Р ВµРЎРѓР С”Р С•Р В»РЎРЉР С”Р С‘РЎвЂ¦ Р СР ВµРЎРѓРЎвЂљР В°РЎвЂ¦; Р С‘Р В·Р СР ВµР Р…Р ВµР Р…Р С‘РЎРЏ РЎРѓРЎвЂљР С•Р С‘РЎвЂљ Р Т‘Р ВµР В»Р В°РЎвЂљРЎРЉ Р С•РЎРѓР С•Р В·Р Р…Р В°Р Р…Р Р…Р С•.
 // EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
-// RU: РњРµС‚РѕРґ `seedTestAdmin`.
+// RU: Р СљР ВµРЎвЂљР С•Р Т‘ `seedTestAdmin`.
 // EN: Method `seedTestAdmin`.
 //
-// RU: Р§С‚Рѕ РґРµР»Р°РµС‚: РіР°СЂР°РЅС‚РёСЂСѓРµС‚ РЅР°Р»РёС‡РёРµ С‚РµСЃС‚РѕРІРѕР№ admin-СѓС‡С‘С‚РєРё РґР»СЏ РїСЂРѕРІРµСЂРєРё РёРЅС‚РµСЂС„РµР№СЃР° Рё СЃС†РµРЅР°СЂРёРµРІ Р°РґРјРёРЅРёСЃС‚СЂРёСЂРѕРІР°РЅРёСЏ.
+// RU: Р В§РЎвЂљР С• Р Т‘Р ВµР В»Р В°Р ВµРЎвЂљ: Р С–Р В°РЎР‚Р В°Р Р…РЎвЂљР С‘РЎР‚РЎС“Р ВµРЎвЂљ Р Р…Р В°Р В»Р С‘РЎвЂЎР С‘Р Вµ РЎвЂљР ВµРЎРѓРЎвЂљР С•Р Р†Р С•Р в„– admin-РЎС“РЎвЂЎРЎвЂРЎвЂљР С”Р С‘ Р Т‘Р В»РЎРЏ Р С—РЎР‚Р С•Р Р†Р ВµРЎР‚Р С”Р С‘ Р С‘Р Р…РЎвЂљР ВµРЎР‚РЎвЂћР ВµР в„–РЎРѓР В° Р С‘ РЎРѓРЎвЂ Р ВµР Р…Р В°РЎР‚Р С‘Р ВµР Р† Р В°Р Т‘Р СР С‘Р Р…Р С‘РЎРѓРЎвЂљРЎР‚Р С‘РЎР‚Р С•Р Р†Р В°Р Р…Р С‘РЎРЏ.
 // EN: What it does: seedTestAdmin guarantees that a regular admin-role account for UI testing exists with known credentials.
 //
-// RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: СЌС‚Р° СѓС‡С‘С‚РєР° РЅРµ СЏРІР»СЏРµС‚СЃСЏ Р·Р°С‰РёС‰С‘РЅРЅРѕР№; РѕСЃС‚Р°С‘С‚СЃСЏ РІРёРґРёРјРѕР№ РІ СЃРїРёСЃРєР°С… Рё СѓРґР°Р»СЏРµРјРѕР№; Р·Р°С‰РёС‰С‘РЅРЅС‹Рј РѕСЃС‚Р°С‘С‚СЃСЏ С‚РѕР»СЊРєРѕ username `admin`.
+// RU: Р С™Р В»РЎР‹РЎвЂЎР ВµР Р†РЎвЂ№Р Вµ Р СР С•Р СР ВµР Р…РЎвЂљРЎвЂ№: РЎРЊРЎвЂљР В° РЎС“РЎвЂЎРЎвЂРЎвЂљР С”Р В° Р Р…Р Вµ РЎРЏР Р†Р В»РЎРЏР ВµРЎвЂљРЎРѓРЎРЏ Р В·Р В°РЎвЂ°Р С‘РЎвЂ°РЎвЂР Р…Р Р…Р С•Р в„–; Р С•РЎРѓРЎвЂљР В°РЎвЂРЎвЂљРЎРѓРЎРЏ Р Р†Р С‘Р Т‘Р С‘Р СР С•Р в„– Р Р† РЎРѓР С—Р С‘РЎРѓР С”Р В°РЎвЂ¦ Р С‘ РЎС“Р Т‘Р В°Р В»РЎРЏР ВµР СР С•Р в„–; Р В·Р В°РЎвЂ°Р С‘РЎвЂ°РЎвЂР Р…Р Р…РЎвЂ№Р С Р С•РЎРѓРЎвЂљР В°РЎвЂРЎвЂљРЎРѓРЎРЏ РЎвЂљР С•Р В»РЎРЉР С”Р С• username `admin`.
 // EN: Key points: this account is not protected; it remains visible in lists and deletable; only the username `admin` stays protected.
 func (a *App) seedTestAdmin() error {
 	var count int
@@ -613,11 +620,11 @@ func (a *App) seedServices() error {
 	return nil
 }
 
-// RU: Р¤СѓРЅРєС†РёСЏ `hashPassword`.
+// RU: Р В¤РЎС“Р Р…Р С”РЎвЂ Р С‘РЎРЏ `hashPassword`.
 // EN: Function `hashPassword`.
 //
-// RU: Р§С‚Рѕ РґРµР»Р°РµС‚: РІС‹РїРѕР»РЅСЏРµС‚ РІСЃРїРѕРјРѕРіР°С‚РµР»СЊРЅРѕРµ РїСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёРµ, РїСЂРѕРІРµСЂРєСѓ РёР»Рё РїРѕРґРіРѕС‚РѕРІРєСѓ РґР°РЅРЅС‹С….
+// RU: Р В§РЎвЂљР С• Р Т‘Р ВµР В»Р В°Р ВµРЎвЂљ: Р Р†РЎвЂ№Р С—Р С•Р В»Р Р…РЎРЏР ВµРЎвЂљ Р Р†РЎРѓР С—Р С•Р СР С•Р С–Р В°РЎвЂљР ВµР В»РЎРЉР Р…Р С•Р Вµ Р С—РЎР‚Р ВµР С•Р В±РЎР‚Р В°Р В·Р С•Р Р†Р В°Р Р…Р С‘Р Вµ, Р С—РЎР‚Р С•Р Р†Р ВµРЎР‚Р С”РЎС“ Р С‘Р В»Р С‘ Р С—Р С•Р Т‘Р С–Р С•РЎвЂљР С•Р Р†Р С”РЎС“ Р Т‘Р В°Р Р…Р Р…РЎвЂ№РЎвЂ¦.
 // EN: What it does: hashPassword performs a simple deterministic password hash used by this local desktop application.
 //
-// RU: РљР»СЋС‡РµРІС‹Рµ РјРѕРјРµРЅС‚С‹: РІР°Р¶РµРЅ РґР»СЏ СѓСЃС‚РѕР№С‡РёРІРѕСЃС‚Рё Р»РѕРіРёРєРё; РјРѕР¶РµС‚ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ СЃСЂР°Р·Сѓ РІ РЅРµСЃРєРѕР»СЊРєРёС… РјРµСЃС‚Р°С…; РёР·РјРµРЅРµРЅРёСЏ СЃС‚РѕРёС‚ РґРµР»Р°С‚СЊ РѕСЃРѕР·РЅР°РЅРЅРѕ.
+// RU: Р С™Р В»РЎР‹РЎвЂЎР ВµР Р†РЎвЂ№Р Вµ Р СР С•Р СР ВµР Р…РЎвЂљРЎвЂ№: Р Р†Р В°Р В¶Р ВµР Р… Р Т‘Р В»РЎРЏ РЎС“РЎРѓРЎвЂљР С•Р в„–РЎвЂЎР С‘Р Р†Р С•РЎРѓРЎвЂљР С‘ Р В»Р С•Р С–Р С‘Р С”Р С‘; Р СР С•Р В¶Р ВµРЎвЂљ Р С‘РЎРѓР С—Р С•Р В»РЎРЉР В·Р С•Р Р†Р В°РЎвЂљРЎРЉРЎРѓРЎРЏ РЎРѓРЎР‚Р В°Р В·РЎС“ Р Р† Р Р…Р ВµРЎРѓР С”Р С•Р В»РЎРЉР С”Р С‘РЎвЂ¦ Р СР ВµРЎРѓРЎвЂљР В°РЎвЂ¦; Р С‘Р В·Р СР ВµР Р…Р ВµР Р…Р С‘РЎРЏ РЎРѓРЎвЂљР С•Р С‘РЎвЂљ Р Т‘Р ВµР В»Р В°РЎвЂљРЎРЉ Р С•РЎРѓР С•Р В·Р Р…Р В°Р Р…Р Р…Р С•.
 // EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.

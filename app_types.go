@@ -189,15 +189,16 @@ type UpsertServiceRequest struct {
 // RU: Р С™Р В»РЎР‹РЎвЂЎР ВµР Р†РЎвЂ№Р Вµ Р СР С•Р СР ВµР Р…РЎвЂљРЎвЂ№: Р Р†Р В°Р В¶Р ВµР Р… Р С”Р В°Р С” Р С”Р С•Р Р…РЎвЂљРЎР‚Р В°Р С”РЎвЂљ Р С‘Р В»Р С‘ Р С•Р С—Р С•РЎР‚Р Р…Р В°РЎРЏ РЎвЂљР С•РЎвЂЎР С”Р В° Р Т‘Р В»РЎРЏ Р Т‘РЎР‚РЎС“Р С–Р С‘РЎвЂ¦ РЎвЂЎР В°РЎРѓРЎвЂљР ВµР в„– Р С—РЎР‚Р С•Р ВµР С”РЎвЂљР В°; Р С‘Р В·Р СР ВµР Р…Р ВµР Р…Р С‘РЎРЏ Р В·Р Т‘Р ВµРЎРѓРЎРЉ РЎвЂЎР В°РЎРѓРЎвЂљР С• РЎвЂљРЎР‚Р ВµР В±РЎС“РЎР‹РЎвЂљ Р С•РЎРѓРЎвЂљР С•РЎР‚Р С•Р В¶Р Р…Р С•РЎРѓРЎвЂљР С‘.
 // EN: Key points: serves as a shared contract or reference point; is reused across multiple areas of the project; changes here should be made carefully.
 type User struct {
-	ID                   int64  `json:"id"`
-	Username             string `json:"username"`
-	FullName             string `json:"fullName"`
-	Role                 string `json:"role"`
-	CreatedAt            string `json:"createdAt"`
-	LastActNumber        int    `json:"lastActNumber"`
-	ContractSPBKSNumber  string `json:"contractSPBKSNumber"`
+	ID                    int64  `json:"id"`
+	Username              string `json:"username"`
+	FullName              string `json:"fullName"`
+	Role                  string `json:"role"`
+	CreatedAt             string `json:"createdAt"`
+	LastActNumber         int    `json:"lastActNumber"`
+	PreferredContractCode string `json:"preferredContractCode"`
+	ContractSPBKSNumber   string `json:"contractSPBKSNumber"`
 	ContractGrizablNumber string `json:"contractGrizablNumber"`
-	ContractSignedAt     string `json:"contractSignedAt"`
+	ContractSignedAt      string `json:"contractSignedAt"`
 }
 
 // RU: Р СћР С‘Р С— Р Т‘Р В°Р Р…Р Р…РЎвЂ№РЎвЂ¦ `UserWithPassword`.
@@ -227,14 +228,15 @@ type UpdateUserFullNameRequest struct {
 type UpdateUserContractDetailsRequest struct {
 	UserID                int64  `json:"userID"`
 	FullName              string `json:"fullName"`
+	PreferredContractCode string `json:"preferredContractCode"`
 	ContractSPBKSNumber   string `json:"contractSPBKSNumber"`
 	ContractGrizablNumber string `json:"contractGrizablNumber"`
 	ContractSignedAt      string `json:"contractSignedAt"`
 }
 
 type UpdateUserLastActNumberRequest struct {
-	UserID         int64 `json:"userID"`
-	LastActNumber  int   `json:"lastActNumber"`
+	UserID        int64 `json:"userID"`
+	LastActNumber int   `json:"lastActNumber"`
 }
 
 // RU: Р СћР С‘Р С— Р Т‘Р В°Р Р…Р Р…РЎвЂ№РЎвЂ¦ `LoginRequest`.

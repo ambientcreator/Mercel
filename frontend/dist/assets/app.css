@@ -284,15 +284,26 @@ button:hover:not(:disabled) { transform: translateY(-1px); }
 .contract-choice-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
   gap: 14px;
   margin-bottom: 12px;
 }
 .contract-choice-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  height: 100%;
   border-radius: 20px;
   padding: 14px;
   background: rgba(255,255,255,0.03);
   border: 1px solid rgba(255,255,255,0.06);
   margin-bottom: 0;
+}
+.contract-choice-card > span {
+  min-height: 48px;
+}
+.contract-choice-card > input {
+  margin-top: 8px;
 }
 .radio-inline {
   display: flex;
@@ -300,7 +311,8 @@ button:hover:not(:disabled) { transform: translateY(-1px); }
   gap: 10px;
   color: var(--muted);
   font-size: 13px;
-  margin-top: 10px;
+  margin-top: auto;
+  min-height: 40px;
 }
 .radio-inline input {
   width: 16px;
@@ -704,3 +716,5 @@ tbody td:nth-child(2) strong { white-space: normal; overflow-wrap: anywhere; }
 @media (max-width: 900px) {
   .contract-choice-grid { grid-template-columns: 1fr; }
 }
+
+
