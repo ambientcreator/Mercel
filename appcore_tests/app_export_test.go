@@ -27,7 +27,7 @@ func TestBuildActPDFDataRequiresActNumber(t *testing.T) {
 		TargetAmount:     100,
 		Items:            sampleExportItems(),
 	}, &User{})
-	if err == nil || !strings.Contains(err.Error(), "\u043d\u043e\u043c\u0435\u0440 \u0430\u043a\u0442\u0430") {
+	if err == nil || !strings.Contains(strings.ToLower(err.Error()), "номер акта") {
 		t.Fatalf("expected act number validation error, got %v", err)
 	}
 }
@@ -41,7 +41,7 @@ func TestBuildActPDFDataRequiresFullName(t *testing.T) {
 		TargetAmount:   100,
 		Items:          sampleExportItems(),
 	}, &User{})
-	if err == nil || !strings.Contains(err.Error(), "\u0424\u0418\u041e \u0441\u043e\u0442\u0440\u0443\u0434\u043d\u0438\u043a\u0430") {
+	if err == nil || !strings.Contains(strings.ToLower(err.Error()), "фио сотрудника") {
 		t.Fatalf("expected full name validation error, got %v", err)
 	}
 }
@@ -130,7 +130,7 @@ func TestBuildActPDFDataUsesCurrentUserFullNameFallback(t *testing.T) {
 	if data.ContractNumber != "15" {
 		t.Fatalf("expected contract number, got %q", data.ContractNumber)
 	}
-	if data.ContractTitle != "\u00ab\u0413\u0440\u0438\u0437\u0430\u0431\u043b\u044c\u00bb \u21162" {
+	if data.ContractTitle != "\u00ab\u0413\u0440\u0438\u0437\u0430\u0431\u043b\u044c\u00bb" {
 		t.Fatalf("expected contract title for 2, got %q", data.ContractTitle)
 	}
 	if data.CustomerName != "\u0413\u0440\u0438\u0437\u0430\u0431\u043b\u044c" {
@@ -149,7 +149,7 @@ func TestResolveContractInfo(t *testing.T) {
 	if err != nil {
 		t.Fatalf("resolveContractInfo error = %v", err)
 	}
-	if info.Title != "\u00ab\u0421\u0430\u043d\u043a\u0442-\u041f\u0435\u0442\u0435\u0440\u0431\u0443\u0440\u0433\u0441\u043a\u0438\u0435 \u043a\u043e\u043c\u043f\u044c\u044e\u0442\u0435\u0440\u043d\u044b\u0435 \u0441\u0435\u0442\u0438\u00bb \u21161" {
+	if info.Title != "\u00ab\u0421\u0430\u043d\u043a\u0442-\u041f\u0435\u0442\u0435\u0440\u0431\u0443\u0440\u0433\u0441\u043a\u0438\u0435 \u043a\u043e\u043c\u043f\u044c\u044e\u0442\u0435\u0440\u043d\u044b\u0435 \u0441\u0435\u0442\u0438\u00bb" {
 		t.Fatalf("unexpected title: %q", info.Title)
 	}
 }
@@ -198,5 +198,30 @@ func TestUpdateUserContractDetailsPersistsPreferredContract(t *testing.T) {
 	reloaded := app.GetSession()
 	if reloaded.User == nil || reloaded.User.PreferredContractCode != "2" {
 		t.Fatalf("expected persisted preferred contract code 2 after relogin, got %+v", reloaded.User)
+	}
+}
+
+func TestBuildActPDFDataSkipsZeroPercentItems(t *testing.T) {
+	zero := 0.0
+	data, err := BuildActPDFDataForTest(ExportCalculationRequest{
+		ActNumber:        1,
+		EmployeeFullName: "\u0418\u0432\u0430\u043d\u043e\u0432 \u0418\u0432\u0430\u043d \u0418\u0432\u0430\u043d\u043e\u0432\u0438\u0447",
+		ContractCode:     "1",
+		ContractNumber:   "10/32-\u0444\u0435",
+		ContractDate:     "2026-01-30",
+		TargetAmount:     100,
+		Items: []CalculationItem{
+			{Name: "\u041d\u0443\u0436\u043d\u0430\u044f", Unit: "\u0447.", Rate: 100, Quantity: 1, LineTotal: 100},
+			{Name: "\u041d\u0435 \u043d\u0443\u0436\u043d\u0430\u044f", Unit: "\u0447.", Rate: 999, Quantity: 0, LineTotal: 0, AllocationPercent: &zero},
+		},
+	}, &User{})
+	if err != nil {
+		t.Fatalf("buildActPDFData error = %v", err)
+	}
+	if len(data.Items) != 1 {
+		t.Fatalf("expected only one export item, got %d", len(data.Items))
+	}
+	if data.Items[0].Name != "\u041d\u0443\u0436\u043d\u0430\u044f" {
+		t.Fatalf("expected remaining item to be exported, got %+v", data.Items[0])
 	}
 }

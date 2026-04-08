@@ -1,10 +1,11 @@
-const appState = {
+﻿const appState = {
   session: { authenticated: false, canManage: false, canAdmin: false, canModerate: false, user: null },
   services: [],
   users: [],
   savedCalculations: [],
   currentCalculation: null,
   activeHistoryId: null,
+  editingArchiveId: null,
   archiveOwnerFilter: "all",
   activeTab: "calculator",
   weights: {},
@@ -52,6 +53,9 @@ const downloadPdfButton = document.getElementById("download-pdf-button");
 const actNumberVisibleInput = document.getElementById("act-number-visible-input");
 const previousActNumber = document.getElementById("previous-act-number");
 const copyArchiveServicesButton = document.getElementById("copy-archive-services-button");
+const editArchiveButton = document.getElementById("edit-archive-button");
+const cancelArchiveEditButton = document.getElementById("cancel-archive-edit-button");
+const saveArchiveEditButton = document.getElementById("save-archive-edit-button");
 const messageNode = document.getElementById("message");
 const resultBody = document.getElementById("result-body");
 const resultTotal = document.getElementById("result-total");
@@ -120,7 +124,7 @@ function renderActNumberControls() {
     actNumberVisibleInput.disabled = !appState.session?.authenticated;
   }
   if (previousActNumber) {
-    previousActNumber.textContent = `Последний номер акта: ${lastActNumber > 0 ? lastActNumber : "—"}`;
+    previousActNumber.textContent = `\u041f\u043e\u0441\u043b\u0435\u0434\u043d\u0438\u0439 \u043d\u043e\u043c\u0435\u0440 \u0430\u043a\u0442\u0430: ${lastActNumber > 0 ? lastActNumber : "\u2014"}`;
   }
 }
 
@@ -134,7 +138,7 @@ function clampPositiveInteger(value, fallback = 1) {
 }
 
 function formatMoney(value) {
-  return `${new Intl.NumberFormat("ru-RU").format(value)} р`;
+  return `${new Intl.NumberFormat("ru-RU").format(value)} \u0440`;
 }
 
 function closeConfirmModal(confirmed = false) {
@@ -147,7 +151,7 @@ function closeConfirmModal(confirmed = false) {
   }
 }
 
-function openConfirmModal({ title, text, confirmLabel = "Удалить" }) {
+function openConfirmModal({ title, text, confirmLabel = "\u0423\u0434\u0430\u043b\u0438\u0442\u044c" }) {
   confirmTitle.textContent = title;
   confirmText.textContent = text;
   confirmSubmit.textContent = confirmLabel;
@@ -160,9 +164,9 @@ function openConfirmModal({ title, text, confirmLabel = "Удалить" }) {
 
 async function requestDeleteConfirmation(entityLabel, entityName) {
   return openConfirmModal({
-    title: `Удалить ${entityLabel}?`,
-    text: `Подтвердите удаление: ${entityName}. Это действие нельзя отменить.`,
-    confirmLabel: "Удалить",
+    title: `\u0423\u0434\u0430\u043b\u0438\u0442\u044c ${entityLabel}?`,
+    text: `\u041f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u0435 \u0443\u0434\u0430\u043b\u0435\u043d\u0438\u0435: ${entityName}. \u042d\u0442\u043e \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u043d\u0435\u043b\u044c\u0437\u044f \u043e\u0442\u043c\u0435\u043d\u0438\u0442\u044c.`,
+    confirmLabel: "\u0423\u0434\u0430\u043b\u0438\u0442\u044c",
   });
 }
 
@@ -237,9 +241,9 @@ function updateHiddenExportInputs() {
 }
 
 function contractTemplateLabel(code) {
-
-  return code === "2" ? "«Гризабль»" : "«Санкт-Петербургские компьютерные сети»";
-
+  return code === "2"
+    ? "\u00ab\u0413\u0440\u0438\u0437\u0430\u0431\u043b\u044c\u00bb"
+    : "\u00ab\u0421\u0430\u043d\u043a\u0442-\u041f\u0435\u0442\u0435\u0440\u0431\u0443\u0440\u0433\u0441\u043a\u0438\u0435 \u043a\u043e\u043c\u043f\u044c\u044e\u0442\u0435\u0440\u043d\u044b\u0435 \u0441\u0435\u0442\u0438\u00bb";
 }
 
 
@@ -272,7 +276,7 @@ function renderContractDetailsSummary() {
 
   if (!selectedNumber || !contractDate || !fullName) {
 
-    contractDetailsSummary.textContent = "Для выгрузки акта укажите номер договора, дату подписания и ваше ФИО.";
+    contractDetailsSummary.textContent = "\u0414\u043b\u044f \u0432\u044b\u0433\u0440\u0443\u0437\u043a\u0438 \u0430\u043a\u0442\u0430 \u0443\u043a\u0430\u0436\u0438\u0442\u0435 \u043d\u043e\u043c\u0435\u0440 \u0434\u043e\u0433\u043e\u0432\u043e\u0440\u0430, \u0434\u0430\u0442\u0443 \u043f\u043e\u0434\u043f\u0438\u0441\u0430\u043d\u0438\u044f \u0438 \u0432\u0430\u0448\u0435 \u0424\u0418\u041e.";
 
     contractDetailsSummary.className = "message muted compact-note";
 
@@ -280,7 +284,7 @@ function renderContractDetailsSummary() {
 
   }
 
-  contractDetailsSummary.textContent = `Выбран договор: ${contractTemplateLabel(appState.exportDraft.contractCode)} №${selectedNumber} от ${formatArchiveTitle(new Date(contractDate))}. ФИО: ${fullName}.`;
+  contractDetailsSummary.textContent = `\u0412\u044b\u0431\u0440\u0430\u043d \u0434\u043e\u0433\u043e\u0432\u043e\u0440: ${contractTemplateLabel(appState.exportDraft.contractCode)} \u2116${selectedNumber} \u043e\u0442 ${formatArchiveTitle(new Date(contractDate))}. \u0424\u0418\u041e: ${fullName}.`;
 
   contractDetailsSummary.className = "message success compact-note";
 
@@ -389,13 +393,17 @@ async function saveContractDetails() {
 
   const contractCode = contractModalCodeGrizabl?.checked ? "2" : "1";
 
+  const selectedNumber = contractCode === "2" ? contractGrizablNumber : contractSpbksNumber;
 
+  if (!selectedNumber) {
 
-  if (!contractSpbksNumber && !contractGrizablNumber) {
+    setMessage("\u0423\u043a\u0430\u0436\u0438\u0442\u0435 \u043d\u043e\u043c\u0435\u0440 \u0434\u043e\u0433\u043e\u0432\u043e\u0440\u0430 \u0434\u043b\u044f \u0432\u044b\u0431\u0440\u0430\u043d\u043d\u043e\u0433\u043e \u0448\u0430\u0431\u043b\u043e\u043d\u0430.", "error");
 
-    setMessage("Укажите номер хотя бы одного договора.", "error");
-
-    contractModalSPBKSNumberInput?.focus();
+    if (contractCode === "2") {
+      contractModalGrizablNumberInput?.focus();
+    } else {
+      contractModalSPBKSNumberInput?.focus();
+    }
 
     return;
 
@@ -403,7 +411,7 @@ async function saveContractDetails() {
 
   if (!contractDate) {
 
-    setMessage("Укажите дату подписания договора.", "error");
+    setMessage("\u0423\u043a\u0430\u0436\u0438\u0442\u0435 \u0434\u0430\u0442\u0443 \u043f\u043e\u0434\u043f\u0438\u0441\u0430\u043d\u0438\u044f \u0434\u043e\u0433\u043e\u0432\u043e\u0440\u0430.", "error");
 
     contractModalDateInput?.focus();
 
@@ -413,15 +421,13 @@ async function saveContractDetails() {
 
   if (!fullName) {
 
-    setMessage("Укажите ваше ФИО для акта.", "error");
+    setMessage("\u0423\u043a\u0430\u0436\u0438\u0442\u0435 \u0432\u0430\u0448\u0435 \u0424\u0418\u041e \u0434\u043b\u044f \u0430\u043a\u0442\u0430.", "error");
 
     contractModalFullNameInput?.focus();
 
     return;
 
   }
-
-
 
   try {
 
@@ -432,6 +438,8 @@ async function saveContractDetails() {
       userID: currentUser?.id ?? 0,
 
       fullName,
+
+      preferredContractCode: contractCode,
 
       contractSPBKSNumber: contractSpbksNumber,
 
@@ -465,10 +473,9 @@ async function saveContractDetails() {
 
       closeContractModal();
 
-      setMessage("Данные договора сохранены. Теперь можно скачать акт PDF.", "success");
+      setMessage("\u0414\u0430\u043d\u043d\u044b\u0435 \u0434\u043e\u0433\u043e\u0432\u043e\u0440\u0430 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u044b. \u0422\u0435\u043f\u0435\u0440\u044c \u043c\u043e\u0436\u043d\u043e \u0441\u043a\u0430\u0447\u0430\u0442\u044c \u0430\u043a\u0442 PDF.", "success");
 
     }
-
   } catch (error) {
 
     setMessage(error, "error");
@@ -499,6 +506,10 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;");
 }
 
+function escapeAttribute(value) {
+  return escapeHtml(value).replaceAll("'", "&#39;");
+}
+
 function stripSpaces(value) {
   return String(value ?? "").replace(/\s+/g, "");
 }
@@ -506,13 +517,13 @@ function stripSpaces(value) {
 function categoryLabel(category) {
   switch (category) {
     case "primary":
-      return "Основная";
+      return "\u041e\u0441\u043d\u043e\u0432\u043d\u0430\u044f";
     case "secondary":
-      return "Вторичная";
+      return "\u0412\u0442\u043e\u0440\u0438\u0447\u043d\u0430\u044f";
     case "closing":
-      return "Закрывающая";
+      return "\u0417\u0430\u043a\u0440\u044b\u0432\u0430\u044e\u0449\u0430\u044f";
     default:
-      return "Без группы";
+      return "\u0411\u0435\u0437 \u0433\u0440\u0443\u043f\u043f\u044b";
   }
 }
 
@@ -565,49 +576,49 @@ function normalizeRole(role) {
 
 function roleMeta(role) {
   const catalog = {
-    admin: { level: 5, department: "global", label: "Администратор" },
-    global_director: { level: 4, department: "global", label: "Генеральный директор" },
-    executive_director: { level: 4, department: "global", label: "Исполнительный директор" },
-    technical_director: { level: 4, department: "global", label: "Технический директор" },
-    support_head: { level: 3, department: "support", label: "Руководитель Тех. Поддержки" },
-    support_sysadmin: { level: 3, department: "support", label: "Системный администратор" },
-    support_senior: { level: 2, department: "support", label: "Старший специалист техподдержки" },
-    support_employee: { level: 1, department: "support", label: "Специалист техподдержки" },
-    technical_head: { level: 3, department: "technical", label: "Руководитель технического отдела" },
-    technical_senior: { level: 2, department: "technical", label: "Старший техник" },
-    technical_employee: { level: 1, department: "technical", label: "Техник" },
-    telecom_construction_director: { level: 3, department: "telecom", label: "Директор по строительству" },
-    telecom_construction_head: { level: 3, department: "telecom", label: "Руководитель строительного отдела" },
-    telecom_senior_vols: { level: 2, department: "telecom", label: "Старший монтажник ВОЛС" },
-    telecom_senior_lvs: { level: 2, department: "telecom", label: "Старший монтажник ЛВС" },
-    telecom_employee_vols: { level: 1, department: "telecom", label: "Монтажник ВОЛС" },
-    telecom_employee_lvs: { level: 1, department: "telecom", label: "Монтажник ЛВС" },
-    skud_head: { level: 3, department: "skud", label: "Руководитель отдела технического обслуживания СКУД" },
-    skud_project_manager: { level: 2, department: "skud", label: "Менеджер проектов СКУД" },
-    skud_senior_service_engineer: { level: 2, department: "skud", label: "Старший сервисный инженер СКУД" },
-    skud_senior_installer: { level: 2, department: "skud", label: "Старший монтажник СКУД" },
-    skud_service_engineer: { level: 1, department: "skud", label: "Сервисный инженер СКУД" },
-    skud_installer: { level: 1, department: "skud", label: "Монтажник СКУД" },
-    approval_head: { level: 3, department: "approval", label: "Руководитель согласования" },
-    approval_senior: { level: 2, department: "approval", label: "Старший менеджер согласования" },
-    approval_employee: { level: 1, department: "approval", label: "Менеджер по согласованию" },
-    marketing_head: { level: 3, department: "marketing", label: "Руководитель отдела рекламы и маркетинга" },
-    marketing_courier: { level: 1, department: "marketing", label: "Курьер" },
-    commercial_director: { level: 4, department: "commercial", label: "Директор коммерческого блока" },
-    commercial_subscriber_head: { level: 3, department: "commercial", label: "Руководитель абонентского отдела" },
-    commercial_active_sales_head: { level: 3, department: "commercial", label: "Менеджер активных продаж" },
-    commercial_senior_mrk: { level: 2, department: "commercial", label: "Старший МРК" },
-    commercial_senior_mryu: { level: 2, department: "commercial", label: "Старший МРЮ" },
-    commercial_employee_mrk: { level: 1, department: "commercial", label: "МРК" },
-    commercial_employee_mryu: { level: 1, department: "commercial", label: "МРЮ" },
-    finance_head: { level: 3, department: "finance", label: "Гл. бухгалтер" },
-    finance_employee: { level: 1, department: "finance", label: "Помощник бухгалтера" },
-    legal_employee: { level: 1, department: "legal", label: "Юрист" },
-    development_head: { level: 3, department: "development", label: "Руководитель группы разработки" },
-    development_senior: { level: 2, department: "development", label: "Старший разработчик" },
-    development_employee: { level: 1, department: "development", label: "Разработчик" },
+    admin: { level: 5, department: "global", label: "\u0410\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u043e\u0440" },
+    global_director: { level: 4, department: "global", label: "\u0413\u0435\u043d\u0435\u0440\u0430\u043b\u044c\u043d\u044b\u0439 \u0434\u0438\u0440\u0435\u043a\u0442\u043e\u0440" },
+    executive_director: { level: 4, department: "global", label: "\u0418\u0441\u043f\u043e\u043b\u043d\u0438\u0442\u0435\u043b\u044c\u043d\u044b\u0439 \u0434\u0438\u0440\u0435\u043a\u0442\u043e\u0440" },
+    technical_director: { level: 4, department: "global", label: "\u0422\u0435\u0445\u043d\u0438\u0447\u0435\u0441\u043a\u0438\u0439 \u0434\u0438\u0440\u0435\u043a\u0442\u043e\u0440" },
+    support_head: { level: 3, department: "support", label: "\u0420\u0443\u043a\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c \u0422\u0435\u0445. \u041f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0438" },
+    support_sysadmin: { level: 3, department: "support", label: "\u0421\u0438\u0441\u0442\u0435\u043c\u043d\u044b\u0439 \u0430\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u043e\u0440" },
+    support_senior: { level: 2, department: "support", label: "\u0421\u0442\u0430\u0440\u0448\u0438\u0439 \u0441\u043f\u0435\u0446\u0438\u0430\u043b\u0438\u0441\u0442 \u0442\u0435\u0445\u043f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0438" },
+    support_employee: { level: 1, department: "support", label: "\u0421\u043f\u0435\u0446\u0438\u0430\u043b\u0438\u0441\u0442 \u0442\u0435\u0445\u043f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0438" },
+    technical_head: { level: 3, department: "technical", label: "\u0420\u0443\u043a\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c \u0442\u0435\u0445\u043d\u0438\u0447\u0435\u0441\u043a\u043e\u0433\u043e \u043e\u0442\u0434\u0435\u043b\u0430" },
+    technical_senior: { level: 2, department: "technical", label: "\u0421\u0442\u0430\u0440\u0448\u0438\u0439 \u0442\u0435\u0445\u043d\u0438\u043a" },
+    technical_employee: { level: 1, department: "technical", label: "\u0422\u0435\u0445\u043d\u0438\u043a" },
+    telecom_construction_director: { level: 3, department: "telecom", label: "\u0414\u0438\u0440\u0435\u043a\u0442\u043e\u0440 \u043f\u043e \u0441\u0442\u0440\u043e\u0438\u0442\u0435\u043b\u044c\u0441\u0442\u0432\u0443" },
+    telecom_construction_head: { level: 3, department: "telecom", label: "\u0420\u0443\u043a\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c \u0441\u0442\u0440\u043e\u0438\u0442\u0435\u043b\u044c\u043d\u043e\u0433\u043e \u043e\u0442\u0434\u0435\u043b\u0430" },
+    telecom_senior_vols: { level: 2, department: "telecom", label: "\u0421\u0442\u0430\u0440\u0448\u0438\u0439 \u043c\u043e\u043d\u0442\u0430\u0436\u043d\u0438\u043a \u0412\u041e\u041b\u0421" },
+    telecom_senior_lvs: { level: 2, department: "telecom", label: "\u0421\u0442\u0430\u0440\u0448\u0438\u0439 \u043c\u043e\u043d\u0442\u0430\u0436\u043d\u0438\u043a \u041b\u0412\u0421" },
+    telecom_employee_vols: { level: 1, department: "telecom", label: "\u041c\u043e\u043d\u0442\u0430\u0436\u043d\u0438\u043a \u0412\u041e\u041b\u0421" },
+    telecom_employee_lvs: { level: 1, department: "telecom", label: "\u041c\u043e\u043d\u0442\u0430\u0436\u043d\u0438\u043a \u041b\u0412\u0421" },
+    skud_head: { level: 3, department: "skud", label: "\u0420\u0443\u043a\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c \u043e\u0442\u0434\u0435\u043b\u0430 \u0442\u0435\u0445\u043d\u0438\u0447\u0435\u0441\u043a\u043e\u0433\u043e \u043e\u0431\u0441\u043b\u0443\u0436\u0438\u0432\u0430\u043d\u0438\u044f \u0421\u041a\u0423\u0414" },
+    skud_project_manager: { level: 2, department: "skud", label: "\u041c\u0435\u043d\u0435\u0434\u0436\u0435\u0440 \u043f\u0440\u043e\u0435\u043a\u0442\u043e\u0432 \u0421\u041a\u0423\u0414" },
+    skud_senior_service_engineer: { level: 2, department: "skud", label: "\u0421\u0442\u0430\u0440\u0448\u0438\u0439 \u0441\u0435\u0440\u0432\u0438\u0441\u043d\u044b\u0439 \u0438\u043d\u0436\u0435\u043d\u0435\u0440 \u0421\u041a\u0423\u0414" },
+    skud_senior_installer: { level: 2, department: "skud", label: "\u0421\u0442\u0430\u0440\u0448\u0438\u0439 \u043c\u043e\u043d\u0442\u0430\u0436\u043d\u0438\u043a \u0421\u041a\u0423\u0414" },
+    skud_service_engineer: { level: 1, department: "skud", label: "\u0421\u0435\u0440\u0432\u0438\u0441\u043d\u044b\u0439 \u0438\u043d\u0436\u0435\u043d\u0435\u0440 \u0421\u041a\u0423\u0414" },
+    skud_installer: { level: 1, department: "skud", label: "\u041c\u043e\u043d\u0442\u0430\u0436\u043d\u0438\u043a \u0421\u041a\u0423\u0414" },
+    approval_head: { level: 3, department: "approval", label: "\u0420\u0443\u043a\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c \u0441\u043e\u0433\u043b\u0430\u0441\u043e\u0432\u0430\u043d\u0438\u044f" },
+    approval_senior: { level: 2, department: "approval", label: "\u0421\u0442\u0430\u0440\u0448\u0438\u0439 \u043c\u0435\u043d\u0435\u0434\u0436\u0435\u0440 \u0441\u043e\u0433\u043b\u0430\u0441\u043e\u0432\u0430\u043d\u0438\u044f" },
+    approval_employee: { level: 1, department: "approval", label: "\u041c\u0435\u043d\u0435\u0434\u0436\u0435\u0440 \u043f\u043e \u0441\u043e\u0433\u043b\u0430\u0441\u043e\u0432\u0430\u043d\u0438\u044e" },
+    marketing_head: { level: 3, department: "marketing", label: "\u0420\u0443\u043a\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c \u043e\u0442\u0434\u0435\u043b\u0430 \u0440\u0435\u043a\u043b\u0430\u043c\u044b \u0438 \u043c\u0430\u0440\u043a\u0435\u0442\u0438\u043d\u0433\u0430" },
+    marketing_courier: { level: 1, department: "marketing", label: "\u041a\u0443\u0440\u044c\u0435\u0440" },
+    commercial_director: { level: 4, department: "commercial", label: "\u0414\u0438\u0440\u0435\u043a\u0442\u043e\u0440 \u043a\u043e\u043c\u043c\u0435\u0440\u0447\u0435\u0441\u043a\u043e\u0433\u043e \u0431\u043b\u043e\u043a\u0430" },
+    commercial_subscriber_head: { level: 3, department: "commercial", label: "\u0420\u0443\u043a\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c \u0430\u0431\u043e\u043d\u0435\u043d\u0442\u0441\u043a\u043e\u0433\u043e \u043e\u0442\u0434\u0435\u043b\u0430" },
+    commercial_active_sales_head: { level: 3, department: "commercial", label: "\u041c\u0435\u043d\u0435\u0434\u0436\u0435\u0440 \u0430\u043a\u0442\u0438\u0432\u043d\u044b\u0445 \u043f\u0440\u043e\u0434\u0430\u0436" },
+    commercial_senior_mrk: { level: 2, department: "commercial", label: "\u0421\u0442\u0430\u0440\u0448\u0438\u0439 \u041c\u0420\u041a" },
+    commercial_senior_mryu: { level: 2, department: "commercial", label: "\u0421\u0442\u0430\u0440\u0448\u0438\u0439 \u041c\u0420\u042e" },
+    commercial_employee_mrk: { level: 1, department: "commercial", label: "\u041c\u0420\u041a" },
+    commercial_employee_mryu: { level: 1, department: "commercial", label: "\u041c\u0420\u042e" },
+    finance_head: { level: 3, department: "finance", label: "\u0413\u043b. \u0431\u0443\u0445\u0433\u0430\u043b\u0442\u0435\u0440" },
+    finance_employee: { level: 1, department: "finance", label: "\u041f\u043e\u043c\u043e\u0449\u043d\u0438\u043a \u0431\u0443\u0445\u0433\u0430\u043b\u0442\u0435\u0440\u0430" },
+    legal_employee: { level: 1, department: "legal", label: "\u042e\u0440\u0438\u0441\u0442" },
+    development_head: { level: 3, department: "development", label: "\u0420\u0443\u043a\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c \u0433\u0440\u0443\u043f\u043f\u044b \u0440\u0430\u0437\u0440\u0430\u0431\u043e\u0442\u043a\u0438" },
+    development_senior: { level: 2, department: "development", label: "\u0421\u0442\u0430\u0440\u0448\u0438\u0439 \u0440\u0430\u0437\u0440\u0430\u0431\u043e\u0442\u0447\u0438\u043a" },
+    development_employee: { level: 1, department: "development", label: "\u0420\u0430\u0437\u0440\u0430\u0431\u043e\u0442\u0447\u0438\u043a" },
   };
-  return catalog[normalizeRole(role)] ?? { level: 0, department: "support", label: "Пользователь" };
+  return catalog[normalizeRole(role)] ?? { level: 0, department: "support", label: "\u041f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044c" };
 }
 
 function roleDepartment(role) {
@@ -822,34 +833,34 @@ function roleLabel(role) {
   return roleMeta(role).label;
 }
 
-function normalizeErrorText(text, fallback = "Произошла ошибка.") {
-  const value = String(text ?? "").replace(/^Error:\s*/, "").trim();
-  if (!value) {
-    return fallback;
-  }
-  if (value.includes("Р ") || value.includes("РЎ") || value.includes("СЃ") || value.includes("РґРѕСЃС‚")) {
+function normalizeErrorText(text, fallback = "\u041f\u0440\u043e\u0438\u0437\u043e\u0448\u043b\u0430 \u043e\u0448\u0438\u0431\u043a\u0430.") {
+  const rawValue = typeof text === "object" && text !== null
+    ? (text.message ?? text.error ?? text.reason ?? text.details ?? String(text))
+    : text;
+  const value = String(rawValue ?? "").replace(/^Error:\s*/, "").trim();
+  if (!value || value === "[object Object]") {
     return fallback;
   }
   return value;
 }
 
 function setMessage(text, type = "muted") {
-  messageNode.textContent = normalizeErrorText(text, "Произошла ошибка.");
+  messageNode.textContent = normalizeErrorText(text, "\u041f\u0440\u043e\u0438\u0437\u043e\u0448\u043b\u0430 \u043e\u0448\u0438\u0431\u043a\u0430.");
   messageNode.className = `message ${type}`;
 }
 
 function setLoginMessage(text, type = "muted") {
-  loginMessage.textContent = normalizeErrorText(text, "Ошибка входа. Проверьте логин и пароль.");
+  loginMessage.textContent = normalizeErrorText(text, "\u041e\u0448\u0438\u0431\u043a\u0430 \u0432\u0445\u043e\u0434\u0430. \u041f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u043b\u043e\u0433\u0438\u043d \u0438 \u043f\u0430\u0440\u043e\u043b\u044c.");
   loginMessage.className = `message ${type}`;
 }
 
 function setServiceFormMessage(text, type = "muted") {
-  serviceFormMessage.textContent = normalizeErrorText(text, "Не удалось сохранить услугу.");
+  serviceFormMessage.textContent = normalizeErrorText(text, "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u0443\u0441\u043b\u0443\u0433\u0443.");
   serviceFormMessage.className = `message ${type}`;
 }
 
 function setUserFormMessage(text, type = "muted") {
-  userFormMessage.textContent = normalizeErrorText(text, "Не удалось выполнить действие с пользователем.");
+  userFormMessage.textContent = normalizeErrorText(text, "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0432\u044b\u043f\u043e\u043b\u043d\u0438\u0442\u044c \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u0441 \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u0435\u043c.");
   userFormMessage.className = `message ${type}`;
 }
 
@@ -992,6 +1003,10 @@ function clampWeightValue(value) {
   return Math.max(-10, Math.min(10, Math.trunc(value)));
 }
 
+function serviceTakesPartInCalculation(service) {
+  return !(typeof service?.allocationPercent === 'number' && service.allocationPercent <= 0);
+}
+
 function buildEffectivePercentMap(items, weightMap = null) {
   const grouped = { primary: [], secondary: [], closing: [] };
   items.forEach((item) => {
@@ -1063,10 +1078,10 @@ function updateServicePercentHint() {
   }
 
   const placeholderValue = formatPercent(currentValue || 0);
-  servicePercentInput.placeholder = `Пусто = ${placeholderValue} по умолчанию`;
+  servicePercentInput.placeholder = `\u041f\u0443\u0441\u0442\u043e = ${placeholderValue} \u043f\u043e \u0443\u043c\u043e\u043b\u0447\u0430\u043d\u0438\u044e`;
   servicePercentHint.textContent = nextPercent !== null && Number.isFinite(nextPercent)
-    ? `Сейчас для услуги будет установлен процент ${formatPercent(nextPercent)}.`
-    : `Сейчас для услуги действует процент по группе: ${placeholderValue}. Он рассчитан с учётом количества услуг в этой группе.`;
+    ? `\u0421\u0435\u0439\u0447\u0430\u0441 \u0434\u043b\u044f \u0443\u0441\u043b\u0443\u0433\u0438 \u0431\u0443\u0434\u0435\u0442 \u0443\u0441\u0442\u0430\u043d\u043e\u0432\u043b\u0435\u043d \u043f\u0440\u043e\u0446\u0435\u043d\u0442 ${formatPercent(nextPercent)}.`
+    : `\u0421\u0435\u0439\u0447\u0430\u0441 \u0434\u043b\u044f \u0443\u0441\u043b\u0443\u0433\u0438 \u0434\u0435\u0439\u0441\u0442\u0432\u0443\u0435\u0442 \u043f\u0440\u043e\u0446\u0435\u043d\u0442 \u043f\u043e \u0433\u0440\u0443\u043f\u043f\u0435: ${placeholderValue}. \u041e\u043d \u0440\u0430\u0441\u0441\u0447\u0438\u0442\u0430\u043d \u0441 \u0443\u0447\u0451\u0442\u043e\u043c \u043a\u043e\u043b\u0438\u0447\u0435\u0441\u0442\u0432\u0430 \u0443\u0441\u043b\u0443\u0433 \u0432 \u044d\u0442\u043e\u0439 \u0433\u0440\u0443\u043f\u043f\u0435.`;
 }
 
 function formatPercent(value) {
@@ -1084,16 +1099,16 @@ function resetServiceForm() {
   serviceRateInput.value = "";
   serviceCategoryInput.value = "primary";
   servicePercentInput.value = "";
-  saveServiceButton.textContent = "Сохранить услугу";
+  saveServiceButton.textContent = "\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u0443\u0441\u043b\u0443\u0433\u0443";
   updateServicePercentHint();
 }
 
 function renderResult(result) {
   if (!result) {
-    resultTotal.textContent = "0 р";
-    summaryTotal.textContent = "0 р";
+    resultTotal.textContent = "0 \u0440";
+    summaryTotal.textContent = "0 \u0440";
     summaryItems.textContent = `0/${appState.services.length}`;
-    exactStatus.textContent = "Ожидание расчёта";
+    exactStatus.textContent = "\u041e\u0436\u0438\u0434\u0430\u043d\u0438\u0435 \u0440\u0430\u0441\u0447\u0451\u0442\u0430";
     if (downloadPdfButton) {
       downloadPdfButton.disabled = true;
     }
@@ -1101,7 +1116,7 @@ function renderResult(result) {
       actNumberVisibleInput.disabled = true;
     }
     renderActNumberControls();
-    resultBody.innerHTML = '<tr><td colspan="7" class="placeholder">Результаты появятся здесь после расчёта.</td></tr>';
+    resultBody.innerHTML = '<tr><td colspan="7" class="placeholder">\u0420\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442\u044b \u043f\u043e\u044f\u0432\u044f\u0442\u0441\u044f \u0437\u0434\u0435\u0441\u044c \u043f\u043e\u0441\u043b\u0435 \u0440\u0430\u0441\u0447\u0451\u0442\u0430.</td></tr>';
     return;
   }
 
@@ -1111,7 +1126,7 @@ function renderResult(result) {
   resultTotal.textContent = formatMoney(result.totalAmount);
   summaryTotal.textContent = formatMoney(result.totalAmount);
   summaryItems.textContent = `${result.activeServices}/${result.items.length}`;
-  exactStatus.textContent = isExact ? "Точное совпадение найдено" : "Есть отклонение от целевой суммы";
+  exactStatus.textContent = isExact ? "\u0422\u043e\u0447\u043d\u043e\u0435 \u0441\u043e\u0432\u043f\u0430\u0434\u0435\u043d\u0438\u0435 \u043d\u0430\u0439\u0434\u0435\u043d\u043e" : "\u0415\u0441\u0442\u044c \u043e\u0442\u043a\u043b\u043e\u043d\u0435\u043d\u0438\u0435 \u043e\u0442 \u0446\u0435\u043b\u0435\u0432\u043e\u0439 \u0441\u0443\u043c\u043c\u044b";
   if (downloadPdfButton) {
     downloadPdfButton.disabled = !isExact;
   }
@@ -1134,14 +1149,15 @@ function renderResult(result) {
     </tr>
   `).join("");
 }
+
 function renderDefaultPercentages() {
   const groups = appState.defaultGroupPercent;
-  defaultPercentages.textContent = `По умолчанию: основные ${Math.round((groups.primary ?? 0) * 100)}%, вторичные ${Math.round((groups.secondary ?? 0) * 100)}%, закрывающие ${Math.round((groups.closing ?? 0) * 100)}%. Внутри группы этот процент делится равномерно, если для услуги не задан свой процент. Вес можно задавать от -10 до 10: плюс усиливает услугу, минус ослабляет.`;
+  defaultPercentages.textContent = `\u041f\u043e \u0443\u043c\u043e\u043b\u0447\u0430\u043d\u0438\u044e: \u043e\u0441\u043d\u043e\u0432\u043d\u044b\u0435 ${Math.round((groups.primary ?? 0) * 100)}%, \u0432\u0442\u043e\u0440\u0438\u0447\u043d\u044b\u0435 ${Math.round((groups.secondary ?? 0) * 100)}%, \u0437\u0430\u043a\u0440\u044b\u0432\u0430\u044e\u0449\u0438\u0435 ${Math.round((groups.closing ?? 0) * 100)}%. \u0412\u043d\u0443\u0442\u0440\u0438 \u0433\u0440\u0443\u043f\u043f\u044b \u044d\u0442\u043e\u0442 \u043f\u0440\u043e\u0446\u0435\u043d\u0442 \u0434\u0435\u043b\u0438\u0442\u0441\u044f \u0440\u0430\u0432\u043d\u043e\u043c\u0435\u0440\u043d\u043e, \u0435\u0441\u043b\u0438 \u0434\u043b\u044f \u0443\u0441\u043b\u0443\u0433\u0438 \u043d\u0435 \u0437\u0430\u0434\u0430\u043d \u0441\u0432\u043e\u0439 \u043f\u0440\u043e\u0446\u0435\u043d\u0442. \u0412\u0435\u0441 \u043c\u043e\u0436\u043d\u043e \u0437\u0430\u0434\u0430\u0432\u0430\u0442\u044c \u043e\u0442 -10 \u0434\u043e 10: \u043f\u043b\u044e\u0441 \u0443\u0441\u0438\u043b\u0438\u0432\u0430\u0435\u0442 \u0443\u0441\u043b\u0443\u0433\u0443, \u043c\u0438\u043d\u0443\u0441 \u043e\u0441\u043b\u0430\u0431\u043b\u044f\u0435\u0442.`;
 }
 
 function renderServices() {
   if (!appState.services.length) {
-    servicesList.innerHTML = '<div class="service-card">Услуги ещё не созданы. Добавьте их во вкладке настроек.</div>';
+    servicesList.innerHTML = '<div class="service-card">\u0423\u0441\u043b\u0443\u0433\u0438 \u0435\u0449\u0451 \u043d\u0435 \u0441\u043e\u0437\u0434\u0430\u043d\u044b. \u0414\u043e\u0431\u0430\u0432\u044c\u0442\u0435 \u0438\u0445 \u0432\u043e \u0432\u043a\u043b\u0430\u0434\u043a\u0435 \u043d\u0430\u0441\u0442\u0440\u043e\u0435\u043a.</div>';
     return;
   }
 
@@ -1154,23 +1170,38 @@ function renderServices() {
         <div>
           <strong class="truncate-text" title="${escapeHtml(`${index + 1}. ${service.name}`)}">${escapeHtml(`${index + 1}. ${service.name}`)}</strong>
           <div class="service-meta">${formatMoney(service.rate)} / ${escapeHtml(service.unit)}</div>
-          <div class="service-meta">Процент: ${percentText(service, effectivePercentMap)}</div>
+          <div class="service-meta">\u041f\u0440\u043e\u0446\u0435\u043d\u0442: ${percentText(service, effectivePercentMap)}</div>
           <span class="category-pill ${categoryClass(service.category)}">${categoryLabel(service.category)}</span>
         </div>
         <label class="weight-field">
-          <span>Вес</span>
-          <input type="number" min="-10" max="10" step="1" value="${weight}" class="${weightClass}" data-weight-code="${service.code}" />
+          <span>\u0412\u0435\u0441</span>
+          <input type="text" inputmode="numeric" autocomplete="off" value="${weight}" class="${weightClass}" data-weight-code="${service.code}" />
         </label>
       </article>
     `;
   }).join("");
 
+
   servicesList.querySelectorAll("[data-weight-code]").forEach((node) => {
     node.addEventListener("input", (event) => {
-      const nextValue = Number(event.target.value);
+      const rawValue = String(event.target.value ?? "");
+      if (/^-?\d*$/.test(rawValue)) {
+        return;
+      }
+      event.target.value = rawValue.replace(/[^\d-]/g, "").replace(/(?!^)-/g, "");
+    });
+    const applyWeightValue = (event) => {
+      const rawValue = String(event.target.value ?? "").trim();
+      const nextValue = rawValue === "" || rawValue === "-" ? 0 : Number(rawValue);
+      if (!Number.isFinite(nextValue)) {
+        event.target.value = String(appState.weights[node.dataset.weightCode] ?? 0);
+        return;
+      }
       appState.weights[node.dataset.weightCode] = clampWeightValue(nextValue);
       renderServices();
-    });
+    };
+    node.addEventListener("change", applyWeightValue);
+    node.addEventListener("blur", applyWeightValue);
   });
 }
 
@@ -1188,9 +1219,8 @@ function startEditService(id) {
   saveServiceButton.textContent = "\u041e\u0431\u043d\u043e\u0432\u0438\u0442\u044c \u0443\u0441\u043b\u0443\u0433\u0443";
   updateServicePercentHint();
   setActiveTab("settings");
-  setServiceFormMessage(`Редактируется услуга «${service.name}».`, "muted");
+  setServiceFormMessage(`\u0420\u0435\u0434\u0430\u043a\u0442\u0438\u0440\u0443\u0435\u0442\u0441\u044f \u0443\u0441\u043b\u0443\u0433\u0430 \u00ab${service.name}\u00bb.`, "muted");
 }
-
 function renderServicesAdmin() {
   saveServiceButton.disabled = false;
   resetServiceFormButton.disabled = false;
@@ -1298,38 +1328,24 @@ async function downloadCurrentCalculationPDF() {
 
 
   const isExact = Boolean(result.foundExact ?? result.exactMatch ?? (result.totalAmount === result.targetAmount));
-
   if (!isExact) {
-
     setMessage("Скачать акт можно только для точного расчёта без отклонений.", "error");
-
     return;
-
   }
 
-
-
-  const actNumber = Number(appState.exportDraft.actNumber || 1);
-
+  const actNumber = clampPositiveInteger(actNumberVisibleInput?.value, appState.exportDraft.actNumber || ((currentUser.lastActNumber || 0) + 1));
+  appState.exportDraft.actNumber = actNumber;
   const fullName = String(appState.exportDraft.employeeFullName || "").trim();
-
   const contractCode = String(appState.exportDraft.contractCode || "1").trim();
-
   const contractNumber = getSelectedContractNumber();
-
   const contractDate = String(appState.exportDraft.contractDate || "").trim();
 
-
-
   if (!fullName || !contractDate || !contractNumber) {
-
     setMessage("Сначала укажите договор, дату подписания и ФИО для формирования акта.", "error");
-
     openContractModal();
-
     return;
-
   }
+
 
 
 
@@ -1406,13 +1422,13 @@ function renderUsers() {
   userRoleInput.disabled = !canModerateUsers || roleChoices.length === 0;
 
   if (!canModerateUsers || roleChoices.length === 0) {
-    usersList.innerHTML = '<div class="settings-empty">Управление пользователями доступно старшим и руководителям своего отдела, а также администратору.</div>';
-    setUserFormMessage("Создавать пользователей можно только внутри своего отдела и своей зоны ответственности.", "muted");
+    usersList.innerHTML = '<div class="settings-empty">\u0423\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435 \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044f\u043c\u0438 \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u043e \u0441\u0442\u0430\u0440\u0448\u0438\u043c \u0438 \u0440\u0443\u043a\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044f\u043c \u0441\u0432\u043e\u0435\u0433\u043e \u043e\u0442\u0434\u0435\u043b\u0430, \u0430 \u0442\u0430\u043a\u0436\u0435 \u0430\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u043e\u0440\u0443.</div>';
+    setUserFormMessage("\u0421\u043e\u0437\u0434\u0430\u0432\u0430\u0442\u044c \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u0435\u0439 \u043c\u043e\u0436\u043d\u043e \u0442\u043e\u043b\u044c\u043a\u043e \u0432\u043d\u0443\u0442\u0440\u0438 \u0441\u0432\u043e\u0435\u0433\u043e \u043e\u0442\u0434\u0435\u043b\u0430 \u0438 \u0441\u0432\u043e\u0435\u0439 \u0437\u043e\u043d\u044b \u043e\u0442\u0432\u0435\u0442\u0441\u0442\u0432\u0435\u043d\u043d\u043e\u0441\u0442\u0438.", "muted");
     return;
   }
   if (!sortedUsers.length) {
-    usersList.innerHTML = '<div class="settings-empty">Пользователи пока не созданы.</div>';
-    setUserFormMessage("Можно создать первого пользователя в рамках доступных вам ролей.", "muted");
+    usersList.innerHTML = '<div class="settings-empty">\u041f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u0438 \u043f\u043e\u043a\u0430 \u043d\u0435 \u0441\u043e\u0437\u0434\u0430\u043d\u044b.</div>';
+    setUserFormMessage("\u041c\u043e\u0436\u043d\u043e \u0441\u043e\u0437\u0434\u0430\u0442\u044c \u043f\u0435\u0440\u0432\u043e\u0433\u043e \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044f \u0432 \u0440\u0430\u043c\u043a\u0430\u0445 \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u043e\u0439 \u0432\u0430\u043c \u0440\u043e\u043b\u0438.", "muted");
     return;
   }
 
@@ -1429,13 +1445,13 @@ function renderUsers() {
         <div>
           <strong>${escapeHtml(user.username)}</strong>
           <div class="service-meta">${roleLabel(user.role)}</div>
-          <div class="service-meta">Создан: ${formatDate(user.createdAt)}</div>
-          ${canEditFullName ? `<div class="user-fullname-row"><input type="text" class="input-select compact-select inline-fullname-input" placeholder="ФИО сотрудника" value="${escapeHtml(user.fullName || "")}" data-user-fullname-id="${user.id}" /><button type="button" class="ghost-button compact-action-button" data-save-fullname-id="${user.id}">Сохранить ФИО</button></div>` : ""}
-          ${canResetPassword ? `<div class="user-password-row"><input type="password" class="input-select compact-select inline-password-input" placeholder="Новый пароль" data-user-password-id="${user.id}" /><button type="button" class="ghost-button compact-action-button" data-apply-password-id="${user.id}">Сменить пароль</button></div>` : ""}
+          <div class="service-meta">\u0421\u043e\u0437\u0434\u0430\u043d: ${formatDate(user.createdAt)}</div>
+          ${canEditFullName ? `<div class="user-fullname-row"><input type="text" class="input-select compact-select inline-fullname-input" placeholder="\u0424\u0418\u041e \u0441\u043e\u0442\u0440\u0443\u0434\u043d\u0438\u043a\u0430" value="${escapeHtml(user.fullName || "")}" data-user-fullname-id="${user.id}" /><button type="button" class="ghost-button compact-action-button" data-save-fullname-id="${user.id}">\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u0424\u0418\u041e</button></div>` : ""}
+          ${canResetPassword ? `<div class="user-password-row"><input type="password" class="input-select compact-select inline-password-input" placeholder="\u041d\u043e\u0432\u044b\u0439 \u043f\u0430\u0440\u043e\u043b\u044c" data-user-password-id="${user.id}" /><button type="button" class="ghost-button compact-action-button" data-apply-password-id="${user.id}">\u0421\u043c\u0435\u043d\u0438\u0442\u044c \u043f\u0430\u0440\u043e\u043b\u044c</button></div>` : ""}
         </div>
         <div class="settings-item-actions stacked-actions">
-          ${canChangeRole ? `<select class="input-select compact-select" data-user-role-id="${user.id}">${roleOptions}</select><button type="button" class="ghost-button" data-apply-role-id="${user.id}">Сменить роль</button>` : `<div class="service-meta">Смена ролей доступна только руководителю отдела и администратору.</div>`}
-          <button type="button" class="danger-button" ${canDelete ? `data-delete-user-id="${user.id}"` : "disabled"}>Удалить</button>
+          ${canChangeRole ? `<select class="input-select compact-select" data-user-role-id="${user.id}">${roleOptions}</select><button type="button" class="ghost-button" data-apply-role-id="${user.id}">\u0421\u043c\u0435\u043d\u0438\u0442\u044c \u0440\u043e\u043b\u044c</button>` : `<div class="service-meta">\u0421\u043c\u0435\u043d\u0430 \u0440\u043e\u043b\u0435\u0439 \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u0430 \u0442\u043e\u043b\u044c\u043a\u043e \u0440\u0443\u043a\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044e \u043e\u0442\u0434\u0435\u043b\u0430 \u0438 \u0430\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u043e\u0440\u0443.</div>`}
+          <button type="button" class="danger-button" ${canDelete ? `data-delete-user-id="${user.id}"` : "disabled"}>\u0423\u0434\u0430\u043b\u0438\u0442\u044c</button>
         </div>
       </article>
     `;
@@ -1455,7 +1471,7 @@ function renderUsers() {
       const fullNameInput = usersList.querySelector(`[data-user-fullname-id="${userId}"]`);
       await updateUserFullName(userId, fullNameInput?.value ?? "", {
         focusNode: fullNameInput,
-        successMessage: "ФИО сотрудника сохранено.",
+        successMessage: "\u0424\u0418\u041e \u0441\u043e\u0442\u0440\u0443\u0434\u043d\u0438\u043a\u0430 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u043e.",
       });
     });
   });
@@ -1466,7 +1482,7 @@ function renderUsers() {
       const passwordInput = usersList.querySelector(`[data-user-password-id="${userId}"]`);
       const nextPassword = stripSpaces(passwordInput?.value ?? "");
       if (!nextPassword) {
-        setUserFormMessage("Введите новый пароль.", "error");
+        setUserFormMessage("\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u043d\u043e\u0432\u044b\u0439 \u043f\u0430\u0440\u043e\u043b\u044c.", "error");
         passwordInput?.focus();
         return;
       }
@@ -1483,7 +1499,7 @@ function renderUsers() {
     });
   });
 
-  setUserFormMessage("Пользователи отображаются и создаются только в пределах вашего отдела и уровня доступа.", "muted");
+  setUserFormMessage("\u041f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u0438 \u043e\u0442\u043e\u0431\u0440\u0430\u0436\u0430\u044e\u0442\u0441\u044f \u0438 \u0441\u043e\u0437\u0434\u0430\u044e\u0442\u0441\u044f \u0442\u043e\u043b\u044c\u043a\u043e \u0432 \u043f\u0440\u0435\u0434\u0435\u043b\u0430\u0445 \u0432\u0430\u0448\u0435\u0433\u043e \u043e\u0442\u0434\u0435\u043b\u0430 \u0438 \u0443\u0440\u043e\u0432\u043d\u044f \u0434\u043e\u0441\u0442\u0443\u043f\u0430.", "muted");
 }
 
 function userSortPriority(role) {
@@ -1506,10 +1522,24 @@ function userSortPriority(role) {
 function renderArchiveDetails(saved) {
   const canCopyArchiveServices = Boolean(appState.session?.canAdmin && saved);
   const canDeleteArchive = Boolean((appState.session?.canManage || appState.session?.canAdmin) && saved);
+  const canEditArchive = Boolean(appState.session?.canAdmin && saved);
+  const isEditingArchive = Boolean(saved && appState.editingArchiveId === saved.id);
+  editArchiveButton?.classList.toggle("hidden", !canEditArchive || isEditingArchive);
+  if (editArchiveButton) {
+    editArchiveButton.disabled = !canEditArchive || isEditingArchive;
+  }
+  cancelArchiveEditButton?.classList.toggle("hidden", !isEditingArchive);
+  saveArchiveEditButton?.classList.toggle("hidden", !isEditingArchive);
+  if (cancelArchiveEditButton) {
+    cancelArchiveEditButton.disabled = !isEditingArchive;
+  }
+  if (saveArchiveEditButton) {
+    saveArchiveEditButton.disabled = !isEditingArchive;
+  }
   deleteArchiveButton.classList.toggle("hidden", !canDeleteArchive);
-  deleteArchiveButton.disabled = !canDeleteArchive;
+  deleteArchiveButton.disabled = !canDeleteArchive || isEditingArchive;
   copyArchiveServicesButton.classList.toggle("hidden", !canCopyArchiveServices);
-  copyArchiveServicesButton.disabled = !canCopyArchiveServices;
+  copyArchiveServicesButton.disabled = !canCopyArchiveServices || isEditingArchive;
   if (!saved) {
     archiveTitle.textContent = appState.session?.canModerate ? "Выберите расчёт сотрудника" : "Выберите расчёт из архива";
     archiveTotal.textContent = "0 р";
@@ -1518,25 +1548,147 @@ function renderArchiveDetails(saved) {
     return;
   }
 
-  const weightMap = Object.fromEntries(saved.items.map((item) => [item.serviceCode, item.weight ?? 0]));
-  const effectivePercentMap = buildEffectivePercentMap(saved.items, weightMap);
-  archiveTitle.textContent = saved.title;
-  archiveTotal.textContent = formatMoney(saved.totalAmount);
-  archiveMeta.innerHTML = `<span>Целевая сумма: <strong>${formatMoney(saved.targetAmount)}</strong></span><span>Автор: <strong>${escapeHtml(saved.createdBy || "Не указан")}</strong></span><span class="history-date">${formatDate(saved.createdAt)}</span>`;
-  archiveBody.innerHTML = saved.items.map((item, index) => `
-    <tr class="${item.quantity === 0 ? "muted-row" : ""}">
-      <td>${index + 1}</td>
-      <td>
-        <strong class="truncate-text" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong>
-        <div class="service-meta">${formatMoney(item.rate)} / ${escapeHtml(item.unit)}</div>
-      </td>
-      <td class="group-cell">${categoryLabel(item.category)}</td>
-      <td class="weight-value">${formatPercent(effectivePercentMap[item.serviceCode] ?? 0)}</td>
-      <td class="weight-value">${item.weight ?? 0}</td>
-      <td class="qty">${item.quantity} ${escapeHtml(item.unit)}</td>
-      <td class="money">${formatMoney(item.lineTotal)}</td>
-    </tr>
-  `).join("");
+  const items = Array.isArray(saved.items) ? saved.items : [];
+  archiveTitle.textContent = saved.title || "Архивный расчёт";
+  archiveTotal.textContent = formatMoney(saved.totalAmount || 0);
+  archiveMeta.innerHTML = `<span>Целевая сумма: <strong>${formatMoney(saved.targetAmount || 0)}</strong></span><span>Автор: <strong>${escapeHtml(saved.createdBy || "Не указан")}</strong></span><span class="history-date">${formatDate(saved.createdAt)}</span>${isEditingArchive ? '<span class="archive-inline-note">Режим редактирования архива активен.</span>' : ""}`;
+
+  let effectivePercentMap = {};
+  try {
+    const weightMap = Object.fromEntries(items.map((item) => [item.serviceCode ?? item.code ?? "", item.weight ?? 0]));
+    effectivePercentMap = buildEffectivePercentMap(items, weightMap);
+  } catch (error) {
+    console.error("Archive detail render failed", error, saved);
+    setMessage("Не удалось корректно отобразить состав архива.", "error");
+  }
+
+  if (!items.length) {
+    archiveBody.innerHTML = '<tr><td colspan="7" class="placeholder">В этом архиве пока нет услуг для отображения.</td></tr>';
+    return;
+  }
+
+  archiveBody.innerHTML = items.map((item, index) => {
+    const percentKey = item.serviceCode ?? item.code ?? "";
+    const percentValue = effectivePercentMap[percentKey] ?? 0;
+    const percentInputValue = item.allocationPercent == null ? "" : String(roundToOneDecimal(item.allocationPercent));
+    if (isEditingArchive) {
+      return `
+      <tr class="archive-edit-row ${item.quantity === 0 ? "muted-row" : ""}" data-archive-row="${index}">
+        <td>${index + 1}</td>
+        <td>
+          <div class="archive-edit-stack">
+            <input class="archive-edit-input" data-archive-name value="${escapeAttribute(item.name ?? "")}" />
+            <div class="archive-edit-meta">
+              <input class="archive-edit-input" data-archive-rate type="number" min="1" step="1" value="${Number(item.rate) || 0}" />
+              <select class="archive-edit-select" data-archive-unit>
+                <option value="ч." ${item.unit === "ч." ? "selected" : ""}>ч.</option>
+                <option value="шт." ${item.unit === "шт." ? "selected" : ""}>шт.</option>
+              </select>
+            </div>
+          </div>
+        </td>
+        <td class="group-cell">
+          <select class="archive-edit-select" data-archive-category>
+            <option value="primary" ${item.category === "primary" ? "selected" : ""}>Основная</option>
+            <option value="secondary" ${item.category === "secondary" ? "selected" : ""}>Вторичная</option>
+            <option value="closing" ${item.category === "closing" ? "selected" : ""}>Закрывающая</option>
+          </select>
+        </td>
+        <td class="weight-value"><input class="archive-edit-input" data-archive-percent type="number" min="0" step="0.1" value="${escapeAttribute(percentInputValue)}" placeholder="${formatPercent(percentValue)}" /></td>
+        <td class="weight-value"><input class="archive-edit-input" data-archive-weight type="number" min="-10" max="10" step="1" value="${item.weight ?? 0}" /></td>
+        <td class="qty"><input class="archive-edit-input" data-archive-quantity type="number" min="0" step="1" value="${Number(item.quantity) || 0}" /></td>
+        <td class="money">${formatMoney(Number(item.lineTotal) || 0)}</td>
+      </tr>`;
+    }
+    return `
+      <tr class="${item.quantity === 0 ? "muted-row" : ""}">
+        <td>${index + 1}</td>
+        <td>
+          <strong class="truncate-text" title="${escapeHtml(item.name ?? "")}">${escapeHtml(item.name ?? "")}</strong>
+          <div class="service-meta">${formatMoney(Number(item.rate) || 0)} / ${escapeHtml(item.unit ?? "")}</div>
+        </td>
+        <td class="group-cell">${categoryLabel(item.category)}</td>
+        <td class="weight-value">${formatPercent(percentValue)}</td>
+        <td class="weight-value">${item.weight ?? 0}</td>
+        <td class="qty">${Number(item.quantity) || 0} ${escapeHtml(item.unit ?? "")}</td>
+        <td class="money">${formatMoney(Number(item.lineTotal) || 0)}</td>
+      </tr>`;
+  }).join("");
+}
+
+function roundToOneDecimal(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return 0;
+  }
+  return Math.round(numeric * 10) / 10;
+}
+
+function getActiveArchiveCalculation() {
+  return appState.savedCalculations.find((item) => item.id === appState.activeHistoryId) ?? null;
+}
+
+function startArchiveEdit() {
+  const current = getActiveArchiveCalculation();
+  if (!appState.session?.canAdmin || !current) {
+    return;
+  }
+  appState.editingArchiveId = current.id;
+  renderArchiveDetails(current);
+  setMessage("Архив переведён в режим редактирования.", "muted");
+}
+
+function cancelArchiveEdit() {
+  appState.editingArchiveId = null;
+  renderArchiveDetails(getActiveArchiveCalculation());
+  setMessage("Редактирование архива отменено.", "muted");
+}
+
+function collectArchiveEditRequest(saved) {
+  const rows = [...archiveBody.querySelectorAll("[data-archive-row]")];
+  return {
+    id: saved.id,
+    items: rows.map((row, index) => {
+      const source = saved.items[index] || {};
+      const name = row.querySelector("[data-archive-name]")?.value?.trim() || "";
+      const rate = Number.parseInt(row.querySelector("[data-archive-rate]")?.value || String(source.rate || 0), 10) || 0;
+      const unit = row.querySelector("[data-archive-unit]")?.value || source.unit || "ч.";
+      const category = row.querySelector("[data-archive-category]")?.value || source.category || "primary";
+      const quantity = Number.parseInt(row.querySelector("[data-archive-quantity]")?.value || String(source.quantity || 0), 10) || 0;
+      const weight = Number.parseInt(row.querySelector("[data-archive-weight]")?.value || String(source.weight || 0), 10) || 0;
+      const percentRaw = row.querySelector("[data-archive-percent]")?.value?.trim() || "";
+      return {
+        serviceId: source.serviceId || 0,
+        serviceCode: source.serviceCode || `archive-${saved.id}-${index + 1}`,
+        name,
+        unit,
+        rate,
+        quantity,
+        lineTotal: rate * quantity,
+        description: source.description || "",
+        weight,
+        category,
+        allocationPercent: percentRaw === "" ? null : Number.parseFloat(percentRaw),
+      };
+    }),
+  };
+}
+
+async function saveArchiveEdit() {
+  const current = getActiveArchiveCalculation();
+  if (!appState.session?.canAdmin || !current) {
+    return;
+  }
+  try {
+    const updated = await api.UpdateCalculationAsAdmin(collectArchiveEditRequest(current));
+    appState.savedCalculations = appState.savedCalculations.map((item) => item.id === updated.id ? updated : item);
+    appState.editingArchiveId = null;
+    renderHistory();
+    renderArchiveDetails(updated);
+    setMessage("Архивный расчёт сохранён.", "success");
+  } catch (error) {
+    setMessage(normalizeErrorText(error, "Не удалось сохранить архивный расчёт."), "error");
+  }
 }
 
 function getFilteredCalculations() {
@@ -1660,6 +1812,10 @@ function buildRandomWeightPayload() {
   const next = {};
   const groups = new Map();
   appState.services.forEach((service) => {
+    next[service.code] = 0;
+    if (!serviceTakesPartInCalculation(service)) {
+      return;
+    }
     const category = service.category || "closing";
     if (!groups.has(category)) {
       groups.set(category, []);
@@ -1730,56 +1886,23 @@ async function calculate() {
     appState.currentCalculation = result;
     renderResult(result);
 
-    const saved = await api.SaveCalculation({
-      targetAmount: result.targetAmount,
-      items: result.items,
-    });
-    appState.activeHistoryId = saved.id ?? null;
-    await refreshBootstrap({ keepArchiveSelection: true });
-    setMessage(`Расчёт сохранён в архив за ${saved.title}. Активно ${result.activeServices} из ${result.items.length} услуг на сумму ${formatMoney(result.totalAmount)}.`, "success");
+    try {
+      const saved = await api.SaveCalculation({
+        targetAmount: result.targetAmount,
+        items: result.items,
+      });
+      appState.activeHistoryId = saved.id ?? null;
+      await refreshBootstrap({ keepArchiveSelection: true });
+      setMessage(`Расчёт сохранён в архив за ${saved.title}. Активно ${result.activeServices} из ${result.items.length} услуг на сумму ${formatMoney(result.totalAmount)}.`, "success");
+    } catch (error) {
+      setMessage(`Расчёт построен, но не удалось сохранить его в архив: ${normalizeErrorText(error, "ошибка сохранения архива")}.`, "error");
+    }
   } catch (error) {
     appState.currentCalculation = null;
     renderResult(null);
     setMessage(error, "error");
   } finally {
     calculateButton.disabled = false;
-  }
-}
-
-async function copyArchiveServicesToAdmin(id) {
-  const current = appState.savedCalculations.find((item) => item.id === id);
-  if (!current || !appState.session?.canAdmin) {
-    return;
-  }
-  try {
-    const result = await api.CopyArchiveServicesToAdmin(id);
-    await refreshBootstrap({ keepArchiveSelection: true });
-    const created = Number(result?.created ?? 0);
-    const updated = Number(result?.updated ?? 0);
-    setMessage(`Услуги из архива ${current.title} скопированы к администратору: создано ${created}, обновлено ${updated}.`, "success");
-    setActiveTab("settings");
-  } catch (error) {
-    setMessage(error, "error");
-  }
-}
-
-async function deleteCalculation(id) {
-  const current = appState.savedCalculations.find((item) => item.id === id);
-  if (!current) {
-    return;
-  }
-  if (!await requestDeleteConfirmation("\u0440\u0430\u0441\u0447\u0451\u0442", current.title)) {
-    return;
-  }
-  try {
-    await api.DeleteCalculation(id);
-    if (appState.activeHistoryId === id) {
-      appState.activeHistoryId = null;
-    }
-    await refreshBootstrap();
-    setMessage(`\u0420\u0430\u0441\u0447\u0451\u0442 ${current.title} \u0443\u0434\u0430\u043b\u0451\u043d \u0438\u0437 \u0430\u0440\u0445\u0438\u0432\u0430.`, "success");
-  } catch (error) {
-    setMessage(error, "error");
   }
 }
 
@@ -1830,7 +1953,7 @@ async function deleteService(id) {
   if (!service) {
     return;
   }
-  if (!await requestDeleteConfirmation("\u0443\u0441\u043b\u0443\u0433\u0443", service.name)) {
+  if (!await requestDeleteConfirmation("услугу", service.name)) {
     return;
   }
   try {
@@ -1840,7 +1963,7 @@ async function deleteService(id) {
     }
     delete appState.weights[service.code];
     await refreshBootstrap();
-    setServiceFormMessage(`\u0423\u0441\u043b\u0443\u0433\u0430 ${service.name} \u0443\u0434\u0430\u043b\u0435\u043d\u0430.`, "success");
+    setServiceFormMessage(`Услуга ${service.name} удалена.`, "success");
   } catch (error) {
     setServiceFormMessage(error, "error");
   }
@@ -1890,7 +2013,7 @@ async function deleteUser(userId) {
   if (!user) {
     return;
   }
-  if (!await requestDeleteConfirmation("\u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044f", user.username)) {
+  if (!await requestDeleteConfirmation("пользователя", user.username)) {
     return;
   }
   try {
@@ -1943,7 +2066,7 @@ amountInput.addEventListener("input", () => {
   if (!amountInput.value.trim()) {
     appState.currentCalculation = null;
     renderResult(null);
-    setMessage("Введите сумму и при необходимости сместите акцент весами по услугам.", "muted");
+    setMessage("Введите сумму и при необходимости сместите акценты весами по услугам.", "muted");
     return;
   }
   autoCalculateTimer = setTimeout(() => {
@@ -1970,6 +2093,7 @@ resetWeightsButton.addEventListener("click", resetWeights);
 archiveOwnerFilter?.addEventListener("change", () => {
   appState.archiveOwnerFilter = archiveOwnerFilter.value || "all";
   appState.activeHistoryId = null;
+  appState.editingArchiveId = null;
   renderHistory();
 });
 
@@ -1983,6 +2107,9 @@ copyArchiveServicesButton?.addEventListener("click", async () => {
     await copyArchiveServicesToAdmin(appState.activeHistoryId);
   }
 });
+editArchiveButton?.addEventListener("click", startArchiveEdit);
+cancelArchiveEditButton?.addEventListener("click", cancelArchiveEdit);
+saveArchiveEditButton?.addEventListener("click", saveArchiveEdit);
 saveServiceButton.addEventListener("click", saveService);
 resetServiceFormButton.addEventListener("click", () => {
   resetServiceForm();
@@ -2071,8 +2198,6 @@ window.addEventListener("DOMContentLoaded", async () => {
     setLoginMessage(error, "error");
   }
 });
-
-
 
 
 

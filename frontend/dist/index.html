@@ -168,10 +168,13 @@
                 <h2 id="archive-title">Выберите расчёт из архива</h2>
               </div>
               <div class="archive-actions">
-                <button id="copy-archive-services-button" type="button" class="ghost-button hidden">Скопировать услуги к себе</button>
-                <button id="delete-archive-button" type="button" class="danger-button" disabled>Удалить</button>
-                <div id="archive-total" class="total-pill">0 р</div>
-              </div>
+  <button id="edit-archive-button" type="button" class="ghost-button hidden archive-action-icon" title="Редактировать архив">&#9998;</button>
+  <button id="cancel-archive-edit-button" type="button" class="secondary hidden">Отмена</button>
+  <button id="save-archive-edit-button" type="button" class="primary hidden">Сохранить</button>
+  <button id="copy-archive-services-button" type="button" class="ghost-button hidden">Скопировать услуги к себе</button>
+  <button id="delete-archive-button" type="button" class="danger-button" disabled>Удалить</button>
+  <div id="archive-total" class="total-pill">0 р</div>
+</div>
             </div>
 
             <div id="archive-meta" class="archive-meta">Здесь появятся дата, автор и состав выбранного расчёта.</div>
@@ -339,6 +342,8 @@
     <script src="./assets/app.js"></script>
   </body>
 </html>
+
+
 
 
 
