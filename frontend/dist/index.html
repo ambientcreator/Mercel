@@ -1,347 +1,714 @@
-﻿<!doctype html>
+<!doctype html>
+
 <html lang="ru">
+
   <head>
+
     <meta charset="UTF-8" />
+
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" />
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
     <title>Mercel</title>
+
     <link rel="stylesheet" href="./assets/app.css" />
+
   </head>
+
   <body>
+
     <div class="shell">
+
       <div class="orb orb-left"></div>
+
       <div class="orb orb-right"></div>
 
+
+
       <section id="login-screen" class="login-screen glass">
+
         <div class="login-card">
+
           <div class="panel-kicker">Mercel</div>
+
           <h1>Вход в систему</h1>
+
           <label class="field">
+
             <span>Логин</span>
+
             <input id="login-username" type="text" placeholder="Введите логин" />
+
           </label>
+
           <label class="field">
+
             <span>Пароль</span>
+
             <input id="login-password" type="password" placeholder="Введите пароль" />
+
           </label>
+
           <button id="login-button" class="primary wide">Войти</button>
+
           <div id="login-message" class="message muted">Введите логин и пароль, чтобы войти в систему.</div>
+
         </div>
+
       </section>
 
+
+
       <section id="app-shell" class="app-shell hidden">
+
         <header class="topbar glass">
+
           <div>
+
             <div class="panel-kicker">Mercel</div>
+
             <h2>Панель работы с расчётами</h2>
+
           </div>
+
           <div class="topbar-actions">
+
             <div class="session-chip">
+
               <span id="session-username">Гость</span>
+
               <strong id="session-role">Не авторизован</strong>
+
             </div>
+
             <button id="logout-button" type="button" class="secondary">Выйти</button>
+
           </div>
+
         </header>
 
+
+
         <div class="tabs" id="main-tabs">
+
           <button type="button" class="tab-button active" data-tab="calculator">Расчёт</button>
+
           <button type="button" class="tab-button" data-tab="archive">Архив</button>
+
           <button type="button" class="tab-button hidden" data-tab="settings" id="settings-tab-button">Настройки</button>
+
         </div>
 
+
+
         <main id="calculator-tab" class="layout tab-panel active">
+
           <section class="glass panel control-panel">
+
             <div class="panel-head">
+
               <div>
+
                 <span class="panel-kicker">Расчёт</span>
+
                 <h2>Подбор услуг</h2>
+
               </div>
+
             </div>
-            <label class="field">
-              <span>Сумма, р</span>
-              <input id="amount-input" type="number" min="1" step="1" placeholder="Например, 78920" />
-            </label>
 
             <label class="field">
-              <span>Дата расчёта</span>
-              <input id="archive-date-input" type="text" readonly />
+
+              <span>Сумма, р</span>
+
+              <input id="amount-input" type="number" min="1" step="1" placeholder="Например, 78920" />
+
             </label>
+
+
+
+
+
 
             <input id="act-number-input" type="hidden" value="1" />
+
             <input id="employee-full-name-input" type="hidden" />
+
             <input id="contract-code-input" type="hidden" value="1" />
+
             <input id="contract-spbks-number-input" type="hidden" />
+
             <input id="contract-grizabl-number-input" type="hidden" />
+
             <input id="contract-date-input" type="hidden" />
 
+
+
             <div class="compact-actions">
+
               <button id="calculate-button" class="primary">&#1056;&#1072;&#1089;&#1089;&#1095;&#1080;&#1090;&#1072;&#1090;&#1100;</button>
+
               <button id="contract-details-button" type="button" class="secondary">&#1059;&#1082;&#1072;&#1079;&#1072;&#1090;&#1100; &#1076;&#1086;&#1075;&#1086;&#1074;&#1086;&#1088;</button>
+
             </div>
+
             <div id="contract-details-summary" class="message muted compact-note">&#1044;&#1083;&#1103; &#1074;&#1099;&#1075;&#1088;&#1091;&#1079;&#1082;&#1080; &#1072;&#1082;&#1090;&#1072; &#1091;&#1082;&#1072;&#1078;&#1080;&#1090;&#1077; &#1085;&#1086;&#1084;&#1077;&#1088; &#1076;&#1086;&#1075;&#1086;&#1074;&#1086;&#1088;&#1072;, &#1076;&#1072;&#1090;&#1091; &#1087;&#1086;&#1076;&#1087;&#1080;&#1089;&#1072;&#1085;&#1080;&#1103; &#1080; &#1074;&#1072;&#1096;&#1077; &#1060;&#1048;&#1054;.</div>
+
             <div id="message" class="message muted">Введите сумму и задайте веса для нужных услуг.</div>
 
+
+
             <div class="summary-grid">
+
               <div class="glass mini-card"><span>Итог</span><strong id="summary-total">0 р</strong></div>
+
               <div class="glass mini-card"><span>Активно</span><strong id="summary-items">0/0</strong></div>
+
               <div class="glass mini-card"><span>Архив</span><strong id="summary-history">0</strong></div>
+
             </div>
+
+
 
             <div class="exact-inline glass">
+
               <span>Точное совпадение</span>
+
               <strong id="exact-status">Ожидание расчёта</strong>
+
             </div>
+
+
 
             <div class="service-list-block">
+
               <div class="service-list-head">
+
                 <div>
+
                   <div class="block-title">Приоритеты, проценты и веса</div>
+
                   <div id="default-percentages" class="legend">Загрузка настроек процентов...</div>
+
                 </div>
+
                 <button id="reset-weights-button" type="button" class="ghost-button">Сбросить веса</button>
+
               </div>
+
               <div id="services-list" class="service-grid"></div>
+
             </div>
+
           </section>
+
+
 
           <section class="glass panel result-panel">
+
             <div class="panel-head">
+
               <div>
+
                 <span class="panel-kicker">Результат</span>
+
                 <h2>Структура расчёта</h2>
+
               </div>
+
               <div class="result-head-actions">
+
                 <button id="randomize-button" type="button" class="ghost-button randomize-button">Рандомизировать расчёт</button>
+
                 <div id="result-total" class="total-pill">0 р</div>
+
               </div>
+
             </div>
+
+
 
             <div class="table-wrap no-grow">
-              <table>
+
+              <table class="result-table">
+
                 <thead>
+
                   <tr>
+
                     <th>№</th>
+
                     <th>Наименование услуги</th>
-                    <th>Группа</th>
-                    <th>%</th>
-                    <th>Вес</th>
+
                     <th>Количество</th>
+
                     <th>Стоимость</th>
+
                   </tr>
+
                 </thead>
+
                 <tbody id="result-body">
-                  <tr><td colspan="7" class="placeholder">Результаты появятся здесь после расчёта.</td></tr>
+
+                  <tr><td colspan="4" class="placeholder">Результаты появятся здесь после расчёта.</td></tr>
+
                 </tbody>
+
               </table>
+
             </div>
+
             <div class="result-actions">
-              <label class="act-number-control">
-                <span>&#1053;&#1086;&#1084;&#1077;&#1088; &#1072;&#1082;&#1090;&#1072;</span>
-                <input id="act-number-visible-input" type="number" min="1" step="1" value="1" disabled />
-              </label>
-              <div id="previous-act-number" class="act-number-meta">&#1053;&#1086;&#1084;&#1077;&#1088; &#1087;&#1088;&#1077;&#1076;. &#1072;&#1082;&#1090;&#1072;: &#8212;</div>
-              <button id="download-pdf-button" type="button" class="secondary" disabled>&#1057;&#1082;&#1072;&#1095;&#1072;&#1090;&#1100; &#1072;&#1082;&#1090; PDF</button>
+
+              <div class="result-actions-fields">
+
+                <label class="act-number-control calc-date-control">
+
+                  <span>&#1044;&#1072;&#1090;&#1072; &#1088;&#1072;&#1089;&#1095;&#1105;&#1090;&#1072;</span>
+
+                  <div class="date-input-wrap">
+                    <input id="archive-date-input" type="text" inputmode="numeric" maxlength="10" autocomplete="off" placeholder="&#1076;&#1076;.&#1084;&#1084;.&#1075;&#1075;&#1075;&#1075;" />
+                    <button id="archive-date-picker-button" type="button" class="date-picker-button" aria-label="&#1054;&#1090;&#1082;&#1088;&#1099;&#1090;&#1100; &#1082;&#1072;&#1083;&#1077;&#1085;&#1076;&#1072;&#1088;&#1100;"></button>
+                    <input id="archive-date-picker" type="date" class="native-date-picker" tabindex="-1" aria-hidden="true" />
+                  </div>
+
+                </label>
+
+                <label class="act-number-control">
+
+                  <span>&#1053;&#1086;&#1084;&#1077;&#1088; &#1072;&#1082;&#1090;&#1072;</span>
+
+                  <input id="act-number-visible-input" type="number" min="1" step="1" value="1" disabled />
+
+                </label>
+
+              </div>
+
+              <div class="result-actions-meta">
+
+                <div id="previous-act-number" class="act-number-meta">&#1055;&#1086;&#1089;&#1083;&#1077;&#1076;&#1085;&#1080;&#1081; &#1085;&#1086;&#1084;&#1077;&#1088; &#1072;&#1082;&#1090;&#1072;: &#8212;</div>
+
+                <button id="download-pdf-button" type="button" class="secondary" disabled>&#1057;&#1082;&#1072;&#1095;&#1072;&#1090;&#1100; &#1072;&#1082;&#1090; PDF</button>
+
+              </div>
+
             </div>
+
           </section>
+
         </main>
 
+
+
         <section id="archive-tab" class="archive-layout tab-panel">
+
           <aside class="glass panel archive-list-panel">
+
             <div class="panel-head">
+
               <div>
+
                 <span class="panel-kicker">SQLite</span>
+
                 <h2>Архив расчётов</h2>
+
               </div>
+
             </div>
+
             <label class="field hidden" id="archive-owner-field">
+
               <span>Архив сотрудника</span>
+
               <select id="archive-owner-filter" class="input-select"></select>
+
             </label>
+
             <div id="history-list" class="history-list"></div>
+
           </aside>
 
+
+
           <section class="glass panel archive-detail-panel">
+
             <div class="panel-head">
+
               <div>
+
                 <span class="panel-kicker">Детали</span>
+
                 <h2 id="archive-title">Выберите расчёт из архива</h2>
+
               </div>
+
               <div class="archive-actions">
+
   <button id="edit-archive-button" type="button" class="ghost-button hidden archive-action-icon" title="Редактировать архив">&#9998;</button>
+
   <button id="cancel-archive-edit-button" type="button" class="secondary hidden">Отмена</button>
+
   <button id="save-archive-edit-button" type="button" class="primary hidden">Сохранить</button>
+
   <button id="copy-archive-services-button" type="button" class="ghost-button hidden">Скопировать услуги к себе</button>
+
   <button id="delete-archive-button" type="button" class="danger-button" disabled>Удалить</button>
+
   <div id="archive-total" class="total-pill">0 р</div>
+
 </div>
+
             </div>
+
+
 
             <div id="archive-meta" class="archive-meta">Здесь появятся дата, автор и состав выбранного расчёта.</div>
 
+
+
             <div class="table-wrap no-grow">
-              <table>
+
+              <table class="archive-table">
                 <thead>
+
                   <tr>
+
                     <th>№</th>
+
                     <th>Услуга</th>
+
                     <th>Группа</th>
-                    <th>%</th>
-                    <th>Вес</th>
+
                     <th>Количество</th>
+
                     <th>Стоимость</th>
+
                   </tr>
+
                 </thead>
+
                 <tbody id="archive-body">
-                  <tr><td colspan="7" class="placeholder">Архив пока пуст или расчёт ещё не выбран.</td></tr>
+
+                  <tr><td colspan="5" class="placeholder">Архив пока пуст или расчёт ещё не выбран.</td></tr>
+
                 </tbody>
+
               </table>
+
             </div>
+
           </section>
+
         </section>
+
+
 
         <section id="settings-tab" class="settings-layout tab-panel">
+
           <section class="glass panel settings-panel">
+
             <div class="panel-head">
+
               <div>
+
                 <span class="panel-kicker">Настройки</span>
+
                 <h2>Услуги</h2>
+
               </div>
+
             </div>
+
+
 
             <div class="settings-grid">
+
               <div>
+
                 <div id="services-admin-list" class="settings-list"></div>
+
               </div>
+
               <div class="editor-card glass">
+
                 <div class="editor-title">Создать или изменить услугу</div>
+
                 <label class="field">
+
                   <span>Название услуги</span>
+
                   <input id="service-name" type="text" placeholder="Например, Монтаж оборудования" />
+
                 </label>
+
                 <label class="field">
+
                   <span>Единица</span>
+
                   <select id="service-unit" class="input-select">
+
                     <option value="ч.">Часы</option>
+
                     <option value="шт.">Штуки</option>
+
                   </select>
+
                 </label>
+
                 <label class="field">
+
                   <span>Стоимость, р</span>
+
                   <input id="service-rate" type="number" min="1" step="1" placeholder="500" />
+
                 </label>
+
                 <label class="field">
+
                   <span>Группа</span>
+
                   <select id="service-category" class="input-select">
+
                     <option value="primary">Основная</option>
+
                     <option value="secondary">Вторичная</option>
+
                     <option value="closing">Закрывающая</option>
+
                   </select>
+
                 </label>
+
                 <label class="field">
+
                   <span>Процент услуги, %</span>
+
                   <input id="service-percent" type="number" min="0" max="100" step="0.1" placeholder="Пусто = по умолчанию группы" />
+
                 </label>
+
                 <div id="service-percent-hint" class="legend">Текущий процент для этой услуги будет рассчитан по выбранной группе.</div>
+
                 <div class="actions">
+
                   <button id="save-service-button" type="button" class="primary">Сохранить услугу</button>
+
                   <button id="reset-service-form-button" type="button" class="secondary">Очистить форму</button>
+
                 </div>
+
                 <div id="service-form-message" class="message muted">Услуги влияют на расчёт сразу после сохранения.</div>
+
               </div>
+
             </div>
+
           </section>
+
+
 
           <section class="glass panel settings-panel" id="users-panel">
+
             <div class="panel-head">
+
               <div>
+
                 <span class="panel-kicker">Сотрудники</span>
+
                 <h2>Пользователи и роли</h2>
+
               </div>
+
             </div>
+
+
 
             <div class="settings-grid users-grid">
+
               <div>
+
                 <div id="users-list" class="settings-list"></div>
+
               </div>
+
               <div class="editor-card glass">
+
                 <div class="editor-title">Создать пользователя</div>
+
                 <label class="field">
+
                   <span>Логин</span>
+
                   <input id="user-username" type="text" placeholder="newuser" />
+
                 </label>
+
                 <label class="field">
+
                   <span>Пароль</span>
+
                   <input id="user-password" type="password" placeholder="пароль" />
+
                 </label>
+
                 <label class="field">
+
                   <span>Роль</span>
+
                   <select id="user-role" class="input-select"></select>
+
                 </label>
+
                 <div class="actions">
+
                   <button id="create-user-button" type="button" class="primary">Создать пользователя</button>
+
                 </div>
+
                 <div id="user-form-message" class="message muted">Пользователи отображаются и создаются только в пределах вашего отдела и уровня доступа.</div>
+
               </div>
+
             </div>
+
           </section>
+
         </section>
+
       </section>
+
     </div>    <div id="contract-modal" class="confirm-modal hidden" aria-hidden="true">
+
       <div id="contract-backdrop" class="confirm-backdrop"></div>
+
       <section class="confirm-dialog contract-dialog glass" role="dialog" aria-modal="true" aria-labelledby="contract-title">
+
         <div class="panel-kicker">&#1044;&#1072;&#1085;&#1085;&#1099;&#1077; &#1076;&#1083;&#1103; &#1072;&#1082;&#1090;&#1072;</div>
+
         <h3 id="contract-title">&#1059;&#1082;&#1072;&#1079;&#1072;&#1090;&#1100; &#1076;&#1086;&#1075;&#1086;&#1074;&#1086;&#1088;</h3>
+
         <p class="confirm-text">&#1069;&#1090;&#1080; &#1076;&#1072;&#1085;&#1085;&#1099;&#1077; &#1085;&#1091;&#1078;&#1085;&#1099; &#1076;&#1083;&#1103; &#1074;&#1099;&#1075;&#1088;&#1091;&#1079;&#1082;&#1080; &#1072;&#1082;&#1090;&#1072; &#1087;&#1088;&#1080;&#1105;&#1084;&#1072;-&#1089;&#1076;&#1072;&#1095;&#1080; &#1086;&#1082;&#1072;&#1079;&#1072;&#1085;&#1085;&#1099;&#1093; &#1091;&#1089;&#1083;&#1091;&#1075;. &#1044;&#1072;&#1085;&#1085;&#1099;&#1077; &#1089;&#1086;&#1093;&#1088;&#1072;&#1085;&#1103;&#1102;&#1090;&#1089;&#1103;, &#1087;&#1086;&#1101;&#1090;&#1086;&#1084;&#1091; &#1080;&#1093; &#1084;&#1086;&#1078;&#1085;&#1086; &#1088;&#1077;&#1076;&#1072;&#1082;&#1090;&#1080;&#1088;&#1086;&#1074;&#1072;&#1090;&#1100; &#1087;&#1086;&#1079;&#1078;&#1077;.</p>
+
         <div class="contract-choice-grid">
+
           <label class="field contract-choice-card">
+
             <span>&#171;&#1057;&#1072;&#1085;&#1082;&#1090;-&#1055;&#1077;&#1090;&#1077;&#1088;&#1073;&#1091;&#1088;&#1075;&#1089;&#1082;&#1080;&#1077; &#1082;&#1086;&#1084;&#1087;&#1100;&#1102;&#1090;&#1077;&#1088;&#1085;&#1099;&#1077; &#1089;&#1077;&#1090;&#1080;&#187;</span>
+
             <input id="contract-modal-spbks-number-input" type="text" placeholder="&#1059;&#1082;&#1072;&#1078;&#1080;&#1090;&#1077; &#1085;&#1086;&#1084;&#1077;&#1088; &#1076;&#1086;&#1075;&#1086;&#1074;&#1086;&#1088;&#1072;" />
+
             <label class="radio-inline">
+
               <input id="contract-modal-code-spbks" type="radio" name="contract-company" value="1" checked />
+
               <span>&#1048;&#1089;&#1087;&#1086;&#1083;&#1100;&#1079;&#1086;&#1074;&#1072;&#1090;&#1100; &#1101;&#1090;&#1086;&#1090; &#1076;&#1086;&#1075;&#1086;&#1074;&#1086;&#1088;</span>
+
             </label>
+
           </label>
+
           <label class="field contract-choice-card">
+
             <span>&#171;&#1043;&#1088;&#1080;&#1079;&#1072;&#1073;&#1083;&#1100;&#187;</span>
+
             <input id="contract-modal-grizabl-number-input" type="text" placeholder="&#1059;&#1082;&#1072;&#1078;&#1080;&#1090;&#1077; &#1085;&#1086;&#1084;&#1077;&#1088; &#1076;&#1086;&#1075;&#1086;&#1074;&#1086;&#1088;&#1072;" />
+
             <label class="radio-inline">
+
               <input id="contract-modal-code-grizabl" type="radio" name="contract-company" value="2" />
+
               <span>&#1048;&#1089;&#1087;&#1086;&#1083;&#1100;&#1079;&#1086;&#1074;&#1072;&#1090;&#1100; &#1101;&#1090;&#1086;&#1090; &#1076;&#1086;&#1075;&#1086;&#1074;&#1086;&#1088;</span>
+
             </label>
+
           </label>
+
         </div>
+
         <label class="field">
+
           <span>&#1059;&#1082;&#1072;&#1078;&#1080;&#1090;&#1077; &#1076;&#1072;&#1090;&#1091; &#1087;&#1086;&#1076;&#1087;&#1080;&#1089;&#1072;&#1085;&#1080;&#1103; &#1076;&#1086;&#1075;&#1086;&#1074;&#1086;&#1088;&#1072;</span>
-          <input id="contract-modal-date-input" type="date" />
+
+          <div class="date-input-wrap">
+            <input id="contract-modal-date-input" type="text" inputmode="numeric" maxlength="10" autocomplete="off" placeholder="&#1076;&#1076;.&#1084;&#1084;.&#1075;&#1075;&#1075;&#1075;" />
+            <button id="contract-modal-date-picker-button" type="button" class="date-picker-button" aria-label="&#1054;&#1090;&#1082;&#1088;&#1099;&#1090;&#1100; &#1082;&#1072;&#1083;&#1077;&#1085;&#1076;&#1072;&#1088;&#1100;"></button>
+            <input id="contract-modal-date-picker" type="date" class="native-date-picker" tabindex="-1" aria-hidden="true" />
+          </div>
+
         </label>
+
         <label class="field">
+
           <span>&#1059;&#1082;&#1072;&#1078;&#1080;&#1090;&#1077; &#1074;&#1072;&#1096;&#1077; &#1060;&#1048;&#1054;</span>
+
           <input id="contract-modal-fullname-input" type="text" placeholder="&#1042;&#1074;&#1077;&#1076;&#1080;&#1090;&#1077; &#1074;&#1072;&#1096;&#1077; &#1060;&#1048;&#1054; &#1087;&#1086;&#1083;&#1085;&#1086;&#1089;&#1090;&#1100;&#1102;" />
+
         </label>
+
         <div class="confirm-actions">
+
           <button id="contract-cancel" type="button" class="secondary">&#1054;&#1090;&#1084;&#1077;&#1085;&#1072;</button>
+
           <button id="contract-save" type="button" class="primary">&#1057;&#1086;&#1093;&#1088;&#1072;&#1085;&#1080;&#1090;&#1100; &#1076;&#1072;&#1085;&#1085;&#1099;&#1077;</button>
+
         </div>
+
       </section>
+
     </div>
+
+
 
     <div id="confirm-modal" class="confirm-modal hidden" aria-hidden="true">
+
       <div id="confirm-backdrop" class="confirm-backdrop"></div>
+
       <section class="confirm-dialog glass" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+
         <div class="panel-kicker">Подтверждение</div>
+
         <h3 id="confirm-title">Подтвердите удаление</h3>
+
         <p id="confirm-text" class="confirm-text">Вы действительно хотите удалить этот элемент?</p>
+
         <div class="confirm-actions">
+
           <button id="confirm-cancel" type="button" class="secondary">Отмена</button>
+
           <button id="confirm-submit" type="button" class="danger-button">Удалить</button>
+
         </div>
+
       </section>
+
     </div>
 
-    <script src="./assets/app.js"></script>
+
+
+    <script src="./assets/app_state.js"></script>
+    <script src="./assets/app_utils.js"></script>
+    <script src="./assets/app_render.js"></script>
+    <script src="./assets/app_archive.js"></script>
+    <script src="./assets/app_bootstrap.js"></script>
+
   </body>
+
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

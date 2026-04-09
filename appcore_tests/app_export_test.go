@@ -1,4 +1,4 @@
-package appcore_test
+﻿package appcore_test
 
 import (
 	. "statistic/appcore"
@@ -161,6 +161,30 @@ func TestNumberToRussianWordsSimple(t *testing.T) {
 	}
 	if actual != "\u0448\u0435\u0441\u0442\u044c\u0434\u0435\u0441\u044f\u0442 \u0434\u0435\u0432\u044f\u0442\u044c \u0442\u044b\u0441\u044f\u0447 \u0434\u0435\u0432\u044f\u0442\u044c\u0441\u043e\u0442 \u0448\u0435\u0441\u0442\u044c\u0434\u0435\u0441\u044f\u0442" {
 		t.Fatalf("unexpected words: %q", actual)
+	}
+}
+
+func TestRubleNounUsesCorrectDeclension(t *testing.T) {
+	cases := map[int]string{
+		1:       "\u0440\u0443\u0431\u043b\u044c",
+		2:       "\u0440\u0443\u0431\u043b\u044f",
+		3:       "\u0440\u0443\u0431\u043b\u044f",
+		4:       "\u0440\u0443\u0431\u043b\u044f",
+		5:       "\u0440\u0443\u0431\u043b\u0435\u0439",
+		6:       "\u0440\u0443\u0431\u043b\u0435\u0439",
+		7:       "\u0440\u0443\u0431\u043b\u0435\u0439",
+		8:       "\u0440\u0443\u0431\u043b\u0435\u0439",
+		9:       "\u0440\u0443\u0431\u043b\u0435\u0439",
+		21:      "\u0440\u0443\u0431\u043b\u044c",
+		22:      "\u0440\u0443\u0431\u043b\u044f",
+		25:      "\u0440\u0443\u0431\u043b\u0435\u0439",
+		1233323: "\u0440\u0443\u0431\u043b\u044f",
+	}
+
+	for amount, expected := range cases {
+		if actual := RubleNounForTest(amount); actual != expected {
+			t.Fatalf("rubleNoun(%d) = %q, want %q", amount, actual, expected)
+		}
 	}
 }
 

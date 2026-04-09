@@ -24,6 +24,7 @@ type actPDFData struct {
 	TotalAmount      int
 	Items            []CalculationItem
 	TotalWords       string
+	TotalCurrency    string
 }
 
 type contractInfo struct {
@@ -156,6 +157,7 @@ func buildActPDFData(req ExportCalculationRequest, currentUser *User) (actPDFDat
 		TotalAmount:      total,
 		Items:            exportItems,
 		TotalWords:       totalWords,
+		TotalCurrency:    rubleNoun(total),
 	}, nil
 }
 
@@ -298,7 +300,7 @@ func drawActPDF(pdf *gofpdf.Fpdf, data actPDFData) {
 	pdf.Ln(4)
 	pdf.SetX(left)
 	pdf.SetFont("Mercel", "I", 8)
-	pdf.MultiCell(contentWidth, 4.2, fmt.Sprintf("\u0412\u0441\u0435\u0433\u043e \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d\u043e \u0440\u0430\u0431\u043e\u0442 \u043d\u0430 \u0441\u0443\u043c\u043c\u0443: %s \u0440\u0443\u0431\u043b\u0435\u0439 00 \u043a\u043e\u043f\u0435\u0435\u043a \u0431\u0435\u0437 \u041d\u0414\u0421.", data.TotalWords), "", "L", false)
+	pdf.MultiCell(contentWidth, 4.2, fmt.Sprintf("\u0412\u0441\u0435\u0433\u043e \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d\u043e \u0440\u0430\u0431\u043e\u0442 \u043d\u0430 \u0441\u0443\u043c\u043c\u0443: %s %s 00 \u043a\u043e\u043f\u0435\u0435\u043a \u0431\u0435\u0437 \u041d\u0414\u0421.", data.TotalWords, data.TotalCurrency), "", "L", false)
 
 	pdf.Ln(5)
 	pdf.SetX(left)
@@ -559,5 +561,21 @@ func chooseRussianPlural(value int, one string, two string, many string) string 
 		return two
 	default:
 		return many
+	}
+}
+
+func rubleNoun(n int) string {
+	lastTwo := n % 100
+	last := n % 10
+	if lastTwo >= 11 && lastTwo <= 14 {
+		return "рублей"
+	}
+	switch last {
+	case 1:
+		return "рубль"
+	case 2, 3, 4:
+		return "рубля"
+	default:
+		return "рублей"
 	}
 }

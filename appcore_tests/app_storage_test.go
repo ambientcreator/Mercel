@@ -71,11 +71,33 @@ func TestNewAppStartsWithEmptyDatabaseAndSeedsDefaultServices(t *testing.T) {
 		t.Fatalf("expected 8 seeded admin services, got %d", len(services))
 	}
 	for _, service := range services {
-		if service.Unit != "РЎвЂЎ." && service.Unit != "РЎв‚¬РЎвЂљ." {
+		if service.Unit != "ч." && service.Unit != "шт." {
 			t.Fatalf("unexpected seeded unit %q for service %+v", service.Unit, service)
 		}
 		if service.Rate <= 0 {
 			t.Fatalf("unexpected seeded rate %d for service %+v", service.Rate, service)
+		}
+	}
+
+	state := app.Logout()
+	if state.Authenticated {
+		t.Fatalf("expected logged out state, got %+v", state)
+	}
+
+	loginAsAdmin1(t, app)
+	admin1Services, err := app.GetServices()
+	if err != nil {
+		t.Fatalf("GetServices() for admin1 error = %v", err)
+	}
+	if len(admin1Services) != 8 {
+		t.Fatalf("expected 8 seeded admin1 services, got %d", len(admin1Services))
+	}
+	for _, service := range admin1Services {
+		if service.Unit != "ч." && service.Unit != "шт." {
+			t.Fatalf("unexpected seeded unit %q for admin1 service %+v", service.Unit, service)
+		}
+		if service.Rate <= 0 {
+			t.Fatalf("unexpected seeded rate %d for admin1 service %+v", service.Rate, service)
 		}
 	}
 }

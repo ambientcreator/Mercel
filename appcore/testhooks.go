@@ -57,6 +57,10 @@ func NumberToRussianWordsForTest(amount int) (string, error) {
 	return numberToRussianWords(amount)
 }
 
+func RubleNounForTest(amount int) string {
+	return rubleNoun(amount)
+}
+
 func BuildServiceTargetsForTest(byCategory map[string][]Service, categoryTargets map[string]int, weights map[string]int) map[string]int {
 	return buildServiceTargets(byCategory, categoryTargets, weights)
 }

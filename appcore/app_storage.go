@@ -1,4 +1,4 @@
-package appcore
+﻿package appcore
 
 import (
 	"context"
@@ -593,28 +593,35 @@ func (a *App) seedTestAdmin() error {
 }
 
 func (a *App) seedServices() error {
+	defaults := []UpsertServiceRequest{
+		{Name: "Удалённая техническая поддержка клиентов", Unit: "ч.", Rate: 350, Category: CategoryPrimary},
+		{Name: "Удалённый мониторинг сети", Unit: "ч.", Rate: 200, Category: CategoryPrimary},
+		{Name: "Диагностика и устранение внештатных проблем коммутационного оборудования", Unit: "ч.", Rate: 100, Category: CategoryPrimary},
+		{Name: "Удалённая настройка сетевого оборудования (Eltex MES2124M)", Unit: "шт.", Rate: 505, Category: CategorySecondary},
+		{Name: "Удалённая настройка сетевого оборудования (TP-Link TL-SG3428X)", Unit: "шт.", Rate: 1015, Category: CategorySecondary},
+		{Name: "Настройка и обслуживание сетевого оборудования (Linksys SPS 224G4)", Unit: "шт.", Rate: 1010, Category: CategorySecondary},
+		{Name: "Настройка VLAN по запросу", Unit: "шт.", Rate: 15, Category: CategoryClosing},
+		{Name: "Изменение описания порта на оборудовании", Unit: "шт.", Rate: 12, Category: CategoryClosing},
+	}
+
+	for _, owner := range []string{"admin", "admin1"} {
+		if err := a.seedDefaultServicesForOwner(owner, defaults); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (a *App) seedDefaultServicesForOwner(owner string, defaults []UpsertServiceRequest) error {
 	var count int
-	if err := a.db.QueryRow(`SELECT COUNT(*) FROM services WHERE created_by = 'admin'`).Scan(&count); err != nil {
-		return fmt.Errorf("count services: %w", err)
+	if err := a.db.QueryRow(`SELECT COUNT(*) FROM services WHERE created_by = ?`, owner).Scan(&count); err != nil {
+		return fmt.Errorf("count services for %s: %w", owner, err)
 	}
 	if count > 0 {
 		return nil
 	}
-
-	defaults := []UpsertServiceRequest{
-		{Name: "\u0423\u0434\u0430\u043b\u0451\u043d\u043d\u0430\u044f \u0442\u0435\u0445\u043d\u0438\u0447\u0435\u0441\u043a\u0430\u044f \u043f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0430 \u043a\u043b\u0438\u0435\u043d\u0442\u043e\u0432", Unit: "\u0447.", Rate: 350, Category: CategoryPrimary},
-		{Name: "\u0423\u0434\u0430\u043b\u0451\u043d\u043d\u044b\u0439 \u043c\u043e\u043d\u0438\u0442\u043e\u0440\u0438\u043d\u0433 \u0441\u0435\u0442\u0438", Unit: "\u0447.", Rate: 200, Category: CategoryPrimary},
-		{Name: "\u0414\u0438\u0430\u0433\u043d\u043e\u0441\u0442\u0438\u043a\u0430 \u0438 \u0443\u0441\u0442\u0440\u0430\u043d\u0435\u043d\u0438\u0435 \u0432\u043d\u0435\u0448\u0442\u0430\u0442\u043d\u044b\u0445 \u043f\u0440\u043e\u0431\u043b\u0435\u043c \u043a\u043e\u043c\u043c\u0443\u0442\u0430\u0446\u0438\u043e\u043d\u043d\u043e\u0433\u043e \u043e\u0431\u043e\u0440\u0443\u0434\u043e\u0432\u0430\u043d\u0438\u044f", Unit: "\u0447.", Rate: 100, Category: CategoryPrimary},
-		{Name: "\u0423\u0434\u0430\u043b\u0451\u043d\u043d\u0430\u044f \u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0430 \u0441\u0435\u0442\u0435\u0432\u043e\u0433\u043e \u043e\u0431\u043e\u0440\u0443\u0434\u043e\u0432\u0430\u043d\u0438\u044f (Eltex MES2124M)", Unit: "\u0448\u0442.", Rate: 505, Category: CategorySecondary},
-		{Name: "\u0423\u0434\u0430\u043b\u0451\u043d\u043d\u0430\u044f \u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0430 \u0441\u0435\u0442\u0435\u0432\u043e\u0433\u043e \u043e\u0431\u043e\u0440\u0443\u0434\u043e\u0432\u0430\u043d\u0438\u044f (TP-Link TL-SG3428X)", Unit: "\u0448\u0442.", Rate: 1015, Category: CategorySecondary},
-		{Name: "\u041d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0430 \u0438 \u043e\u0431\u0441\u043b\u0443\u0436\u0438\u0432\u0430\u043d\u0438\u0435 \u0441\u0435\u0442\u0435\u0432\u043e\u0433\u043e \u043e\u0431\u043e\u0440\u0443\u0434\u043e\u0432\u0430\u043d\u0438\u044f (Linksys SPS 224G4)", Unit: "\u0448\u0442.", Rate: 1010, Category: CategorySecondary},
-		{Name: "\u041d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0430 VLAN \u043f\u043e \u0437\u0430\u043f\u0440\u043e\u0441\u0443", Unit: "\u0448\u0442.", Rate: 15, Category: CategoryClosing},
-		{Name: "\u0418\u0437\u043c\u0435\u043d\u0435\u043d\u0438\u0435 \u043e\u043f\u0438\u0441\u0430\u043d\u0438\u044f \u043f\u043e\u0440\u0442\u0430 \u043d\u0430 \u043e\u0431\u043e\u0440\u0443\u0434\u043e\u0432\u0430\u043d\u0438\u0438", Unit: "\u0448\u0442.", Rate: 12, Category: CategoryClosing},
-	}
-
 	for _, service := range defaults {
-		if _, err := a.saveServiceForOwner(service, "admin"); err != nil {
-			return err
+		if _, err := a.saveServiceForOwner(service, owner); err != nil {
+			return fmt.Errorf("seed default services for %s: %w", owner, err)
 		}
 	}
 	return nil
@@ -628,3 +635,4 @@ func (a *App) seedServices() error {
 //
 // RU: Р В РЎв„ўР В Р’В»Р РЋР вЂ№Р РЋРІР‚РЋР В Р’ВµР В Р вЂ Р РЋРІР‚в„–Р В Р’Вµ Р В РЎВР В РЎвЂўР В РЎВР В Р’ВµР В Р вЂ¦Р РЋРІР‚С™Р РЋРІР‚в„–: Р В Р вЂ Р В Р’В°Р В Р’В¶Р В Р’ВµР В Р вЂ¦ Р В РўвЂР В Р’В»Р РЋР РЏ Р РЋРЎвЂњР РЋР С“Р РЋРІР‚С™Р В РЎвЂўР В РІвЂћвЂ“Р РЋРІР‚РЋР В РЎвЂР В Р вЂ Р В РЎвЂўР РЋР С“Р РЋРІР‚С™Р В РЎвЂ Р В Р’В»Р В РЎвЂўР В РЎвЂ“Р В РЎвЂР В РЎвЂќР В РЎвЂ; Р В РЎВР В РЎвЂўР В Р’В¶Р В Р’ВµР РЋРІР‚С™ Р В РЎвЂР РЋР С“Р В РЎвЂ”Р В РЎвЂўР В Р’В»Р РЋР Р‰Р В Р’В·Р В РЎвЂўР В Р вЂ Р В Р’В°Р РЋРІР‚С™Р РЋР Р‰Р РЋР С“Р РЋР РЏ Р РЋР С“Р РЋР вЂљР В Р’В°Р В Р’В·Р РЋРЎвЂњ Р В Р вЂ  Р В Р вЂ¦Р В Р’ВµР РЋР С“Р В РЎвЂќР В РЎвЂўР В Р’В»Р РЋР Р‰Р В РЎвЂќР В РЎвЂР РЋРІР‚В¦ Р В РЎВР В Р’ВµР РЋР С“Р РЋРІР‚С™Р В Р’В°Р РЋРІР‚В¦; Р В РЎвЂР В Р’В·Р В РЎВР В Р’ВµР В Р вЂ¦Р В Р’ВµР В Р вЂ¦Р В РЎвЂР РЋР РЏ Р РЋР С“Р РЋРІР‚С™Р В РЎвЂўР В РЎвЂР РЋРІР‚С™ Р В РўвЂР В Р’ВµР В Р’В»Р В Р’В°Р РЋРІР‚С™Р РЋР Р‰ Р В РЎвЂўР РЋР С“Р В РЎвЂўР В Р’В·Р В Р вЂ¦Р В Р’В°Р В Р вЂ¦Р В Р вЂ¦Р В РЎвЂў.
 // EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
+
