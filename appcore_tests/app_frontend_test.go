@@ -1,7 +1,6 @@
-﻿package appcore_test
+package appcore_test
 
 import (
-
 	"bytes"
 
 	"os"
@@ -13,7 +12,6 @@ import (
 	. "statistic/appcore"
 
 	"testing"
-
 )
 
 func TestConfirmModalMarkupUsesReadableUTF8(t *testing.T) {
@@ -421,6 +419,9 @@ func TestArchiveEditFrontendHelpersExist(t *testing.T) {
 		"data-archive-name",
 		"archive-edit-input",
 		"function copyArchiveServicesToAdmin(calculationId)",
+		"function canDeleteArchiveCalculation(saved)",
+		"async function deleteCalculation(calculationId)",
+		"api.DeleteCalculation(id)",
 	} {
 		if !strings.Contains(text, expected) {
 			t.Fatalf("frontend archive edit is missing %q", expected)
@@ -445,7 +446,3 @@ func readFrontendScripts(t *testing.T) string {
 	}
 	return builder.String()
 }
-
-
-
-

@@ -224,11 +224,23 @@ function userSortPriority(role) {
 
 }
 
+function canDeleteArchiveCalculation(saved) {
+
+  if (!saved || !appState.session?.authenticated) {
+
+    return false;
+
+  }
+
+  return Boolean(appState.session?.canAdmin || appState.session?.canManage || saved.createdBy === appState.session?.user?.username);
+
+}
+
 function renderArchiveDetails(saved) {
 
   const canCopyArchiveServices = Boolean(appState.session?.canAdmin && saved);
 
-  const canDeleteArchive = Boolean((appState.session?.canManage || appState.session?.canAdmin) && saved);
+  const canDeleteArchive = canDeleteArchiveCalculation(saved);
 
   const canEditArchive = Boolean(appState.session?.canAdmin && saved);
 
@@ -543,6 +555,54 @@ async function copyArchiveServicesToAdmin(calculationId) {
   }
 
 }
+
+async function deleteCalculation(calculationId) {
+
+  const id = Number(calculationId);
+
+  const calculation = appState.savedCalculations.find((item) => item.id === id);
+
+  if (!calculation || !canDeleteArchiveCalculation(calculation)) {
+
+    setMessage("Недостаточно прав для удаления этого архивного расчёта.", "error");
+
+    return;
+
+  }
+
+  if (!await requestDeleteConfirmation("архивный расчёт", calculation.title || `#${id}`)) {
+
+    return;
+
+  }
+
+  try {
+
+    await api.DeleteCalculation(id);
+
+    if (appState.activeHistoryId === id) {
+
+      appState.activeHistoryId = null;
+
+    }
+
+    if (appState.editingArchiveId === id) {
+
+      appState.editingArchiveId = null;
+
+    }
+
+    await refreshBootstrap({ keepArchiveSelection: true });
+
+    setMessage(`Архивный расчёт ${calculation.title || `#${id}`} удалён.`, "success");
+
+  } catch (error) {
+
+    setMessage(normalizeErrorText(error, "Не удалось удалить архивный расчёт."), "error");
+
+  }
+
+}
 function getFilteredCalculations() {
 
   if (!appState.session?.canModerate || appState.archiveOwnerFilter === "all") {
@@ -635,7 +695,11 @@ function renderHistory() {
 
   }
 
-  historyList.innerHTML = visibleCalculations.map((item) => `
+  historyList.innerHTML = visibleCalculations.map((item) => {
+
+    const canDelete = canDeleteArchiveCalculation(item);
+
+    return `
 
     <article class="history-card ${appState.activeHistoryId === item.id ? "active" : ""}">
 
@@ -659,13 +723,15 @@ function renderHistory() {
 
         </button>
 
-        <button type="button" class="history-delete" data-delete-id="${item.id}">Удалить</button>
+        <button type="button" class="history-delete" ${canDelete ? `data-delete-id="${item.id}"` : "disabled"}>Удалить</button>
 
       </div>
 
     </article>
 
-  `).join("");
+  `;
+
+  }).join("");
 
   historyList.querySelectorAll("[data-history-id]").forEach((node) => {
 

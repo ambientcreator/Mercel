@@ -50,22 +50,11 @@ func withTempDB(t *testing.T) *App {
 
 func loginAsAdmin(t *testing.T, app *App) {
 	t.Helper()
-	state, err := app.Login(LoginRequest{Username: "admin", Password: "#@7pcehQCSpR"})
+	state, err := app.Login(LoginRequest{Username: "admin", Password: "8aj83k7Ob?Cd"})
 	if err != nil {
 		t.Fatalf("Login() error = %v", err)
 	}
 	if !state.Authenticated || state.User == nil || state.User.Username != "admin" {
-		t.Fatalf("unexpected session state: %+v", state)
-	}
-}
-
-func loginAsAdmin1(t *testing.T, app *App) {
-	t.Helper()
-	state, err := app.Login(LoginRequest{Username: "admin1", Password: "admin1"})
-	if err != nil {
-		t.Fatalf("Login() error = %v", err)
-	}
-	if !state.Authenticated || state.User == nil || state.User.Username != "admin1" {
 		t.Fatalf("unexpected session state: %+v", state)
 	}
 }

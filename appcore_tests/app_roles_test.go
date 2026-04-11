@@ -113,7 +113,7 @@ func TestResetUserPasswordRejectsEmptyPassword(t *testing.T) {
 
 func TestUpdateOwnLastActNumberPersistsInSessionAndDatabase(t *testing.T) {
 	app := withTempDB(t)
-	loginAsAdmin1(t, app)
+	loginAsAdmin(t, app)
 
 	current, err := app.RequireAuthForTest()
 	if err != nil {

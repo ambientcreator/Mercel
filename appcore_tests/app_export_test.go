@@ -136,6 +136,16 @@ func TestBuildActPDFDataUsesCurrentUserFullNameFallback(t *testing.T) {
 	if data.CustomerName != "\u0413\u0440\u0438\u0437\u0430\u0431\u043b\u044c" {
 		t.Fatalf("expected customer name for 2, got %q", data.CustomerName)
 	}
+	if info, err := ResolveContractInfoForTest("2"); err != nil {
+		t.Fatalf("resolveContractInfo(2) error = %v", err)
+	} else {
+		if info.CustomerDirectorName != "\u0422\u0438\u043c\u043e\u0445\u0438\u043d\u0430 \u041f\u0430\u0432\u043b\u0430 \u0410\u043b\u0435\u043a\u0441\u0430\u043d\u0434\u0440\u043e\u0432\u0438\u0447\u0430" {
+			t.Fatalf("expected Grizabl director full name, got %q", info.CustomerDirectorName)
+		}
+		if info.CustomerDirectorShort != "\u0422\u0438\u043c\u043e\u0445\u0438\u043d \u041f.\u0410." {
+			t.Fatalf("expected Grizabl director short name, got %q", info.CustomerDirectorShort)
+		}
+	}
 	if data.ContractDate.Format("2006-01-02") != "2026-01-30" {
 		t.Fatalf("expected contract date 2026-01-30, got %s", data.ContractDate.Format("2006-01-02"))
 	}
@@ -178,6 +188,8 @@ func TestRubleNounUsesCorrectDeclension(t *testing.T) {
 		21:      "\u0440\u0443\u0431\u043b\u044c",
 		22:      "\u0440\u0443\u0431\u043b\u044f",
 		25:      "\u0440\u0443\u0431\u043b\u0435\u0439",
+		96541:   "\u0440\u0443\u0431\u043b\u044c",
+		96542:   "\u0440\u0443\u0431\u043b\u044f",
 		1233323: "\u0440\u0443\u0431\u043b\u044f",
 	}
 
@@ -190,7 +202,7 @@ func TestRubleNounUsesCorrectDeclension(t *testing.T) {
 
 func TestUpdateUserContractDetailsPersistsPreferredContract(t *testing.T) {
 	app := withTempDB(t)
-	loginAsAdmin1(t, app)
+	loginAsAdmin(t, app)
 
 	session := app.GetSession()
 	if session.User == nil {
@@ -218,7 +230,7 @@ func TestUpdateUserContractDetailsPersistsPreferredContract(t *testing.T) {
 	}
 
 	app.Logout()
-	loginAsAdmin1(t, app)
+	loginAsAdmin(t, app)
 	reloaded := app.GetSession()
 	if reloaded.User == nil || reloaded.User.PreferredContractCode != "2" {
 		t.Fatalf("expected persisted preferred contract code 2 after relogin, got %+v", reloaded.User)

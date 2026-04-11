@@ -84,21 +84,20 @@ func TestNewAppStartsWithEmptyDatabaseAndSeedsDefaultServices(t *testing.T) {
 		t.Fatalf("expected logged out state, got %+v", state)
 	}
 
-	loginAsAdmin1(t, app)
-	admin1Services, err := app.GetServices()
-	if err != nil {
-		t.Fatalf("GetServices() for admin1 error = %v", err)
+	var deprecatedUsers int
+	if err := app.DBForTest().QueryRow(`SELECT COUNT(*) FROM users WHERE username = ?`, "admin1").Scan(&deprecatedUsers); err != nil {
+		t.Fatalf("check deprecated admin1 user: %v", err)
 	}
-	if len(admin1Services) != 8 {
-		t.Fatalf("expected 8 seeded admin1 services, got %d", len(admin1Services))
+	if deprecatedUsers != 0 {
+		t.Fatalf("expected deprecated admin1 user to be absent, got %d", deprecatedUsers)
 	}
-	for _, service := range admin1Services {
-		if service.Unit != "ч." && service.Unit != "шт." {
-			t.Fatalf("unexpected seeded unit %q for admin1 service %+v", service.Unit, service)
-		}
-		if service.Rate <= 0 {
-			t.Fatalf("unexpected seeded rate %d for admin1 service %+v", service.Rate, service)
-		}
+
+	var deprecatedServices int
+	if err := app.DBForTest().QueryRow(`SELECT COUNT(*) FROM services WHERE created_by = ?`, "admin1").Scan(&deprecatedServices); err != nil {
+		t.Fatalf("check deprecated admin1 services: %v", err)
+	}
+	if deprecatedServices != 0 {
+		t.Fatalf("expected deprecated admin1 services to be absent, got %d", deprecatedServices)
 	}
 }
 
@@ -184,15 +183,15 @@ func TestNewDatabasePathCopiesLegacyData(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListUsers() error = %v", err)
 	}
-	if len(users) != 2 {
-		t.Fatalf("expected copied legacy user plus seeded admin1, got %+v", users)
+	if len(users) != 1 {
+		t.Fatalf("expected copied legacy user to remain visible, got %+v", users)
 	}
 	usernames := map[string]bool{}
 	for _, user := range users {
 		usernames[user.Username] = true
 	}
-	if !usernames["dima"] || !usernames["admin1"] {
-		t.Fatalf("expected copied user dima and seeded admin1, got %+v", users)
+	if !usernames["dima"] {
+		t.Fatalf("expected copied user dima, got %+v", users)
 	}
 	calculations, err := app.ListCalculations()
 	if err != nil {
@@ -284,15 +283,15 @@ func TestExistingFreshMercelDatabaseIsRecoveredFromLegacy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListUsers() error = %v", err)
 	}
-	if len(users) != 2 {
-		t.Fatalf("expected recovered legacy user plus seeded admin1, got %+v", users)
+	if len(users) != 1 {
+		t.Fatalf("expected recovered legacy user to remain visible, got %+v", users)
 	}
 	usernames := map[string]bool{}
 	for _, user := range users {
 		usernames[user.Username] = true
 	}
-	if !usernames["dima"] || !usernames["admin1"] {
-		t.Fatalf("expected recovered legacy dima and seeded admin1, got %+v", users)
+	if !usernames["dima"] {
+		t.Fatalf("expected recovered legacy dima, got %+v", users)
 	}
 	calculations, err := app.ListCalculations()
 	if err != nil {

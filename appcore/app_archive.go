@@ -62,12 +62,30 @@ func (a *App) DeleteCalculation(id int64) error {
 	if id <= 0 {
 		return errors.New("Р В Р’В Р вЂ™Р’В Р В Р Р‹Р РЋРЎв„ўР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’ВµР В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРЎСљР В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРЎС›Р В Р’В Р В Р вЂ№Р В Р’В Р Р†Р вЂљРЎв„ўР В Р’В Р В Р вЂ№Р В Р’В Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’ВµР В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРЎСљР В Р’В Р В Р вЂ№Р В Р вЂ Р В РІР‚С™Р РЋРІвЂћСћР В Р’В Р вЂ™Р’В Р В Р’В Р Р†Р вЂљР’В¦Р В Р’В Р В Р вЂ№Р В Р вЂ Р В РІР‚С™Р Р†РІР‚С›РІР‚вЂњР В Р’В Р вЂ™Р’В Р В Р вЂ Р Р†Р вЂљРЎвЂєР Р†Р вЂљРІР‚Сљ Р В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљР’ВР В Р’В Р вЂ™Р’В Р В РЎС›Р Р†Р вЂљР’ВР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’ВµР В Р’В Р вЂ™Р’В Р В Р’В Р Р†Р вЂљР’В¦Р В Р’В Р В Р вЂ№Р В Р вЂ Р В РІР‚С™Р РЋРІвЂћСћР В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљР’ВР В Р’В Р В Р вЂ№Р В Р вЂ Р В РІР‚С™Р РЋРІР‚С”Р В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљР’ВР В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРЎСљР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’В°Р В Р’В Р В Р вЂ№Р В Р вЂ Р В РІР‚С™Р РЋРІвЂћСћР В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРЎС›Р В Р’В Р В Р вЂ№Р В Р’В Р Р†Р вЂљРЎв„ў Р В Р’В Р В Р вЂ№Р В Р’В Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’В°Р В Р’В Р В Р вЂ№Р В Р’В Р РЋРІР‚СљР В Р’В Р В Р вЂ№Р В Р вЂ Р В РІР‚С™Р В Р вЂ№Р В Р’В Р В Р вЂ№Р В Р вЂ Р В РІР‚С™Р вЂ™Р’ВР В Р’В Р В Р вЂ№Р В Р вЂ Р В РІР‚С™Р РЋРІвЂћСћР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’В°.")
 	}
-	if normalizeRole(user.Role) == RoleAdmin || roleCanManageUsers(user.Role) {
-		_, err = a.db.Exec(`DELETE FROM calculations WHERE id = ?`, id)
-		return err
+	var createdBy string
+	var createdRole string
+	err = a.db.QueryRow(`SELECT created_by, created_role FROM calculations WHERE id = ? LIMIT 1`, id).Scan(&createdBy, &createdRole)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return errors.New("Архивный расчёт не найден.")
+		}
+		return fmt.Errorf("load archived calculation: %w", err)
 	}
-	_, err = a.db.Exec(`DELETE FROM calculations WHERE id = ? AND created_by = ?`, id, user.Username)
-	return err
+
+	createdRole = normalizeRole(createdRole)
+	canDelete := normalizeRole(user.Role) == RoleAdmin || roleCanManageUsers(user.Role) || createdBy == user.Username
+	if !canDelete || !canViewArchiveRole(user, createdRole, createdBy) {
+		return errors.New("Недостаточно прав для удаления этого архивного расчёта.")
+	}
+
+	result, err := a.db.Exec(`DELETE FROM calculations WHERE id = ?`, id)
+	if err != nil {
+		return fmt.Errorf("delete archived calculation: %w", err)
+	}
+	if affected, err := result.RowsAffected(); err == nil && affected == 0 {
+		return errors.New("Архивный расчёт не найден.")
+	}
+	return nil
 }
 
 func (a *App) UpdateCalculationAsAdmin(req UpdateSavedCalculationRequest) (SavedCalculation, error) {

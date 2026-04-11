@@ -1,4 +1,4 @@
-﻿package appcore_test
+package appcore_test
 
 import (
 	"path/filepath"
@@ -79,5 +79,53 @@ func TestAdminCanUpdateArchivedCalculation(t *testing.T) {
 	}
 	if found.TotalAmount != 520 {
 		t.Fatalf("found.TotalAmount = %d, want 520", found.TotalAmount)
+	}
+}
+
+func TestArchiveDeleteHonorsOwnershipAndRoles(t *testing.T) {
+	app := withTempDB(t)
+
+	loginAsAdmin(t, app)
+	if _, err := app.CreateUser(UserWithPassword{Username: "archive_employee_delete", Password: "secret", Role: RoleEmployee}); err != nil {
+		t.Fatalf("CreateUser employee error = %v", err)
+	}
+	if _, err := app.CreateUser(UserWithPassword{Username: "archive_senior_delete", Password: "secret", Role: RoleSeniorSpecialist}); err != nil {
+		t.Fatalf("CreateUser senior error = %v", err)
+	}
+
+	loginAsUser(t, app, "archive_employee_delete", "secret")
+	employeeSaved, err := app.SaveCalculation(SaveCalculationRequest{
+		TargetAmount: 100,
+		Items: []CalculationItem{
+			{Name: "Удаляемая услуга", Unit: "ч.", Rate: 100, Quantity: 1, LineTotal: 100, Category: CategoryPrimary},
+		},
+	})
+	if err != nil {
+		t.Fatalf("SaveCalculation employee error = %v", err)
+	}
+
+	loginAsUser(t, app, "archive_senior_delete", "secret")
+	if err := app.DeleteCalculation(employeeSaved.ID); err == nil {
+		t.Fatalf("expected senior specialist to be denied when deleting another user's archive")
+	}
+
+	loginAsUser(t, app, "archive_employee_delete", "secret")
+	if err := app.DeleteCalculation(employeeSaved.ID); err != nil {
+		t.Fatalf("DeleteCalculation owner error = %v", err)
+	}
+
+	adminSaved, err := app.SaveCalculation(SaveCalculationRequest{
+		TargetAmount: 200,
+		Items: []CalculationItem{
+			{Name: "Админская проверка", Unit: "ч.", Rate: 200, Quantity: 1, LineTotal: 200, Category: CategoryPrimary},
+		},
+	})
+	if err != nil {
+		t.Fatalf("SaveCalculation second employee error = %v", err)
+	}
+
+	loginAsAdmin(t, app)
+	if err := app.DeleteCalculation(adminSaved.ID); err != nil {
+		t.Fatalf("DeleteCalculation admin error = %v", err)
 	}
 }

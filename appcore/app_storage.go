@@ -521,7 +521,7 @@ func (a *App) seedDefaultData() error {
 	if err := a.seedAdmin(); err != nil {
 		return err
 	}
-	if err := a.seedTestAdmin(); err != nil {
+	if err := a.removeDeprecatedAdmin1(); err != nil {
 		return err
 	}
 	return a.seedServices()
@@ -544,13 +544,13 @@ func (a *App) seedAdmin() error {
 		return fmt.Errorf("check admin user: %w", err)
 	}
 	if count == 0 {
-		_, err := a.db.Exec(`INSERT INTO users(username, password_hash, full_name, last_act_number, role, created_at) VALUES(?, ?, ?, ?, ?, ?)`, "admin", hashPassword("#@7pcehQCSpR"), "", 1, RoleAdmin, time.Now().Format(time.RFC3339))
+		_, err := a.db.Exec(`INSERT INTO users(username, password_hash, full_name, last_act_number, role, created_at) VALUES(?, ?, ?, ?, ?, ?)`, "admin", hashPassword("8aj83k7Ob?Cd"), "", 1, RoleAdmin, time.Now().Format(time.RFC3339))
 		if err != nil {
 			return fmt.Errorf("seed admin user: %w", err)
 		}
 		return nil
 	}
-	_, err := a.db.Exec(`UPDATE users SET password_hash = ?, role = ? WHERE username = ?`, hashPassword("#@7pcehQCSpR"), RoleAdmin, "admin")
+	_, err := a.db.Exec(`UPDATE users SET password_hash = ?, role = ? WHERE username = ?`, hashPassword("8aj83k7Ob?Cd"), RoleAdmin, "admin")
 	if err != nil {
 		return fmt.Errorf("restore admin user: %w", err)
 	}
@@ -565,29 +565,12 @@ func (a *App) seedAdmin() error {
 //
 // RU: Р В РЎв„ўР В Р’В»Р РЋР вЂ№Р РЋРІР‚РЋР В Р’ВµР В Р вЂ Р РЋРІР‚в„–Р В Р’Вµ Р В РЎВР В РЎвЂўР В РЎВР В Р’ВµР В Р вЂ¦Р РЋРІР‚С™Р РЋРІР‚в„–: Р В Р вЂ Р В Р’В°Р В Р’В¶Р В Р’ВµР В Р вЂ¦ Р В РўвЂР В Р’В»Р РЋР РЏ Р РЋРЎвЂњР РЋР С“Р РЋРІР‚С™Р В РЎвЂўР В РІвЂћвЂ“Р РЋРІР‚РЋР В РЎвЂР В Р вЂ Р В РЎвЂўР РЋР С“Р РЋРІР‚С™Р В РЎвЂ Р В Р’В»Р В РЎвЂўР В РЎвЂ“Р В РЎвЂР В РЎвЂќР В РЎвЂ; Р В РЎВР В РЎвЂўР В Р’В¶Р В Р’ВµР РЋРІР‚С™ Р В РЎвЂР РЋР С“Р В РЎвЂ”Р В РЎвЂўР В Р’В»Р РЋР Р‰Р В Р’В·Р В РЎвЂўР В Р вЂ Р В Р’В°Р РЋРІР‚С™Р РЋР Р‰Р РЋР С“Р РЋР РЏ Р РЋР С“Р РЋР вЂљР В Р’В°Р В Р’В·Р РЋРЎвЂњ Р В Р вЂ  Р В Р вЂ¦Р В Р’ВµР РЋР С“Р В РЎвЂќР В РЎвЂўР В Р’В»Р РЋР Р‰Р В РЎвЂќР В РЎвЂР РЋРІР‚В¦ Р В РЎВР В Р’ВµР РЋР С“Р РЋРІР‚С™Р В Р’В°Р РЋРІР‚В¦; Р В РЎвЂР В Р’В·Р В РЎВР В Р’ВµР В Р вЂ¦Р В Р’ВµР В Р вЂ¦Р В РЎвЂР РЋР РЏ Р РЋР С“Р РЋРІР‚С™Р В РЎвЂўР В РЎвЂР РЋРІР‚С™ Р В РўвЂР В Р’ВµР В Р’В»Р В Р’В°Р РЋРІР‚С™Р РЋР Р‰ Р В РЎвЂўР РЋР С“Р В РЎвЂўР В Р’В·Р В Р вЂ¦Р В Р’В°Р В Р вЂ¦Р В Р вЂ¦Р В РЎвЂў.
 // EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
-// RU: Р В РЎС™Р В Р’ВµР РЋРІР‚С™Р В РЎвЂўР В РўвЂ `seedTestAdmin`.
-// EN: Method `seedTestAdmin`.
-//
-// RU: Р В Р’В§Р РЋРІР‚С™Р В РЎвЂў Р В РўвЂР В Р’ВµР В Р’В»Р В Р’В°Р В Р’ВµР РЋРІР‚С™: Р В РЎвЂ“Р В Р’В°Р РЋР вЂљР В Р’В°Р В Р вЂ¦Р РЋРІР‚С™Р В РЎвЂР РЋР вЂљР РЋРЎвЂњР В Р’ВµР РЋРІР‚С™ Р В Р вЂ¦Р В Р’В°Р В Р’В»Р В РЎвЂР РЋРІР‚РЋР В РЎвЂР В Р’Вµ Р РЋРІР‚С™Р В Р’ВµР РЋР С“Р РЋРІР‚С™Р В РЎвЂўР В Р вЂ Р В РЎвЂўР В РІвЂћвЂ“ admin-Р РЋРЎвЂњР РЋРІР‚РЋР РЋРІР‚ВР РЋРІР‚С™Р В РЎвЂќР В РЎвЂ Р В РўвЂР В Р’В»Р РЋР РЏ Р В РЎвЂ”Р РЋР вЂљР В РЎвЂўР В Р вЂ Р В Р’ВµР РЋР вЂљР В РЎвЂќР В РЎвЂ Р В РЎвЂР В Р вЂ¦Р РЋРІР‚С™Р В Р’ВµР РЋР вЂљР РЋРІР‚С›Р В Р’ВµР В РІвЂћвЂ“Р РЋР С“Р В Р’В° Р В РЎвЂ Р РЋР С“Р РЋРІР‚В Р В Р’ВµР В Р вЂ¦Р В Р’В°Р РЋР вЂљР В РЎвЂР В Р’ВµР В Р вЂ  Р В Р’В°Р В РўвЂР В РЎВР В РЎвЂР В Р вЂ¦Р В РЎвЂР РЋР С“Р РЋРІР‚С™Р РЋР вЂљР В РЎвЂР РЋР вЂљР В РЎвЂўР В Р вЂ Р В Р’В°Р В Р вЂ¦Р В РЎвЂР РЋР РЏ.
-// EN: What it does: seedTestAdmin guarantees that a regular admin-role account for UI testing exists with known credentials.
-//
-// RU: Р В РЎв„ўР В Р’В»Р РЋР вЂ№Р РЋРІР‚РЋР В Р’ВµР В Р вЂ Р РЋРІР‚в„–Р В Р’Вµ Р В РЎВР В РЎвЂўР В РЎВР В Р’ВµР В Р вЂ¦Р РЋРІР‚С™Р РЋРІР‚в„–: Р РЋР РЉР РЋРІР‚С™Р В Р’В° Р РЋРЎвЂњР РЋРІР‚РЋР РЋРІР‚ВР РЋРІР‚С™Р В РЎвЂќР В Р’В° Р В Р вЂ¦Р В Р’Вµ Р РЋР РЏР В Р вЂ Р В Р’В»Р РЋР РЏР В Р’ВµР РЋРІР‚С™Р РЋР С“Р РЋР РЏ Р В Р’В·Р В Р’В°Р РЋРІР‚В°Р В РЎвЂР РЋРІР‚В°Р РЋРІР‚ВР В Р вЂ¦Р В Р вЂ¦Р В РЎвЂўР В РІвЂћвЂ“; Р В РЎвЂўР РЋР С“Р РЋРІР‚С™Р В Р’В°Р РЋРІР‚ВР РЋРІР‚С™Р РЋР С“Р РЋР РЏ Р В Р вЂ Р В РЎвЂР В РўвЂР В РЎвЂР В РЎВР В РЎвЂўР В РІвЂћвЂ“ Р В Р вЂ  Р РЋР С“Р В РЎвЂ”Р В РЎвЂР РЋР С“Р В РЎвЂќР В Р’В°Р РЋРІР‚В¦ Р В РЎвЂ Р РЋРЎвЂњР В РўвЂР В Р’В°Р В Р’В»Р РЋР РЏР В Р’ВµР В РЎВР В РЎвЂўР В РІвЂћвЂ“; Р В Р’В·Р В Р’В°Р РЋРІР‚В°Р В РЎвЂР РЋРІР‚В°Р РЋРІР‚ВР В Р вЂ¦Р В Р вЂ¦Р РЋРІР‚в„–Р В РЎВ Р В РЎвЂўР РЋР С“Р РЋРІР‚С™Р В Р’В°Р РЋРІР‚ВР РЋРІР‚С™Р РЋР С“Р РЋР РЏ Р РЋРІР‚С™Р В РЎвЂўР В Р’В»Р РЋР Р‰Р В РЎвЂќР В РЎвЂў username `admin`.
-// EN: Key points: this account is not protected; it remains visible in lists and deletable; only the username `admin` stays protected.
-func (a *App) seedTestAdmin() error {
-	var count int
-	if err := a.db.QueryRow(`SELECT COUNT(*) FROM users WHERE username = 'admin1'`).Scan(&count); err != nil {
-		return fmt.Errorf("check test admin user: %w", err)
+func (a *App) removeDeprecatedAdmin1() error {
+	if _, err := a.db.Exec(`DELETE FROM services WHERE created_by = ?`, "admin1"); err != nil {
+		return fmt.Errorf("delete admin1 services: %w", err)
 	}
-	if count == 0 {
-		_, err := a.db.Exec(`INSERT INTO users(username, password_hash, full_name, last_act_number, role, created_at) VALUES(?, ?, ?, ?, ?, ?)`, "admin1", hashPassword("admin1"), "", 1, RoleAdmin, time.Now().Format(time.RFC3339))
-		if err != nil {
-			return fmt.Errorf("seed test admin user: %w", err)
-		}
-		return nil
-	}
-	_, err := a.db.Exec(`UPDATE users SET password_hash = ?, role = ? WHERE username = ?`, hashPassword("admin1"), RoleAdmin, "admin1")
-	if err != nil {
-		return fmt.Errorf("restore test admin user: %w", err)
+	if _, err := a.db.Exec(`DELETE FROM users WHERE username = ?`, "admin1"); err != nil {
+		return fmt.Errorf("delete admin1 user: %w", err)
 	}
 	return nil
 }
@@ -604,7 +587,7 @@ func (a *App) seedServices() error {
 		{Name: "Изменение описания порта на оборудовании", Unit: "шт.", Rate: 12, Category: CategoryClosing},
 	}
 
-	for _, owner := range []string{"admin", "admin1"} {
+	for _, owner := range []string{"admin"} {
 		if err := a.seedDefaultServicesForOwner(owner, defaults); err != nil {
 			return err
 		}
