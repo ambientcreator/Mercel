@@ -1,4 +1,4 @@
-﻿package appcore
+package appcore
 
 import (
 	"errors"
