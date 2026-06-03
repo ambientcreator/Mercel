@@ -55,7 +55,10 @@ func (a *App) saveServiceForOwner(req UpsertServiceRequest, owner string) (Servi
 		if err != nil {
 			return Service{}, fmt.Errorf("create service: %w", err)
 		}
-		id, _ := result.LastInsertId()
+		id, err := result.LastInsertId()
+		if err != nil {
+			return Service{}, fmt.Errorf("resolve created service id: %w", err)
+		}
 		return a.getServiceByIDForOwner(id, owner)
 	}
 

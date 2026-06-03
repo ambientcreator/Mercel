@@ -36,7 +36,10 @@ func (a *App) CreateUser(req UserWithPassword) (User, error) {
 	if err != nil {
 		return User{}, fmt.Errorf("create user: %w", err)
 	}
-	id, _ := result.LastInsertId()
+	id, err := result.LastInsertId()
+	if err != nil {
+		return User{}, fmt.Errorf("resolve created user id: %w", err)
+	}
 	return a.getUserByID(id)
 }
 
