@@ -50,7 +50,10 @@ func (a *App) SaveCalculation(req SaveCalculationRequest) (SavedCalculation, err
 	if err != nil {
 		return SavedCalculation{}, fmt.Errorf("save calculation: %w", err)
 	}
-	id, _ := result.LastInsertId()
+	id, err := result.LastInsertId()
+	if err != nil {
+		return SavedCalculation{}, fmt.Errorf("resolve saved calculation id: %w", err)
+	}
 	return SavedCalculation{ID: id, Title: title, TargetAmount: req.TargetAmount, TotalAmount: total, Items: req.Items, CreatedAt: createdAt, CreatedBy: user.Username, CreatedRole: user.Role}, nil
 }
 
