@@ -27,6 +27,50 @@ type actPDFData struct {
 	TotalCurrency    string
 }
 
+const (
+	actPDFTargetScale = 1.30
+	actPDFMinScale    = 1.00
+)
+
+type actPDFLayout struct {
+	Scale                 float64
+	Left                  float64
+	Right                 float64
+	Top                   float64
+	Bottom                float64
+	ContentWidth          float64
+	TitleFont             float64
+	MetaFont              float64
+	BodyFont              float64
+	TotalFont             float64
+	ClosingFont           float64
+	SignatureFont         float64
+	TableHeaderFont       float64
+	TableBodyFont         float64
+	TableTotalFont        float64
+	TitleHeight           float64
+	MetaHeight            float64
+	IntroLineHeight       float64
+	TotalLineHeight       float64
+	ClosingLineHeight     float64
+	SignatureHeaderHeight float64
+	SignatureHeight       float64
+	IntroGap              float64
+	TableGap              float64
+	TotalGap              float64
+	ClosingGap            float64
+	SignatureGap          float64
+	TableHeaderHeight     float64
+	TableTotalHeight      float64
+	TableLineHeight       float64
+	TablePaddingTop       float64
+	TablePaddingX         float64
+	ColNo                 float64
+	ColName               float64
+	ColQty                float64
+	ColMoney              float64
+}
+
 type contractInfo struct {
 	Code                  string
 	Title                 string
@@ -191,7 +235,7 @@ func renderActPDF(path string, data actPDFData) error {
 	}
 
 	pdf := gofpdf.New("P", "mm", "A4", "")
-	pdf.SetMargins(14, 16, 14)
+	pdf.SetMargins(10, 12, 10)
 	pdf.SetAutoPageBreak(false, 0)
 	pdf.AddUTF8Font("Mercel", "", fontRegular)
 	pdf.AddUTF8Font("Mercel", "B", fontBold)
@@ -199,13 +243,16 @@ func renderActPDF(path string, data actPDFData) error {
 	pdf.SetFont("Mercel", "", 10)
 	pdf.AddPage()
 
-	pageBottom := 287.0
-	if err := ensureActFitsOnePage(pdf, data, pageBottom); err != nil {
+	layout, err := fitActPDFLayout(pdf, data)
+	if err != nil {
 		return err
 	}
 
-	drawActPDF(pdf, data)
+	drawActPDF(pdf, data, layout)
 	if pdf.PageNo() > 1 {
+		return errors.New("\u0414\u043e\u043a\u0443\u043c\u0435\u043d\u0442 \u043d\u0435 \u043f\u043e\u043c\u0435\u0449\u0430\u0435\u0442\u0441\u044f \u043d\u0430 \u043e\u0434\u0438\u043d \u043b\u0438\u0441\u0442 PDF. \u0423\u043c\u0435\u043d\u044c\u0448\u0438\u0442\u0435 \u043a\u043e\u043b\u0438\u0447\u0435\u0441\u0442\u0432\u043e \u0443\u0441\u043b\u0443\u0433 \u0438\u043b\u0438 \u0434\u043b\u0438\u043d\u0443 \u043d\u0430\u0437\u0432\u0430\u043d\u0438\u0439.")
+	}
+	if pdf.GetY() > layout.Bottom {
 		return errors.New("\u0414\u043e\u043a\u0443\u043c\u0435\u043d\u0442 \u043d\u0435 \u043f\u043e\u043c\u0435\u0449\u0430\u0435\u0442\u0441\u044f \u043d\u0430 \u043e\u0434\u0438\u043d \u043b\u0438\u0441\u0442 PDF. \u0423\u043c\u0435\u043d\u044c\u0448\u0438\u0442\u0435 \u043a\u043e\u043b\u0438\u0447\u0435\u0441\u0442\u0432\u043e \u0443\u0441\u043b\u0443\u0433 \u0438\u043b\u0438 \u0434\u043b\u0438\u043d\u0443 \u043d\u0430\u0437\u0432\u0430\u043d\u0438\u0439.")
 	}
 	if err := pdf.OutputFileAndClose(path); err != nil {
@@ -240,50 +287,160 @@ func fileExists(path string) bool {
 	return err == nil
 }
 
-func ensureActFitsOnePage(pdf *gofpdf.Fpdf, data actPDFData, pageBottom float64) error {
-	pdf.SetFont("Mercel", "", 10)
-	rowHeights := actRowHeights(pdf, data.Items, 106, 4.9)
-	totalRowsHeight := 0.0
-	for _, height := range rowHeights {
-		totalRowsHeight += height
+func fitActPDFLayout(pdf *gofpdf.Fpdf, data actPDFData) (actPDFLayout, error) {
+	// Prefer a larger print-friendly layout, but back off just enough to keep A4 on one page.
+	target := newActPDFLayout(pdf, actPDFTargetScale)
+	if estimateActPDFHeight(pdf, data, target) <= target.Bottom {
+		return target, nil
 	}
 
-	estimatedHeight := 16.0
-	estimatedHeight += 11.0
-	estimatedHeight += 10.0
-	estimatedHeight += 28.0
-	estimatedHeight += 8.0
-	estimatedHeight += totalRowsHeight
-	estimatedHeight += 11.0
-	estimatedHeight += 12.0
-	estimatedHeight += 18.0
-	estimatedHeight += 24.0
-
-	if estimatedHeight > pageBottom {
-		return errors.New("\u0414\u043e\u043a\u0443\u043c\u0435\u043d\u0442 \u043d\u0435 \u043f\u043e\u043c\u0435\u0449\u0430\u0435\u0442\u0441\u044f \u043d\u0430 \u043e\u0434\u0438\u043d \u043b\u0438\u0441\u0442 PDF. \u0423\u043c\u0435\u043d\u044c\u0448\u0438\u0442\u0435 \u043a\u043e\u043b\u0438\u0447\u0435\u0441\u0442\u0432\u043e \u0443\u0441\u043b\u0443\u0433 \u0438\u043b\u0438 \u0434\u043b\u0438\u043d\u0443 \u043d\u0430\u0437\u0432\u0430\u043d\u0438\u0439.")
+	minimum := newActPDFLayout(pdf, actPDFMinScale)
+	if estimateActPDFHeight(pdf, data, minimum) > minimum.Bottom {
+		return actPDFLayout{}, errors.New("\u0414\u043e\u043a\u0443\u043c\u0435\u043d\u0442 \u043d\u0435 \u043f\u043e\u043c\u0435\u0449\u0430\u0435\u0442\u0441\u044f \u043d\u0430 \u043e\u0434\u0438\u043d \u043b\u0438\u0441\u0442 PDF. \u0423\u043c\u0435\u043d\u044c\u0448\u0438\u0442\u0435 \u043a\u043e\u043b\u0438\u0447\u0435\u0441\u0442\u0432\u043e \u0443\u0441\u043b\u0443\u0433 \u0438\u043b\u0438 \u0434\u043b\u0438\u043d\u0443 \u043d\u0430\u0437\u0432\u0430\u043d\u0438\u0439.")
 	}
-	return nil
+
+	low := actPDFMinScale
+	high := actPDFTargetScale
+	for i := 0; i < 12; i++ {
+		mid := (low + high) / 2
+		layout := newActPDFLayout(pdf, mid)
+		if estimateActPDFHeight(pdf, data, layout) <= layout.Bottom {
+			low = mid
+			continue
+		}
+		high = mid
+	}
+	return newActPDFLayout(pdf, low), nil
 }
 
-func drawActPDF(pdf *gofpdf.Fpdf, data actPDFData) {
-	left := 14.0
-	top := 18.0
-	pageWidth, _ := pdf.GetPageSize()
-	contentWidth := pageWidth - 28.0
+func newActPDFLayout(pdf *gofpdf.Fpdf, scale float64) actPDFLayout {
+	pageWidth, pageHeight := pdf.GetPageSize()
+	left := 10.0
+	right := 10.0
+	contentWidth := pageWidth - left - right
+	colNo := 10.0
+	colQty := 31.0
+	colMoney := 38.0
+	colName := contentWidth - colNo - colQty - colMoney
+
+	return actPDFLayout{
+		Scale:                 scale,
+		Left:                  left,
+		Right:                 right,
+		Top:                   12.0,
+		Bottom:                pageHeight - 10.0,
+		ContentWidth:          contentWidth,
+		TitleFont:             10.0 * scale,
+		MetaFont:              9.0 * scale,
+		BodyFont:              8.8 * scale,
+		TotalFont:             8.0 * scale,
+		ClosingFont:           8.6 * scale,
+		SignatureFont:         8.8 * scale,
+		TableHeaderFont:       8.8 * scale,
+		TableBodyFont:         8.4 * scale,
+		TableTotalFont:        9.0 * scale,
+		TitleHeight:           6.0 * scale,
+		MetaHeight:            6.0 * scale,
+		IntroLineHeight:       4.7 * scale,
+		TotalLineHeight:       4.2 * scale,
+		ClosingLineHeight:     4.8 * scale,
+		SignatureHeaderHeight: 5.0 * scale,
+		SignatureHeight:       16.0 * scale,
+		IntroGap:              5.2 * scale,
+		TableGap:              2.0 * scale,
+		TotalGap:              4.0 * scale,
+		ClosingGap:            5.0 * scale,
+		SignatureGap:          6.0 * scale,
+		TableHeaderHeight:     8.0 * scale,
+		TableTotalHeight:      10.0 * scale,
+		TableLineHeight:       4.9 * scale,
+		TablePaddingTop:       2.1 * scale,
+		TablePaddingX:         2.0 * scale,
+		ColNo:                 colNo,
+		ColName:               colName,
+		ColQty:                colQty,
+		ColMoney:              colMoney,
+	}
+}
+
+func estimateActPDFHeight(pdf *gofpdf.Fpdf, data actPDFData, layout actPDFLayout) float64 {
+	y := layout.Top
+	y += layout.TitleHeight
+	y += layout.MetaHeight
+	y += layout.IntroGap
+	pdf.SetFont("Mercel", "", layout.BodyFont)
+	y += float64(len(pdf.SplitText(buildActIntro(data), layout.ContentWidth))) * layout.IntroLineHeight
+	y += layout.TableGap
+
+	rowHeights := actRowHeights(pdf, data.Items, layout)
+	y += layout.TableHeaderHeight
+	for _, height := range rowHeights {
+		y += height
+	}
+	y += layout.TableTotalHeight
+
+	y += layout.TotalGap
+	pdf.SetFont("Mercel", "I", layout.TotalFont)
+	y += float64(len(pdf.SplitText(actTotalText(data), layout.ContentWidth))) * layout.TotalLineHeight
+	y += layout.ClosingGap
+	pdf.SetFont("Mercel", "", layout.ClosingFont)
+	y += float64(len(pdf.SplitText(actClosingText(), layout.ContentWidth))) * layout.ClosingLineHeight
+	y += layout.SignatureGap
+	y += layout.SignatureHeaderHeight
+	y += layout.SignatureHeight
+	return y
+}
+
+func drawActPDF(pdf *gofpdf.Fpdf, data actPDFData, layout actPDFLayout) {
+	left := layout.Left
+	top := layout.Top
+	contentWidth := layout.ContentWidth
 
 	pdf.SetXY(left, top)
-	pdf.SetFont("Mercel", "B", 10)
-	pdf.CellFormat(contentWidth, 6, fmt.Sprintf("\u0410\u041a\u0422 \u2116 %d \u041f\u0420\u0418\u0401\u041c\u0410-\u0421\u0414\u0410\u0427\u0418 \u041e\u041a\u0410\u0417\u0410\u041d\u041d\u042b\u0425 \u0423\u0421\u041b\u0423\u0413", data.ActNumber), "", 1, "C", false, 0, "")
+	pdf.SetFont("Mercel", "B", layout.TitleFont)
+	pdf.CellFormat(contentWidth, layout.TitleHeight, fmt.Sprintf("\u0410\u041a\u0422 \u2116 %d \u041f\u0420\u0418\u0401\u041c\u0410-\u0421\u0414\u0410\u0427\u0418 \u041e\u041a\u0410\u0417\u0410\u041d\u041d\u042b\u0425 \u0423\u0421\u041b\u0423\u0413", data.ActNumber), "", 1, "C", false, 0, "")
 
-	pdf.SetFont("Mercel", "", 9)
+	pdf.SetFont("Mercel", "", layout.MetaFont)
 	pdf.SetX(left)
-	pdf.CellFormat(contentWidth/2, 6, "\u0433. \u0421\u0430\u043d\u043a\u0442-\u041f\u0435\u0442\u0435\u0440\u0431\u0443\u0440\u0433", "", 0, "L", false, 0, "")
-	pdf.CellFormat(contentWidth/2, 6, russianActDate(data.GeneratedAt), "", 1, "R", false, 0, "")
+	pdf.CellFormat(contentWidth/2, layout.MetaHeight, "\u0433. \u0421\u0430\u043d\u043a\u0442-\u041f\u0435\u0442\u0435\u0440\u0431\u0443\u0440\u0433", "", 0, "L", false, 0, "")
+	pdf.CellFormat(contentWidth/2, layout.MetaHeight, russianActDate(data.GeneratedAt), "", 1, "R", false, 0, "")
 
-	pdf.Ln(7)
+	pdf.Ln(layout.IntroGap)
 	pdf.SetX(left)
-	pdf.SetFont("Mercel", "", 8.8)
-	intro := fmt.Sprintf(
+	pdf.SetFont("Mercel", "", layout.BodyFont)
+	pdf.MultiCell(contentWidth, layout.IntroLineHeight, buildActIntro(data), "", "J", false)
+	pdf.Ln(layout.TableGap)
+
+	drawActTable(pdf, layout, data)
+
+	pdf.Ln(layout.TotalGap)
+	pdf.SetX(left)
+	pdf.SetFont("Mercel", "I", layout.TotalFont)
+	pdf.MultiCell(contentWidth, layout.TotalLineHeight, actTotalText(data), "", "L", false)
+
+	pdf.Ln(layout.ClosingGap)
+	pdf.SetX(left)
+	pdf.SetFont("Mercel", "", layout.ClosingFont)
+	pdf.MultiCell(contentWidth, layout.ClosingLineHeight, actClosingText(), "", "J", false)
+
+	pdf.Ln(layout.SignatureGap)
+	signatureY := pdf.GetY()
+	colWidth := contentWidth / 2
+
+	pdf.SetFont("Mercel", "B", layout.TableTotalFont)
+	pdf.SetXY(left, signatureY)
+	pdf.CellFormat(colWidth, layout.SignatureHeaderHeight, "\u0418\u0441\u043f\u043e\u043b\u043d\u0438\u0442\u0435\u043b\u044c:", "", 0, "L", false, 0, "")
+	pdf.CellFormat(colWidth, layout.SignatureHeaderHeight, "\u0417\u0430\u043a\u0430\u0437\u0447\u0438\u043a:", "", 1, "L", false, 0, "")
+
+	pdf.SetFont("Mercel", "", layout.SignatureFont)
+	pdf.SetX(left)
+	drawSignature(pdf, layout, colWidth, shortEmployeeSignatureName(data.EmployeeFullName))
+	drawSignature(pdf, layout, colWidth, resolveContractDirectorShort(data.ContractTitle))
+	pdf.SetY(signatureY + layout.SignatureHeaderHeight + layout.SignatureHeight)
+}
+
+func buildActIntro(data actPDFData) string {
+	return fmt.Sprintf(
 		"\u041e\u0431\u0449\u0435\u0441\u0442\u0432\u043e \u0441 \u043e\u0433\u0440\u0430\u043d\u0438\u0447\u0435\u043d\u043d\u043e\u0439 \u043e\u0442\u0432\u0435\u0442\u0441\u0442\u0432\u0435\u043d\u043d\u043e\u0441\u0442\u044c\u044e \u00ab%s\u00bb, \u0438\u043c\u0435\u043d\u0443\u0435\u043c\u043e\u0435 \u0432 \u0434\u0430\u043b\u044c\u043d\u0435\u0439\u0448\u0435\u043c \u0417\u0430\u043a\u0430\u0437\u0447\u0438\u043a, \u0432 \u043b\u0438\u0446\u0435 \u0433\u0435\u043d\u0435\u0440\u0430\u043b\u044c\u043d\u043e\u0433\u043e \u0434\u0438\u0440\u0435\u043a\u0442\u043e\u0440\u0430 %s \u0441 \u043e\u0434\u043d\u043e\u0439 \u0441\u0442\u043e\u0440\u043e\u043d\u044b \u0438 \u0418\u043d\u0434\u0438\u0432\u0438\u0434\u0443\u0430\u043b\u044c\u043d\u044b\u0439 \u043f\u0440\u0435\u0434\u043f\u0440\u0438\u043d\u0438\u043c\u0430\u0442\u0435\u043b\u044c %s, \u0438\u043c\u0435\u043d\u0443\u0435\u043c\u044b\u0439 \u0432 \u0434\u0430\u043b\u044c\u043d\u0435\u0439\u0448\u0435\u043c \u0418\u0441\u043f\u043e\u043b\u043d\u0438\u0442\u0435\u043b\u044c, \u0441 \u0434\u0440\u0443\u0433\u043e\u0439 \u0441\u0442\u043e\u0440\u043e\u043d\u044b \u0441\u043e\u0441\u0442\u0430\u0432\u0438\u043b\u0438 \u043d\u0430\u0441\u0442\u043e\u044f\u0449\u0438\u0439 \u0430\u043a\u0442, \u0441\u043e\u0433\u043b\u0430\u0441\u043d\u043e \u0414\u043e\u0433\u043e\u0432\u043e\u0440\u0443 %s \u2116 %s \u043e\u0442 %s, \u0437\u0430\u043a\u043b\u044e\u0447\u0435\u043d\u043d\u043e\u0433\u043e \u043c\u0435\u0436\u0434\u0443 \u0421\u0442\u043e\u0440\u043e\u043d\u0430\u043c\u0438, \u043e \u0442\u043e\u043c, \u0447\u0442\u043e \u0418\u0441\u043f\u043e\u043b\u043d\u0438\u0442\u0435\u043b\u044c \u0432\u044b\u043f\u043e\u043b\u043d\u0438\u043b, \u0430 \u0417\u0430\u043a\u0430\u0437\u0447\u0438\u043a \u043f\u0440\u0438\u043d\u044f\u043b \u0441\u043b\u0435\u0434\u0443\u044e\u0449\u0438\u0435 \u0440\u0430\u0431\u043e\u0442\u044b:",
 		data.CustomerName,
 		resolveContractDirectorName(data.ContractTitle),
@@ -292,34 +449,14 @@ func drawActPDF(pdf *gofpdf.Fpdf, data actPDFData) {
 		data.ContractNumber,
 		formatContractDateLong(data.ContractDate),
 	)
-	pdf.MultiCell(contentWidth, 4.7, intro, "", "J", false)
-	pdf.Ln(2)
+}
 
-	drawActTable(pdf, left, data)
+func actTotalText(data actPDFData) string {
+	return fmt.Sprintf("\u0412\u0441\u0435\u0433\u043e \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d\u043e \u0440\u0430\u0431\u043e\u0442 \u043d\u0430 \u0441\u0443\u043c\u043c\u0443: %s %s 00 \u043a\u043e\u043f\u0435\u0435\u043a \u0431\u0435\u0437 \u041d\u0414\u0421.", data.TotalWords, data.TotalCurrency)
+}
 
-	pdf.Ln(4)
-	pdf.SetX(left)
-	pdf.SetFont("Mercel", "I", 8)
-	pdf.MultiCell(contentWidth, 4.2, fmt.Sprintf("\u0412\u0441\u0435\u0433\u043e \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d\u043e \u0440\u0430\u0431\u043e\u0442 \u043d\u0430 \u0441\u0443\u043c\u043c\u0443: %s %s 00 \u043a\u043e\u043f\u0435\u0435\u043a \u0431\u0435\u0437 \u041d\u0414\u0421.", data.TotalWords, data.TotalCurrency), "", "L", false)
-
-	pdf.Ln(5)
-	pdf.SetX(left)
-	pdf.SetFont("Mercel", "", 8.6)
-	pdf.MultiCell(contentWidth, 4.8, "\u0412\u044b\u0448\u0435\u043f\u0435\u0440\u0435\u0447\u0438\u0441\u043b\u0435\u043d\u043d\u044b\u0435 \u0443\u0441\u043b\u0443\u0433\u0438 \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d\u044b \u043f\u043e\u043b\u043d\u043e\u0441\u0442\u044c\u044e \u0438 \u0432 \u0441\u0440\u043e\u043a. \u0417\u0430\u043a\u0430\u0437\u0447\u0438\u043a \u043f\u0440\u0435\u0442\u0435\u043d\u0437\u0438\u0439 \u043f\u043e \u043e\u0431\u044a\u0451\u043c\u0443, \u043a\u0430\u0447\u0435\u0441\u0442\u0432\u0443 \u0438 \u0441\u0440\u043e\u043a\u0430\u043c \u043e\u043a\u0430\u0437\u0430\u043d\u0438\u044f \u0443\u0441\u043b\u0443\u0433 \u043d\u0435 \u0438\u043c\u0435\u0435\u0442.", "", "J", false)
-
-	pdf.Ln(6)
-	signatureY := pdf.GetY()
-	colWidth := contentWidth / 2
-
-	pdf.SetFont("Mercel", "B", 9)
-	pdf.SetXY(left, signatureY)
-	pdf.CellFormat(colWidth, 5, "\u0418\u0441\u043f\u043e\u043b\u043d\u0438\u0442\u0435\u043b\u044c:", "", 0, "L", false, 0, "")
-	pdf.CellFormat(colWidth, 5, "\u0417\u0430\u043a\u0430\u0437\u0447\u0438\u043a:", "", 1, "L", false, 0, "")
-
-	pdf.SetFont("Mercel", "", 8.8)
-	pdf.SetX(left)
-	drawSignature(pdf, colWidth, shortEmployeeSignatureName(data.EmployeeFullName))
-	drawSignature(pdf, colWidth, resolveContractDirectorShort(data.ContractTitle))
+func actClosingText() string {
+	return "\u0412\u044b\u0448\u0435\u043f\u0435\u0440\u0435\u0447\u0438\u0441\u043b\u0435\u043d\u043d\u044b\u0435 \u0443\u0441\u043b\u0443\u0433\u0438 \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d\u044b \u043f\u043e\u043b\u043d\u043e\u0441\u0442\u044c\u044e \u0438 \u0432 \u0441\u0440\u043e\u043a. \u0417\u0430\u043a\u0430\u0437\u0447\u0438\u043a \u043f\u0440\u0435\u0442\u0435\u043d\u0437\u0438\u0439 \u043f\u043e \u043e\u0431\u044a\u0451\u043c\u0443, \u043a\u0430\u0447\u0435\u0441\u0442\u0432\u0443 \u0438 \u0441\u0440\u043e\u043a\u0430\u043c \u043e\u043a\u0430\u0437\u0430\u043d\u0438\u044f \u0443\u0441\u043b\u0443\u0433 \u043d\u0435 \u0438\u043c\u0435\u0435\u0442."
 }
 
 func resolveContractDirectorName(contractTitle string) string {
@@ -348,40 +485,41 @@ func resolveContractInfoFromTitle(title string) (contractInfo, error) {
 	return contractInfo{}, errors.New("\u043d\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043d\u044b\u0439 \u0448\u0430\u0431\u043b\u043e\u043d \u0434\u043e\u0433\u043e\u0432\u043e\u0440\u0430")
 }
 
-func drawSignature(pdf *gofpdf.Fpdf, width float64, name string) {
-	nameWidth := width - 28
+func drawSignature(pdf *gofpdf.Fpdf, layout actPDFLayout, width float64, name string) {
+	nameWidth := width - (28 * layout.Scale)
 	if nameWidth < 60 {
 		nameWidth = width * 0.7
 	}
-	pdf.CellFormat(nameWidth, 16, name, "", 0, "L", false, 0, "")
-	pdf.CellFormat(width-nameWidth, 16, "   /________/", "", 0, "L", false, 0, "")
+	pdf.CellFormat(nameWidth, layout.SignatureHeight, name, "", 0, "L", false, 0, "")
+	pdf.CellFormat(width-nameWidth, layout.SignatureHeight, "   /________/", "", 0, "L", false, 0, "")
 }
 
-func drawActTable(pdf *gofpdf.Fpdf, left float64, data actPDFData) {
-	colNo := 9.0
-	colName := 106.0
-	colQty := 28.0
-	colMoney := 33.0
-	lineHeight := 4.9
-	paddingTop := 2.1
-	paddingHorizontal := 2.0
+func drawActTable(pdf *gofpdf.Fpdf, layout actPDFLayout, data actPDFData) {
+	left := layout.Left
+	colNo := layout.ColNo
+	colName := layout.ColName
+	colQty := layout.ColQty
+	colMoney := layout.ColMoney
+	lineHeight := layout.TableLineHeight
+	paddingTop := layout.TablePaddingTop
+	paddingHorizontal := layout.TablePaddingX
 
-	pdf.SetFont("Mercel", "B", 8.8)
+	pdf.SetFont("Mercel", "B", layout.TableHeaderFont)
 	pdf.SetX(left)
-	pdf.CellFormat(colNo, 8, "\u2116", "1", 0, "C", false, 0, "")
-	pdf.CellFormat(colName, 8, "\u041d\u0430\u0438\u043c\u0435\u043d\u043e\u0432\u0430\u043d\u0438\u0435 \u0443\u0441\u043b\u0443\u0433\u0438", "1", 0, "C", false, 0, "")
-	pdf.CellFormat(colQty, 8, "\u041a\u043e\u043b\u0438\u0447\u0435\u0441\u0442\u0432\u043e", "1", 0, "C", false, 0, "")
-	pdf.CellFormat(colMoney, 8, "\u0421\u0442\u043e\u0438\u043c\u043e\u0441\u0442\u044c", "1", 1, "C", false, 0, "")
+	pdf.CellFormat(colNo, layout.TableHeaderHeight, "\u2116", "1", 0, "C", false, 0, "")
+	pdf.CellFormat(colName, layout.TableHeaderHeight, "\u041d\u0430\u0438\u043c\u0435\u043d\u043e\u0432\u0430\u043d\u0438\u0435 \u0443\u0441\u043b\u0443\u0433\u0438", "1", 0, "C", false, 0, "")
+	pdf.CellFormat(colQty, layout.TableHeaderHeight, "\u041a\u043e\u043b\u0438\u0447\u0435\u0441\u0442\u0432\u043e", "1", 0, "C", false, 0, "")
+	pdf.CellFormat(colMoney, layout.TableHeaderHeight, "\u0421\u0442\u043e\u0438\u043c\u043e\u0441\u0442\u044c", "1", 1, "C", false, 0, "")
 
-	pdf.SetFont("Mercel", "", 8.4)
+	pdf.SetFont("Mercel", "", layout.TableBodyFont)
 	for index, item := range data.Items {
 		lines := pdf.SplitText(item.Name, colName-(paddingHorizontal*2))
 		if len(lines) == 0 {
 			lines = []string{""}
 		}
 		rowHeight := float64(len(lines))*lineHeight + (paddingTop * 2)
-		if rowHeight < 10 {
-			rowHeight = 10
+		if minHeight := 10 * layout.Scale; rowHeight < minHeight {
+			rowHeight = minHeight
 		}
 
 		x := left
@@ -404,19 +542,23 @@ func drawActTable(pdf *gofpdf.Fpdf, left float64, data actPDFData) {
 		pdf.CellFormat(colMoney, rowHeight, formatDocumentMoney(item.LineTotal), "", 1, "C", false, 0, "")
 	}
 
-	pdf.SetFont("Mercel", "B", 9)
+	pdf.SetFont("Mercel", "B", layout.TableTotalFont)
 	pdf.SetX(left + colNo + colName)
-	pdf.CellFormat(colQty, 10, "\u0418\u0422\u041e\u0413\u041e:", "1", 0, "C", false, 0, "")
-	pdf.CellFormat(colMoney, 10, formatDocumentMoney(data.TotalAmount), "1", 1, "C", false, 0, "")
+	pdf.CellFormat(colQty, layout.TableTotalHeight, "\u0418\u0422\u041e\u0413\u041e:", "1", 0, "C", false, 0, "")
+	pdf.CellFormat(colMoney, layout.TableTotalHeight, formatDocumentMoney(data.TotalAmount), "1", 1, "C", false, 0, "")
 }
 
-func actRowHeights(pdf *gofpdf.Fpdf, items []CalculationItem, nameWidth float64, lineHeight float64) []float64 {
+func actRowHeights(pdf *gofpdf.Fpdf, items []CalculationItem, layout actPDFLayout) []float64 {
 	heights := make([]float64, 0, len(items))
+	pdf.SetFont("Mercel", "", layout.TableBodyFont)
 	for _, item := range items {
-		lines := pdf.SplitText(item.Name, nameWidth-4)
-		height := float64(len(lines))*lineHeight + 4.2
-		if height < 10 {
-			height = 10
+		lines := pdf.SplitText(item.Name, layout.ColName-(layout.TablePaddingX*2))
+		if len(lines) == 0 {
+			lines = []string{""}
+		}
+		height := float64(len(lines))*layout.TableLineHeight + (layout.TablePaddingTop * 2)
+		if minHeight := 10 * layout.Scale; height < minHeight {
+			height = minHeight
 		}
 		heights = append(heights, height)
 	}
