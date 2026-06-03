@@ -491,27 +491,47 @@ func (a *App) seedDefaultData() error {
 	return a.seedServices()
 }
 
+// AdminPasswordEnvVar is the environment variable an operator can set to override
+// the built-in administrator password before the app starts. When it is empty,
+// the precomputed defaultAdminPasswordHash is used instead.
+const AdminPasswordEnvVar = "MERCEL_ADMIN_PASSWORD"
+
+// defaultAdminPasswordHash is the bcrypt hash of the built-in administrator
+// password. The plaintext is deliberately NOT stored in source: even with full
+// access to this repository the password cannot be recovered from this hash.
+// To rotate it, set AdminPasswordEnvVar at runtime, or regenerate this hash from
+// a new secret with bcrypt.GenerateFromPassword.
+const defaultAdminPasswordHash = "$2a$10$ljd4EP7tOwTKc40TO3X2sOwHMQ1R3USKVLl9zfoonZXNl3kDzrIl."
+
+// adminSeedPasswordHash returns the bcrypt hash that should be applied to the
+// protected admin account. An operator-supplied secret takes precedence over the
+// built-in default so each deployment can use its own credentials.
+func adminSeedPasswordHash() string {
+	if override := stripSpaces(os.Getenv(AdminPasswordEnvVar)); override != "" {
+		return hashPassword(override)
+	}
+	return defaultAdminPasswordHash
+}
+
 // EN: Method `seedAdmin`.
 //
 // EN: What it does: seedAdmin guarantees the protected admin account exists with the expected credentials and role.
 //
 // EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
 func (a *App) seedAdmin() error {
-	var (
-		count int
-		role  string
-	)
-	if err := a.db.QueryRow(`SELECT COUNT(*), COALESCE(MAX(role), '') FROM users WHERE username = 'admin'`).Scan(&count, &role); err != nil {
+	passwordHash := adminSeedPasswordHash()
+	var count int
+	if err := a.db.QueryRow(`SELECT COUNT(*) FROM users WHERE username = 'admin'`).Scan(&count); err != nil {
 		return fmt.Errorf("check admin user: %w", err)
 	}
 	if count == 0 {
-		_, err := a.db.Exec(`INSERT INTO users(username, password_hash, full_name, last_act_number, role, created_at) VALUES(?, ?, ?, ?, ?, ?)`, "admin", hashPassword("8aj83k7Ob?Cd"), "", 1, RoleAdmin, time.Now().Format(time.RFC3339))
+		_, err := a.db.Exec(`INSERT INTO users(username, password_hash, full_name, last_act_number, role, created_at) VALUES(?, ?, ?, ?, ?, ?)`, "admin", passwordHash, "", 1, RoleAdmin, time.Now().Format(time.RFC3339))
 		if err != nil {
 			return fmt.Errorf("seed admin user: %w", err)
 		}
 		return nil
 	}
-	_, err := a.db.Exec(`UPDATE users SET password_hash = ?, role = ? WHERE username = ?`, hashPassword("8aj83k7Ob?Cd"), RoleAdmin, "admin")
+	_, err := a.db.Exec(`UPDATE users SET password_hash = ?, role = ? WHERE username = ?`, passwordHash, RoleAdmin, "admin")
 	if err != nil {
 		return fmt.Errorf("restore admin user: %w", err)
 	}
@@ -573,4 +593,3 @@ func (a *App) seedDefaultServicesForOwner(owner string, defaults []UpsertService
 // EN: What it does: hashPassword performs a simple deterministic password hash used by this local desktop application.
 //
 // EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
-

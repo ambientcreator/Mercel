@@ -308,7 +308,7 @@ func canViewManagedUsers(role string) bool {
 }
 
 func canModerateArchives(role string) bool {
-	return len(roleViewDepartments(role)) > 0 && (roleLevel(role) >= 2 || roleLevel(role) >= 4)
+	return len(roleViewDepartments(role)) > 0 && roleLevel(role) >= 2
 }
 
 func canSeeUser(actorRole string, targetRole string) bool {

@@ -50,7 +50,7 @@ func withTempDB(t *testing.T) *App {
 
 func loginAsAdmin(t *testing.T, app *App) {
 	t.Helper()
-	state, err := app.Login(LoginRequest{Username: "admin", Password: "8aj83k7Ob?Cd"})
+	state, err := app.Login(LoginRequest{Username: "admin", Password: "siuW*R%wWkQS"})
 	if err != nil {
 		t.Fatalf("Login() error = %v", err)
 	}
