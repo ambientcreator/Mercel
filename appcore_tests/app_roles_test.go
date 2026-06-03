@@ -440,8 +440,34 @@ func TestListUsersSortsByRolePriority(t *testing.T) {
 	}
 }
 
-// EN: Test `TestConfirmModalMarkupUsesReadableUTF8`.
-//
-// EN: What it does: TestConfirmModalMarkupUsesReadableUTF8 protects the modal template from accidental mojibake regressions.
-//
-// EN: Key points: runs in an isolated scenario; protects against regressions; documents the expected behavior of the feature or rule.
+// TestDirectorsCanCreateWithinDepartmentScope verifies that directors may create
+// staff inside the departments they oversee, but cannot reach into other
+// departments or create additional directors.
+func TestDirectorsCanCreateWithinDepartmentScope(t *testing.T) {
+	app := withTempDB(t)
+	loginAsAdmin(t, app)
+
+	techDirector, err := app.CreateUser(UserWithPassword{Username: "tech_dir", Password: "secret", Role: RoleTechnicalDirector})
+	if err != nil {
+		t.Fatalf("CreateUser technical director error = %v", err)
+	}
+
+	loginAsUser(t, app, techDirector.Username, "secret")
+
+	// In scope: technical and telecom staff below the director level.
+	if _, err := app.CreateUser(UserWithPassword{Username: "tech_emp_x", Password: "secret", Role: RoleTechnicalEmployee}); err != nil {
+		t.Fatalf("technical director must be able to create technical staff: %v", err)
+	}
+	if _, err := app.CreateUser(UserWithPassword{Username: "telecom_emp_x", Password: "secret", Role: RoleTelecomEmployeeVOLS}); err != nil {
+		t.Fatalf("technical director must be able to create telecom staff: %v", err)
+	}
+
+	// Out of department scope: support belongs to another director.
+	if _, err := app.CreateUser(UserWithPassword{Username: "support_emp_x", Password: "secret", Role: RoleSupportEmployee}); err == nil {
+		t.Fatalf("technical director must not create support staff")
+	}
+	// Directors cannot create other directors.
+	if _, err := app.CreateUser(UserWithPassword{Username: "tech_dir_2", Password: "secret", Role: RoleTechnicalDirector}); err == nil {
+		t.Fatalf("technical director must not create another director")
+	}
+}

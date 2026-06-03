@@ -77,16 +77,16 @@ func (a *App) saveService(req UpsertServiceRequest) (Service, error) {
 	return a.saveServiceForOwner(req, user.Username)
 }
 
-// EN: Method `getServiceByIDForOwner`.
-//
-// EN: What it does: getServiceByIDForOwner fetches one service while enforcing ownership boundaries.
-//
-// EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
-func (a *App) getServiceByIDForOwner(id int64, owner string) (Service, error) {
+// serviceSelectColumns is the shared column list for single-service lookups so
+// the queries below stay in sync with scanServiceRow.
+const serviceSelectColumns = `id, code, name, unit, rate, category, allocation_percent, created_by, created_at`
+
+// scanServiceRow decodes one services row and fills in the derived description
+// and optional allocation percent. It is shared by all single-service lookups.
+func scanServiceRow(row *sql.Row) (Service, error) {
 	var item Service
 	var allocation sql.NullFloat64
-	err := a.db.QueryRow(`SELECT id, code, name, unit, rate, category, allocation_percent, created_by, created_at FROM services WHERE id = ? AND created_by = ?`, id, owner).Scan(&item.ID, &item.Code, &item.Name, &item.Unit, &item.Rate, &item.Category, &allocation, &item.CreatedBy, &item.CreatedAt)
-	if err != nil {
+	if err := row.Scan(&item.ID, &item.Code, &item.Name, &item.Unit, &item.Rate, &item.Category, &allocation, &item.CreatedBy, &item.CreatedAt); err != nil {
 		return Service{}, err
 	}
 	item.Description = fmt.Sprintf("1 %s = %s", strings.TrimSuffix(item.Unit, "."), displayMoney(item.Rate))
@@ -97,19 +97,16 @@ func (a *App) getServiceByIDForOwner(id int64, owner string) (Service, error) {
 	return item, nil
 }
 
+// EN: Method `getServiceByIDForOwner`.
+//
+// EN: What it does: getServiceByIDForOwner fetches one service while enforcing ownership boundaries.
+func (a *App) getServiceByIDForOwner(id int64, owner string) (Service, error) {
+	return scanServiceRow(a.db.QueryRow(`SELECT `+serviceSelectColumns+` FROM services WHERE id = ? AND created_by = ?`, id, owner))
+}
+
+// getServiceByNameForOwner fetches the oldest service with a given name owned by owner.
 func (a *App) getServiceByNameForOwner(name string, owner string) (Service, error) {
-	var item Service
-	var allocation sql.NullFloat64
-	err := a.db.QueryRow(`SELECT id, code, name, unit, rate, category, allocation_percent, created_by, created_at FROM services WHERE created_by = ? AND name = ? ORDER BY id ASC LIMIT 1`, owner, strings.TrimSpace(name)).Scan(&item.ID, &item.Code, &item.Name, &item.Unit, &item.Rate, &item.Category, &allocation, &item.CreatedBy, &item.CreatedAt)
-	if err != nil {
-		return Service{}, err
-	}
-	item.Description = fmt.Sprintf("1 %s = %s", strings.TrimSuffix(item.Unit, "."), displayMoney(item.Rate))
-	if allocation.Valid {
-		value := allocation.Float64
-		item.AllocationPercent = &value
-	}
-	return item, nil
+	return scanServiceRow(a.db.QueryRow(`SELECT `+serviceSelectColumns+` FROM services WHERE created_by = ? AND name = ? ORDER BY id ASC LIMIT 1`, owner, strings.TrimSpace(name)))
 }
 
 // EN: Method `UpsertService`.

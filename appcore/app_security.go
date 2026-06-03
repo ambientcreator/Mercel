@@ -268,7 +268,10 @@ func roleCanManageUsers(role string) bool {
 }
 
 func roleCanCreateUsers(role string) bool {
-	return roleCanManageUsers(role) || roleLevel(role) == 2
+	// Heads/sysadmins (via roleCanManageUsers), senior specialists (level 2) and
+	// directors (level 4) may create users. The exact roles they are allowed to
+	// assign — and in which departments — are constrained by canCreateRole.
+	return roleCanManageUsers(role) || roleLevel(role) == 2 || roleLevel(role) == 4
 }
 
 func departmentInScope(actorRole string, targetDepartment string) bool {
@@ -293,7 +296,15 @@ func canCreateRole(actorRole string, targetRole string) bool {
 	if !roleCanCreateUsers(actorRole) {
 		return false
 	}
-	if roleDepartment(actorRole) != roleDepartment(targetRole) {
+	// The target department must be within the actor's visible scope. For heads and
+	// seniors that is only their own department; for directors it spans every
+	// department they oversee (e.g. a technical director covers technical+telecom).
+	if !departmentInScope(actorRole, roleDepartment(targetRole)) {
+		return false
+	}
+	// No one below admin may create another global-department account (i.e. a
+	// director or admin), regardless of level — directors cannot create directors.
+	if roleDepartment(targetRole) == DepartmentGlobal {
 		return false
 	}
 	return roleLevel(actorRole) > roleLevel(targetRole)
