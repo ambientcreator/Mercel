@@ -265,7 +265,8 @@ func errActDoesNotFit() error {
 // EN: Key points: every blank draws on the same A4 page with auto page breaks disabled, and the result is rejected
 // EN: when the content spilled past the printable area, so an act is always exactly one sheet.
 func renderActPDF(path string, data actPDFData) error {
-	fontRegular, fontBold, fontItalic, err := resolvePDFFonts()
+	template := actTemplateOrDefault(data.ActTemplate)
+	fontRegular, fontBold, fontItalic, err := resolvePDFFonts(template == ActTemplateFormal)
 	if err != nil {
 		return err
 	}
@@ -287,11 +288,13 @@ func renderActPDF(path string, data actPDFData) error {
 	pdf.AddPage()
 
 	var bottom float64
-	switch actTemplateOrDefault(data.ActTemplate) {
+	switch template {
+	case ActTemplateFormal:
+		bottom, err = renderFormalAct(pdf, data)
 	case ActTemplateTypographic:
 		bottom, err = renderTypographicAct(pdf, data)
 	default:
-		bottom, err = renderClassicAct(pdf, data)
+		bottom, err = renderStandardAct(pdf, data)
 	}
 	if err != nil {
 		return err
@@ -308,12 +311,12 @@ func renderActPDF(path string, data actPDFData) error {
 	return nil
 }
 
-// EN: Function `renderClassicAct`.
+// EN: Function `renderStandardAct`.
 //
-// EN: What it does: renderClassicAct draws blank \u21161 and reports the bottom edge the content had to stay above.
+// EN: What it does: renderStandardAct draws the standard Mercel blank and reports the bottom edge the content had to stay above.
 //
 // EN: Key points: the scale is fitted first so the whole act lands on a single page.
-func renderClassicAct(pdf *gofpdf.Fpdf, data actPDFData) (float64, error) {
+func renderStandardAct(pdf *gofpdf.Fpdf, data actPDFData) (float64, error) {
 	layout, err := fitActPDFLayout(pdf, data)
 	if err != nil {
 		return 0, err
@@ -348,10 +351,42 @@ func fitActScale(minimum float64, target float64, fits func(scale float64) bool)
 	return low, true
 }
 
-func resolvePDFFonts() (string, string, string, error) {
-	candidates := [][3]string{
-		{`C:\Windows\Fonts\arial.ttf`, `C:\Windows\Fonts\arialbd.ttf`, `C:\Windows\Fonts\ariali.ttf`},
-		{`C:\Windows\Fonts\segoeui.ttf`, `C:\Windows\Fonts\segoeuib.ttf`, `C:\Windows\Fonts\segoeuii.ttf`},
+// EN: Variable `sansPDFFontCandidates`.
+//
+// EN: What it does: sansPDFFontCandidates lists the sans-serif faces used by the standard and typographic blanks.
+//
+// EN: Key points: Windows faces come first, then the Linux/macOS fallbacks used by build and test machines.
+var sansPDFFontCandidates = [][3]string{
+	{`C:\Windows\Fonts\arial.ttf`, `C:\Windows\Fonts\arialbd.ttf`, `C:\Windows\Fonts\ariali.ttf`},
+	{`C:\Windows\Fonts\segoeui.ttf`, `C:\Windows\Fonts\segoeuib.ttf`, `C:\Windows\Fonts\segoeuii.ttf`},
+	{"/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf", "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf", "/usr/share/fonts/truetype/liberation/LiberationSans-Italic.ttf"},
+	{"/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf"},
+	{"/Library/Fonts/Arial.ttf", "/Library/Fonts/Arial Bold.ttf", "/Library/Fonts/Arial Italic.ttf"},
+}
+
+// EN: Variable `serifPDFFontCandidates`.
+//
+// EN: What it does: serifPDFFontCandidates lists the Times-like faces blank №1 is typeset with.
+//
+// EN: Key points: the serif face is what makes blank №1 look different from the standard one, so it is resolved
+// EN: separately; when no serif face is installed the sans list is used instead of failing the export.
+var serifPDFFontCandidates = [][3]string{
+	{`C:\Windows\Fonts\times.ttf`, `C:\Windows\Fonts\timesbd.ttf`, `C:\Windows\Fonts\timesi.ttf`},
+	{"/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf", "/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf", "/usr/share/fonts/truetype/liberation/LiberationSerif-Italic.ttf"},
+	{"/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Italic.ttf"},
+	{"/Library/Fonts/Times New Roman.ttf", "/Library/Fonts/Times New Roman Bold.ttf", "/Library/Fonts/Times New Roman Italic.ttf"},
+}
+
+// EN: Function `resolvePDFFonts`.
+//
+// EN: What it does: resolvePDFFonts finds an installed regular/bold/italic trio for the requested style.
+//
+// EN: Key points: only the family the chosen blank actually needs is resolved and embedded, which keeps the
+// EN: exported PDF small; a missing serif family silently falls back to the sans one.
+func resolvePDFFonts(serif bool) (string, string, string, error) {
+	candidates := sansPDFFontCandidates
+	if serif {
+		candidates = serifPDFFontCandidates
 	}
 	for _, candidate := range candidates {
 		if fileExists(candidate[0]) && fileExists(candidate[1]) && fileExists(candidate[2]) {
@@ -359,23 +394,19 @@ func resolvePDFFonts() (string, string, string, error) {
 		}
 	}
 	if windir := os.Getenv("WINDIR"); windir != "" {
-		regular := filepath.Join(windir, "Fonts", "arial.ttf")
-		bold := filepath.Join(windir, "Fonts", "arialbd.ttf")
-		italic := filepath.Join(windir, "Fonts", "ariali.ttf")
+		names := [3]string{"arial.ttf", "arialbd.ttf", "ariali.ttf"}
+		if serif {
+			names = [3]string{"times.ttf", "timesbd.ttf", "timesi.ttf"}
+		}
+		regular := filepath.Join(windir, "Fonts", names[0])
+		bold := filepath.Join(windir, "Fonts", names[1])
+		italic := filepath.Join(windir, "Fonts", names[2])
 		if fileExists(regular) && fileExists(bold) && fileExists(italic) {
 			return regular, bold, italic, nil
 		}
 	}
-	// Non-Windows fallbacks: metric compatible faces used by the build and test machines.
-	fallbacks := [][3]string{
-		{"/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf", "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf", "/usr/share/fonts/truetype/liberation/LiberationSans-Italic.ttf"},
-		{"/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf"},
-		{"/Library/Fonts/Arial.ttf", "/Library/Fonts/Arial Bold.ttf", "/Library/Fonts/Arial Italic.ttf"},
-	}
-	for _, candidate := range fallbacks {
-		if fileExists(candidate[0]) && fileExists(candidate[1]) && fileExists(candidate[2]) {
-			return candidate[0], candidate[1], candidate[2], nil
-		}
+	if serif {
+		return resolvePDFFonts(false)
 	}
 	return "", "", "", errors.New("\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043d\u0430\u0439\u0442\u0438 \u0441\u0438\u0441\u0442\u0435\u043c\u043d\u044b\u0435 \u0448\u0440\u0438\u0444\u0442\u044b \u0434\u043b\u044f \u0433\u0435\u043d\u0435\u0440\u0430\u0446\u0438\u0438 PDF. \u0423\u0431\u0435\u0434\u0438\u0442\u0435\u0441\u044c, \u0447\u0442\u043e \u0432 Windows \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u044b Arial \u0438\u043b\u0438 Segoe UI.")
 }

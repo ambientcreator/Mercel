@@ -423,6 +423,11 @@ func (a *App) migrateDatabase() error {
 	if _, err := a.db.Exec(`UPDATE users SET preferred_contract_code = '1' WHERE preferred_contract_code IS NULL OR TRIM(preferred_contract_code) = '' OR preferred_contract_code NOT IN ('1', '2')`); err != nil {
 		return fmt.Errorf("backfill users.preferred_contract_code: %w", err)
 	}
+	for legacy, current := range legacyActTemplateIDs {
+		if _, err := a.db.Exec(`UPDATE users SET act_template = ? WHERE act_template = ?`, current, legacy); err != nil {
+			return fmt.Errorf("normalize users.act_template %s: %w", legacy, err)
+		}
+	}
 	if err := a.backfillActTemplates(); err != nil {
 		return fmt.Errorf("backfill users.act_template: %w", err)
 	}

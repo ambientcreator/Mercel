@@ -12,12 +12,25 @@ import (
 // EN: What it does: every employee is permanently bound to one of the printable act blanks, so two employees
 // EN: from the same department hand in visually different documents for the very same calculation.
 //
-// EN: Key points: identifiers repeat the source file numbering (Акт_бланк_1, Акт_бланк_3); values are stored in
-// EN: users.act_template and must stay stable, because changing them would silently reassign existing employees.
+// EN: Key points: "standard" is the blank Mercel shipped from the start, the numbered ones repeat the source file
+// EN: numbering (Акт_бланк_1, Акт_бланк_3); values are stored in users.act_template and must stay stable, because
+// EN: changing them would silently reassign existing employees.
 const (
-	ActTemplateClassic     = "1"
-	ActTemplateTypographic = "3"
+	ActTemplateStandard    = "standard"
+	ActTemplateFormal      = "blank1"
+	ActTemplateTypographic = "blank3"
 )
+
+// EN: Variable `legacyActTemplateIDs`.
+//
+// EN: What it does: legacyActTemplateIDs maps the first generation of identifiers onto the current ones.
+//
+// EN: Key points: the very first version stored "1" for the standard blank and "3" for the typographic one; those
+// EN: rows are rewritten by the migration, and the mapping here keeps any stale value working in the meantime.
+var legacyActTemplateIDs = map[string]string{
+	"1": ActTemplateStandard,
+	"3": ActTemplateTypographic,
+}
 
 // EN: Variable `actTemplateIDs`.
 //
@@ -25,7 +38,7 @@ const (
 //
 // EN: Key points: the random assignment picks from this slice, so adding a new blank here is enough to include it
 // EN: in the rotation; the order is not significant.
-var actTemplateIDs = []string{ActTemplateClassic, ActTemplateTypographic}
+var actTemplateIDs = []string{ActTemplateStandard, ActTemplateFormal, ActTemplateTypographic}
 
 // EN: Function `actTemplateLabel`.
 //
@@ -34,10 +47,12 @@ var actTemplateIDs = []string{ActTemplateClassic, ActTemplateTypographic}
 // EN: Key points: unknown identifiers fall back to the classic label, so the caller never renders an empty string.
 func actTemplateLabel(id string) string {
 	switch normalizeActTemplate(id) {
+	case ActTemplateFormal:
+		return "Бланк №1 — типовой"
 	case ActTemplateTypographic:
 		return "Бланк №3 — типографский"
 	default:
-		return "Бланк №1 — классический"
+		return "Стандартный бланк"
 	}
 }
 
@@ -49,6 +64,9 @@ func actTemplateLabel(id string) string {
 // EN: blank still has to be assigned.
 func normalizeActTemplate(value string) string {
 	trimmed := strings.TrimSpace(value)
+	if mapped, ok := legacyActTemplateIDs[trimmed]; ok {
+		trimmed = mapped
+	}
 	for _, id := range actTemplateIDs {
 		if trimmed == id {
 			return trimmed
@@ -66,7 +84,7 @@ func actTemplateOrDefault(value string) string {
 	if id := normalizeActTemplate(value); id != "" {
 		return id
 	}
-	return ActTemplateClassic
+	return ActTemplateStandard
 }
 
 // EN: Function `ActTemplateOptions`.

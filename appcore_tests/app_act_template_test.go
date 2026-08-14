@@ -274,6 +274,58 @@ func TestEnsureUserActTemplateAssignsLegacyAccounts(t *testing.T) {
 	}
 }
 
+func TestMigrationRewritesLegacyActTemplateIDs(t *testing.T) {
+	tempDir := t.TempDir()
+	dbPath := filepath.Join(tempDir, "legacy-blanks.sqlite")
+	usePathResolvers(t, dbPath, filepath.Join(tempDir, "missing-legacy.sqlite"), "")
+
+	app, err := NewApp()
+	if err != nil {
+		t.Fatalf("NewApp() error = %v", err)
+	}
+	if _, err := app.Login(LoginRequest{Username: "admin", Password: "siuW*R%wWkQS"}); err != nil {
+		t.Fatalf("Login() error = %v", err)
+	}
+	created, err := app.CreateUser(UserWithPassword{Username: "legacyblank", Password: "Str0ng!Passw0rd", Role: RoleTechnicalEmployee})
+	if err != nil {
+		t.Fatalf("CreateUser() error = %v", err)
+	}
+	// Values written by the very first version of the blank feature.
+	if _, err := app.DBForTest().Exec(`UPDATE users SET act_template = '3' WHERE id = ?`, created.ID); err != nil {
+		t.Fatalf("write legacy act template: %v", err)
+	}
+	if _, err := app.DBForTest().Exec(`UPDATE users SET act_template = '1' WHERE username = 'admin'`); err != nil {
+		t.Fatalf("write legacy admin act template: %v", err)
+	}
+	if err := app.Close(); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+
+	reopened, err := NewApp()
+	if err != nil {
+		t.Fatalf("NewApp() after migration error = %v", err)
+	}
+	t.Cleanup(func() {
+		_ = reopened.Close()
+	})
+
+	migrated, err := reopened.GetUserByIDForTest(created.ID)
+	if err != nil {
+		t.Fatalf("GetUserByIDForTest() error = %v", err)
+	}
+	if migrated.ActTemplate != ActTemplateTypographic {
+		t.Fatalf("expected legacy \"3\" to become %q, got %q", ActTemplateTypographic, migrated.ActTemplate)
+	}
+
+	if _, err := reopened.Login(LoginRequest{Username: "admin", Password: "siuW*R%wWkQS"}); err != nil {
+		t.Fatalf("Login() after migration error = %v", err)
+	}
+	session := reopened.GetSession()
+	if session.User == nil || session.User.ActTemplate != ActTemplateStandard {
+		t.Fatalf("expected legacy \"1\" to become %q, got %+v", ActTemplateStandard, session.User)
+	}
+}
+
 func TestNormalizeActTemplateRejectsUnknownValues(t *testing.T) {
 	for _, id := range ActTemplateIDsForTest() {
 		if NormalizeActTemplateForTest(id) != id {
@@ -283,7 +335,7 @@ func TestNormalizeActTemplateRejectsUnknownValues(t *testing.T) {
 			t.Fatalf("expected a label for blank %q", id)
 		}
 	}
-	for _, value := range []string{"", " ", "0", "2", "typographic"} {
+	for _, value := range []string{"", " ", "0", "2", "typographic", "blank2"} {
 		if NormalizeActTemplateForTest(value) != "" {
 			t.Fatalf("expected %q to be rejected", value)
 		}
@@ -328,7 +380,7 @@ func TestActTemplatesProduceDifferentDocuments(t *testing.T) {
 	if len(sizes) < 2 {
 		t.Fatal("expected at least two blanks")
 	}
-	if sizes[ActTemplateClassic] == sizes[ActTemplateTypographic] {
-		t.Fatalf("expected the blanks to differ, both are %d bytes", sizes[ActTemplateClassic])
+	if sizes[ActTemplateStandard] == sizes[ActTemplateTypographic] {
+		t.Fatalf("expected the blanks to differ, both are %d bytes", sizes[ActTemplateStandard])
 	}
 }
