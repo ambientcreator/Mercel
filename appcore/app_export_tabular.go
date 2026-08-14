@@ -3,7 +3,6 @@ package appcore
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/jung-kurt/gofpdf"
 )
@@ -230,6 +229,9 @@ func layoutTabularAct(pdf *gofpdf.Fpdf, data actPDFData, layout tabularActLayout
 		y = drawTabularInfoRow(pdf, layout, y, row[0], row[1], render)
 	}
 
+	// Acceptance statement, the same sentence the other blanks carry above their price list.
+	y = drawTabularFullWidthRow(pdf, layout, y, tabularActAcceptanceText(), render)
+
 	// Price list header.
 	if render {
 		pdf.SetFont("Mercel", "B", layout.HeaderFont)
@@ -264,19 +266,7 @@ func layoutTabularAct(pdf *gofpdf.Fpdf, data actPDFData, layout tabularActLayout
 	y = drawTabularInfoRow(pdf, layout, y, "СУММА ПРОПИСЬЮ", tabularActWords(data), render)
 
 	// Closing statement.
-	pdf.SetFont("Mercel", "", layout.ClosingFont)
-	closingWidth := width - (layout.CellPadX * 2)
-	closingLines := pdf.SplitText(typoClosingText(), closingWidth)
-	if len(closingLines) == 0 {
-		closingLines = []string{""}
-	}
-	if render {
-		for index, line := range closingLines {
-			pdf.SetXY(left+layout.CellPadX, y+layout.ClosingPadY+(float64(index)*layout.ClosingHeight))
-			pdf.CellFormat(closingWidth, layout.ClosingHeight, line, "", 0, "L", false, 0, "")
-		}
-	}
-	y = drawTabularRule(pdf, left, right, y+(layout.ClosingPadY*2)+(float64(len(closingLines))*layout.ClosingHeight), render)
+	y = drawTabularFullWidthRow(pdf, layout, y, typoClosingText(), render)
 
 	// Signatures.
 	y = drawTabularSignatures(pdf, layout, data, y, render)
@@ -299,6 +289,30 @@ func drawTabularRule(pdf *gofpdf.Fpdf, left float64, right float64, y float64, r
 		pdf.Line(left, y, right, y)
 	}
 	return y
+}
+
+// EN: Function `drawTabularFullWidthRow`.
+//
+// EN: What it does: drawTabularFullWidthRow renders one label-less row spanning the whole frame.
+//
+// EN: Key points: the text wraps inside the frame, so the row height is measured rather than assumed.
+func drawTabularFullWidthRow(pdf *gofpdf.Fpdf, layout tabularActLayout, y float64, text string, render bool) float64 {
+	left := layout.Left
+	right := left + layout.ContentWidth
+	textWidth := layout.ContentWidth - (layout.CellPadX * 2)
+
+	pdf.SetFont("Mercel", "", layout.ClosingFont)
+	lines := pdf.SplitText(text, textWidth)
+	if len(lines) == 0 {
+		lines = []string{""}
+	}
+	if render {
+		for index, line := range lines {
+			pdf.SetXY(left+layout.CellPadX, y+layout.ClosingPadY+(float64(index)*layout.ClosingHeight))
+			pdf.CellFormat(textWidth, layout.ClosingHeight, line, "", 0, "L", false, 0, "")
+		}
+	}
+	return drawTabularRule(pdf, left, right, y+(layout.ClosingPadY*2)+(float64(len(lines))*layout.ClosingHeight), render)
 }
 
 // EN: Function `drawTabularHeaderCell`.
@@ -468,27 +482,24 @@ func tabularActSubtitle(data actPDFData) string {
 //
 // EN: What it does: tabularActInfoRows builds the labelled rows describing the parties and the basis.
 //
-// EN: Key points: the service period is not stored with the calculation, so it is taken as the calendar month the
-// EN: act is dated with, which is how these acts are issued.
+// EN: Key points: the rows only identify who signs and under which contract; the acceptance itself is stated by
+// EN: tabularActAcceptanceText right above the price list.
 func tabularActInfoRows(data actPDFData) [][2]string {
 	return [][2]string{
 		{"ЗАКАЗЧИК", fmt.Sprintf("ООО «%s», в лице генерального директора %s, действующего на основании Устава", data.CustomerName, resolveContractDirectorName(data.ContractTitle))},
 		{"ИСПОЛНИТЕЛЬ", fmt.Sprintf("Индивидуальный предприниматель %s", strings.TrimSpace(data.EmployeeFullName))},
 		{"ОСНОВАНИЕ", fmt.Sprintf("Договор № %s от %s", data.ContractNumber, formalContractDate(data.ContractDate))},
-		{"ПЕРИОД ОКАЗАНИЯ УСЛУГ", tabularActPeriod(data.GeneratedAt)},
 	}
 }
 
-// EN: Function `tabularActPeriod`.
+// EN: Function `tabularActAcceptanceText`.
 //
-// EN: What it does: tabularActPeriod returns the calendar month of the act as a "с … по …" period.
+// EN: What it does: tabularActAcceptanceText states that the contractor performed and the customer accepted.
 //
-// EN: Key points: both bounds are written the way the standard blank writes the act date, so one document never
-// EN: mixes two date formats.
-func tabularActPeriod(value time.Time) string {
-	first := time.Date(value.Year(), value.Month(), 1, 0, 0, 0, 0, value.Location())
-	last := first.AddDate(0, 1, -1)
-	return fmt.Sprintf("с %s по %s", russianActDate(first), russianActDate(last))
+// EN: Key points: every other blank carries this sentence right above its price list, so blank №5 says it too
+// EN: instead of leaving the acceptance implied by the party rows alone.
+func tabularActAcceptanceText() string {
+	return "Исполнитель выполнил, а Заказчик принял следующие услуги:"
 }
 
 // EN: Function `tabularActWords`.
