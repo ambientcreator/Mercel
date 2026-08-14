@@ -81,6 +81,30 @@ func ResolveContractInfoForTest(code string) (contractInfo, error) {
 	return resolveContractInfo(code)
 }
 
+func ActTemplateIDsForTest() []string {
+	return append([]string(nil), actTemplateIDs...)
+}
+
+func NormalizeActTemplateForTest(value string) string {
+	return normalizeActTemplate(value)
+}
+
+func ActTemplateLabelForTest(value string) string {
+	return actTemplateLabel(value)
+}
+
+func (a *App) EnsureUserActTemplateForTest(userID int64, current string) (string, error) {
+	return a.ensureUserActTemplate(userID, current)
+}
+
+func RenderActPDFForTest(path string, req ExportCalculationRequest, currentUser *User) error {
+	data, err := buildActPDFData(req, currentUser)
+	if err != nil {
+		return err
+	}
+	return renderActPDF(path, data)
+}
+
 func ArchiveDateTitleForTest(now time.Time) string {
 	return archiveDateTitle(now)
 }

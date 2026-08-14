@@ -296,6 +296,7 @@ func (a *App) initDatabase() error {
 			contract_spbks_number TEXT NOT NULL DEFAULT '',
 			contract_grizabl_number TEXT NOT NULL DEFAULT '',
 			contract_signed_at TEXT NOT NULL DEFAULT '',
+			act_template TEXT NOT NULL DEFAULT '',
 			role TEXT NOT NULL,
 			created_at TEXT NOT NULL
 		);`,
@@ -355,6 +356,9 @@ func (a *App) migrateDatabase() error {
 	}
 	if err := ensureColumnExists(a.db, "users", "contract_signed_at", `ALTER TABLE users ADD COLUMN contract_signed_at TEXT NOT NULL DEFAULT ''`); err != nil {
 		return fmt.Errorf("migrate users.contract_signed_at: %w", err)
+	}
+	if err := ensureColumnExists(a.db, "users", "act_template", `ALTER TABLE users ADD COLUMN act_template TEXT NOT NULL DEFAULT ''`); err != nil {
+		return fmt.Errorf("migrate users.act_template: %w", err)
 	}
 	if err := ensureColumnExists(a.db, "calculations", "created_by", `ALTER TABLE calculations ADD COLUMN created_by TEXT NOT NULL DEFAULT ''`); err != nil {
 		return fmt.Errorf("migrate calculations.created_by: %w", err)
@@ -418,6 +422,9 @@ func (a *App) migrateDatabase() error {
 	}
 	if _, err := a.db.Exec(`UPDATE users SET preferred_contract_code = '1' WHERE preferred_contract_code IS NULL OR TRIM(preferred_contract_code) = '' OR preferred_contract_code NOT IN ('1', '2')`); err != nil {
 		return fmt.Errorf("backfill users.preferred_contract_code: %w", err)
+	}
+	if err := a.backfillActTemplates(); err != nil {
+		return fmt.Errorf("backfill users.act_template: %w", err)
 	}
 	if _, err := a.db.Exec(`UPDATE calculations SET created_role = ? WHERE created_role = 'support_manager'`, RoleSupportHead); err != nil {
 		return fmt.Errorf("normalize calculations.support_manager role: %w", err)
@@ -525,7 +532,7 @@ func (a *App) seedAdmin() error {
 		return fmt.Errorf("check admin user: %w", err)
 	}
 	if count == 0 {
-		_, err := a.db.Exec(`INSERT INTO users(username, password_hash, full_name, last_act_number, role, created_at) VALUES(?, ?, ?, ?, ?, ?)`, "admin", passwordHash, "", 1, RoleAdmin, time.Now().Format(time.RFC3339))
+		_, err := a.db.Exec(`INSERT INTO users(username, password_hash, full_name, last_act_number, act_template, role, created_at) VALUES(?, ?, ?, ?, ?, ?, ?)`, "admin", passwordHash, "", 1, randomActTemplate(), RoleAdmin, time.Now().Format(time.RFC3339))
 		if err != nil {
 			return fmt.Errorf("seed admin user: %w", err)
 		}

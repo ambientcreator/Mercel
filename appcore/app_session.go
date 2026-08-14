@@ -118,8 +118,8 @@ func (a *App) Login(req LoginRequest) (SessionState, error) {
 
 	var user User
 	var passwordHash string
-	err := a.db.QueryRow(`SELECT id, username, password_hash, full_name, last_act_number, preferred_contract_code, contract_spbks_number, contract_grizabl_number, contract_signed_at, role, created_at FROM users WHERE username = ?`, username).
-		Scan(&user.ID, &user.Username, &passwordHash, &user.FullName, &user.LastActNumber, &user.PreferredContractCode, &user.ContractSPBKSNumber, &user.ContractGrizablNumber, &user.ContractSignedAt, &user.Role, &user.CreatedAt)
+	err := a.db.QueryRow(`SELECT id, username, password_hash, full_name, last_act_number, preferred_contract_code, contract_spbks_number, contract_grizabl_number, contract_signed_at, act_template, role, created_at FROM users WHERE username = ?`, username).
+		Scan(&user.ID, &user.Username, &passwordHash, &user.FullName, &user.LastActNumber, &user.PreferredContractCode, &user.ContractSPBKSNumber, &user.ContractGrizablNumber, &user.ContractSignedAt, &user.ActTemplate, &user.Role, &user.CreatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return SessionState{}, errors.New("\u041f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044c \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d.")

@@ -25,6 +25,7 @@ type actPDFData struct {
 	Items            []CalculationItem
 	TotalWords       string
 	TotalCurrency    string
+	ActTemplate      string
 }
 
 const (
@@ -84,6 +85,12 @@ func (a *App) ExportCurrentCalculationPDF(req ExportCalculationRequest) (string,
 	if err != nil {
 		return "", err
 	}
+
+	template, err := a.ensureUserActTemplate(user.ID, user.ActTemplate)
+	if err != nil {
+		return "", err
+	}
+	user.ActTemplate = template
 
 	data, err := buildActPDFData(req, user)
 	if err != nil {
@@ -202,7 +209,21 @@ func buildActPDFData(req ExportCalculationRequest, currentUser *User) (actPDFDat
 		Items:            exportItems,
 		TotalWords:       totalWords,
 		TotalCurrency:    rubleNoun(total),
+		ActTemplate:      actTemplateOrDefault(currentUserActTemplate(currentUser)),
 	}, nil
+}
+
+// EN: Function `currentUserActTemplate`.
+//
+// EN: What it does: currentUserActTemplate reads the blank assigned to the acting user without panicking on a nil session.
+//
+// EN: Key points: buildActPDFData is also called from tests with a bare user, so a missing blank must simply fall
+// EN: back to the classic act instead of failing the export.
+func currentUserActTemplate(currentUser *User) string {
+	if currentUser == nil {
+		return ""
+	}
+	return currentUser.ActTemplate
 }
 
 func resolveContractInfo(code string) (contractInfo, error) {
@@ -228,6 +249,21 @@ func resolveContractInfo(code string) (contractInfo, error) {
 	}
 }
 
+// EN: Function `errActDoesNotFit`.
+//
+// EN: What it does: errActDoesNotFit is the single message shown when no blank scale keeps the act on one sheet.
+//
+// EN: Key points: every blank must fit exactly one A4 page, so all renderers report the same actionable hint.
+func errActDoesNotFit() error {
+	return errors.New("\u0414\u043e\u043a\u0443\u043c\u0435\u043d\u0442 \u043d\u0435 \u043f\u043e\u043c\u0435\u0449\u0430\u0435\u0442\u0441\u044f \u043d\u0430 \u043e\u0434\u0438\u043d \u043b\u0438\u0441\u0442 PDF. \u0423\u043c\u0435\u043d\u044c\u0448\u0438\u0442\u0435 \u043a\u043e\u043b\u0438\u0447\u0435\u0441\u0442\u0432\u043e \u0443\u0441\u043b\u0443\u0433 \u0438\u043b\u0438 \u0434\u043b\u0438\u043d\u0443 \u043d\u0430\u0437\u0432\u0430\u043d\u0438\u0439.")
+}
+
+// EN: Function `renderActPDF`.
+//
+// EN: What it does: renderActPDF prepares the shared PDF canvas and hands it to the blank assigned to the employee.
+//
+// EN: Key points: every blank draws on the same A4 page with auto page breaks disabled, and the result is rejected
+// EN: when the content spilled past the printable area, so an act is always exactly one sheet.
 func renderActPDF(path string, data actPDFData) error {
 	fontRegular, fontBold, fontItalic, err := resolvePDFFonts()
 	if err != nil {
@@ -237,28 +273,79 @@ func renderActPDF(path string, data actPDFData) error {
 	pdf := gofpdf.New("P", "mm", "A4", "")
 	pdf.SetMargins(10, 12, 10)
 	pdf.SetAutoPageBreak(false, 0)
-	pdf.AddUTF8Font("Mercel", "", fontRegular)
-	pdf.AddUTF8Font("Mercel", "B", fontBold)
-	pdf.AddUTF8Font("Mercel", "I", fontItalic)
+	for _, font := range [][2]string{{"", fontRegular}, {"B", fontBold}, {"I", fontItalic}} {
+		raw, err := os.ReadFile(font[1])
+		if err != nil {
+			return fmt.Errorf("read font %s: %w", font[1], err)
+		}
+		pdf.AddUTF8FontFromBytes("Mercel", font[0], raw)
+	}
+	if err := pdf.Error(); err != nil {
+		return fmt.Errorf("load pdf fonts: %w", err)
+	}
 	pdf.SetFont("Mercel", "", 10)
 	pdf.AddPage()
 
-	layout, err := fitActPDFLayout(pdf, data)
+	var bottom float64
+	switch actTemplateOrDefault(data.ActTemplate) {
+	case ActTemplateTypographic:
+		bottom, err = renderTypographicAct(pdf, data)
+	default:
+		bottom, err = renderClassicAct(pdf, data)
+	}
 	if err != nil {
 		return err
 	}
-
-	drawActPDF(pdf, data, layout)
 	if pdf.PageNo() > 1 {
-		return errors.New("\u0414\u043e\u043a\u0443\u043c\u0435\u043d\u0442 \u043d\u0435 \u043f\u043e\u043c\u0435\u0449\u0430\u0435\u0442\u0441\u044f \u043d\u0430 \u043e\u0434\u0438\u043d \u043b\u0438\u0441\u0442 PDF. \u0423\u043c\u0435\u043d\u044c\u0448\u0438\u0442\u0435 \u043a\u043e\u043b\u0438\u0447\u0435\u0441\u0442\u0432\u043e \u0443\u0441\u043b\u0443\u0433 \u0438\u043b\u0438 \u0434\u043b\u0438\u043d\u0443 \u043d\u0430\u0437\u0432\u0430\u043d\u0438\u0439.")
+		return errActDoesNotFit()
 	}
-	if pdf.GetY() > layout.Bottom {
-		return errors.New("\u0414\u043e\u043a\u0443\u043c\u0435\u043d\u0442 \u043d\u0435 \u043f\u043e\u043c\u0435\u0449\u0430\u0435\u0442\u0441\u044f \u043d\u0430 \u043e\u0434\u0438\u043d \u043b\u0438\u0441\u0442 PDF. \u0423\u043c\u0435\u043d\u044c\u0448\u0438\u0442\u0435 \u043a\u043e\u043b\u0438\u0447\u0435\u0441\u0442\u0432\u043e \u0443\u0441\u043b\u0443\u0433 \u0438\u043b\u0438 \u0434\u043b\u0438\u043d\u0443 \u043d\u0430\u0437\u0432\u0430\u043d\u0438\u0439.")
+	if pdf.GetY() > bottom {
+		return errActDoesNotFit()
 	}
 	if err := pdf.OutputFileAndClose(path); err != nil {
 		return fmt.Errorf("save pdf: %w", err)
 	}
 	return nil
+}
+
+// EN: Function `renderClassicAct`.
+//
+// EN: What it does: renderClassicAct draws blank \u21161 and reports the bottom edge the content had to stay above.
+//
+// EN: Key points: the scale is fitted first so the whole act lands on a single page.
+func renderClassicAct(pdf *gofpdf.Fpdf, data actPDFData) (float64, error) {
+	layout, err := fitActPDFLayout(pdf, data)
+	if err != nil {
+		return 0, err
+	}
+	drawActPDF(pdf, data, layout)
+	return layout.Bottom, nil
+}
+
+// EN: Function `fitActScale`.
+//
+// EN: What it does: fitActScale finds the largest scale between minimum and target for which the blank still fits.
+//
+// EN: Key points: shared by every blank; returns false when even the smallest scale overflows the page, which the
+// EN: caller turns into a user facing error.
+func fitActScale(minimum float64, target float64, fits func(scale float64) bool) (float64, bool) {
+	if fits(target) {
+		return target, true
+	}
+	if !fits(minimum) {
+		return 0, false
+	}
+	low := minimum
+	high := target
+	for i := 0; i < 12; i++ {
+		mid := (low + high) / 2
+		if fits(mid) {
+			low = mid
+			continue
+		}
+		high = mid
+	}
+	return low, true
 }
 
 func resolvePDFFonts() (string, string, string, error) {
@@ -279,6 +366,17 @@ func resolvePDFFonts() (string, string, string, error) {
 			return regular, bold, italic, nil
 		}
 	}
+	// Non-Windows fallbacks: metric compatible faces used by the build and test machines.
+	fallbacks := [][3]string{
+		{"/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf", "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf", "/usr/share/fonts/truetype/liberation/LiberationSans-Italic.ttf"},
+		{"/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf"},
+		{"/Library/Fonts/Arial.ttf", "/Library/Fonts/Arial Bold.ttf", "/Library/Fonts/Arial Italic.ttf"},
+	}
+	for _, candidate := range fallbacks {
+		if fileExists(candidate[0]) && fileExists(candidate[1]) && fileExists(candidate[2]) {
+			return candidate[0], candidate[1], candidate[2], nil
+		}
+	}
 	return "", "", "", errors.New("\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043d\u0430\u0439\u0442\u0438 \u0441\u0438\u0441\u0442\u0435\u043c\u043d\u044b\u0435 \u0448\u0440\u0438\u0444\u0442\u044b \u0434\u043b\u044f \u0433\u0435\u043d\u0435\u0440\u0430\u0446\u0438\u0438 PDF. \u0423\u0431\u0435\u0434\u0438\u0442\u0435\u0441\u044c, \u0447\u0442\u043e \u0432 Windows \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u044b Arial \u0438\u043b\u0438 Segoe UI.")
 }
 
@@ -289,28 +387,14 @@ func fileExists(path string) bool {
 
 func fitActPDFLayout(pdf *gofpdf.Fpdf, data actPDFData) (actPDFLayout, error) {
 	// Prefer a larger print-friendly layout, but back off just enough to keep A4 on one page.
-	target := newActPDFLayout(pdf, actPDFTargetScale)
-	if estimateActPDFHeight(pdf, data, target) <= target.Bottom {
-		return target, nil
+	scale, ok := fitActScale(actPDFMinScale, actPDFTargetScale, func(scale float64) bool {
+		candidate := newActPDFLayout(pdf, scale)
+		return estimateActPDFHeight(pdf, data, candidate) <= candidate.Bottom
+	})
+	if !ok {
+		return actPDFLayout{}, errActDoesNotFit()
 	}
-
-	minimum := newActPDFLayout(pdf, actPDFMinScale)
-	if estimateActPDFHeight(pdf, data, minimum) > minimum.Bottom {
-		return actPDFLayout{}, errors.New("\u0414\u043e\u043a\u0443\u043c\u0435\u043d\u0442 \u043d\u0435 \u043f\u043e\u043c\u0435\u0449\u0430\u0435\u0442\u0441\u044f \u043d\u0430 \u043e\u0434\u0438\u043d \u043b\u0438\u0441\u0442 PDF. \u0423\u043c\u0435\u043d\u044c\u0448\u0438\u0442\u0435 \u043a\u043e\u043b\u0438\u0447\u0435\u0441\u0442\u0432\u043e \u0443\u0441\u043b\u0443\u0433 \u0438\u043b\u0438 \u0434\u043b\u0438\u043d\u0443 \u043d\u0430\u0437\u0432\u0430\u043d\u0438\u0439.")
-	}
-
-	low := actPDFMinScale
-	high := actPDFTargetScale
-	for i := 0; i < 12; i++ {
-		mid := (low + high) / 2
-		layout := newActPDFLayout(pdf, mid)
-		if estimateActPDFHeight(pdf, data, layout) <= layout.Bottom {
-			low = mid
-			continue
-		}
-		high = mid
-	}
-	return newActPDFLayout(pdf, low), nil
+	return newActPDFLayout(pdf, scale), nil
 }
 
 func newActPDFLayout(pdf *gofpdf.Fpdf, scale float64) actPDFLayout {

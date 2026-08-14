@@ -190,6 +190,7 @@ type User struct {
 	ContractSPBKSNumber   string `json:"contractSPBKSNumber"`
 	ContractGrizablNumber string `json:"contractGrizablNumber"`
 	ContractSignedAt      string `json:"contractSignedAt"`
+	ActTemplate           string `json:"actTemplate"`
 }
 
 // EN: Data type `UserWithPassword`.
