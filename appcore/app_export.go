@@ -266,7 +266,7 @@ func errActDoesNotFit() error {
 // EN: when the content spilled past the printable area, so an act is always exactly one sheet.
 func renderActPDF(path string, data actPDFData) error {
 	template := actTemplateOrDefault(data.ActTemplate)
-	fontRegular, fontBold, fontItalic, err := resolvePDFFonts(template == ActTemplateFormal)
+	fontRegular, fontBold, fontItalic, err := resolvePDFFonts(actTemplateFont(template))
 	if err != nil {
 		return err
 	}
@@ -275,6 +275,9 @@ func renderActPDF(path string, data actPDFData) error {
 	pdf.SetMargins(10, 12, 10)
 	pdf.SetAutoPageBreak(false, 0)
 	for _, font := range [][2]string{{"", fontRegular}, {"B", fontBold}, {"I", fontItalic}} {
+		if font[1] == "" {
+			continue
+		}
 		raw, err := os.ReadFile(font[1])
 		if err != nil {
 			return fmt.Errorf("read font %s: %w", font[1], err)
@@ -293,6 +296,10 @@ func renderActPDF(path string, data actPDFData) error {
 		bottom, err = renderFormalAct(pdf, data)
 	case ActTemplateTypographic:
 		bottom, err = renderTypographicAct(pdf, data)
+	case ActTemplateContract:
+		bottom, err = renderContractAct(pdf, data)
+	case ActTemplateTabular:
+		bottom, err = renderTabularAct(pdf, data)
 	default:
 		bottom, err = renderStandardAct(pdf, data)
 	}
@@ -351,64 +358,136 @@ func fitActScale(minimum float64, target float64, fits func(scale float64) bool)
 	return low, true
 }
 
-// EN: Variable `sansPDFFontCandidates`.
+// EN: Font families used by the act blanks.
 //
-// EN: What it does: sansPDFFontCandidates lists the sans-serif faces used by the standard and typographic blanks.
+// EN: What it does: every blank names the typeface it is designed for; the exporter resolves and embeds only that
+// EN: one, which both keeps the PDF small and makes the blanks visibly different from each other.
 //
-// EN: Key points: Windows faces come first, then the Linux/macOS fallbacks used by build and test machines.
-var sansPDFFontCandidates = [][3]string{
-	{`C:\Windows\Fonts\arial.ttf`, `C:\Windows\Fonts\arialbd.ttf`, `C:\Windows\Fonts\ariali.ttf`},
-	{`C:\Windows\Fonts\segoeui.ttf`, `C:\Windows\Fonts\segoeuib.ttf`, `C:\Windows\Fonts\segoeuii.ttf`},
-	{"/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf", "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf", "/usr/share/fonts/truetype/liberation/LiberationSans-Italic.ttf"},
-	{"/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf"},
-	{"/Library/Fonts/Arial.ttf", "/Library/Fonts/Arial Bold.ttf", "/Library/Fonts/Arial Italic.ttf"},
+// EN: Key points: Windows faces come first, then the Linux/macOS fallbacks used by build and test machines; a
+// EN: family that is not installed degrades to its fallback family instead of failing the export.
+const (
+	actFontSans    = "sans"
+	actFontSerif   = "serif"
+	actFontGeorgia = "georgia"
+	actFontTahoma  = "tahoma"
+)
+
+// EN: Variable `actFontCandidates`.
+//
+// EN: What it does: actFontCandidates lists the regular/bold/italic file trios of every font family.
+//
+// EN: Key points: an empty italic slot means the family ships without one (Tahoma), and the italic style is then
+// EN: simply not registered — no blank that uses such a family asks for italics.
+var actFontCandidates = map[string][][3]string{
+	actFontSans: {
+		{`C:\Windows\Fonts\arial.ttf`, `C:\Windows\Fonts\arialbd.ttf`, `C:\Windows\Fonts\ariali.ttf`},
+		{`C:\Windows\Fonts\segoeui.ttf`, `C:\Windows\Fonts\segoeuib.ttf`, `C:\Windows\Fonts\segoeuii.ttf`},
+		{"/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf", "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf", "/usr/share/fonts/truetype/liberation/LiberationSans-Italic.ttf"},
+		{"/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf"},
+		{"/Library/Fonts/Arial.ttf", "/Library/Fonts/Arial Bold.ttf", "/Library/Fonts/Arial Italic.ttf"},
+	},
+	actFontSerif: {
+		{`C:\Windows\Fonts\times.ttf`, `C:\Windows\Fonts\timesbd.ttf`, `C:\Windows\Fonts\timesi.ttf`},
+		{"/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf", "/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf", "/usr/share/fonts/truetype/liberation/LiberationSerif-Italic.ttf"},
+		{"/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Italic.ttf"},
+		{"/Library/Fonts/Times New Roman.ttf", "/Library/Fonts/Times New Roman Bold.ttf", "/Library/Fonts/Times New Roman Italic.ttf"},
+	},
+	actFontGeorgia: {
+		{`C:\Windows\Fonts\georgia.ttf`, `C:\Windows\Fonts\georgiab.ttf`, `C:\Windows\Fonts\georgiai.ttf`},
+		{"/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Italic.ttf"},
+		{"/Library/Fonts/Georgia.ttf", "/Library/Fonts/Georgia Bold.ttf", "/Library/Fonts/Georgia Italic.ttf"},
+	},
+	actFontTahoma: {
+		{`C:\Windows\Fonts\tahoma.ttf`, `C:\Windows\Fonts\tahomabd.ttf`, ""},
+		{`C:\Windows\Fonts\verdana.ttf`, `C:\Windows\Fonts\verdanab.ttf`, `C:\Windows\Fonts\verdanai.ttf`},
+		{"/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf"},
+	},
 }
 
-// EN: Variable `serifPDFFontCandidates`.
+// EN: Variable `actFontFallbacks`.
 //
-// EN: What it does: serifPDFFontCandidates lists the Times-like faces blank №1 is typeset with.
+// EN: What it does: actFontFallbacks says which family to try next when the requested one is missing.
 //
-// EN: Key points: the serif face is what makes blank №1 look different from the standard one, so it is resolved
-// EN: separately; when no serif face is installed the sans list is used instead of failing the export.
-var serifPDFFontCandidates = [][3]string{
-	{`C:\Windows\Fonts\times.ttf`, `C:\Windows\Fonts\timesbd.ttf`, `C:\Windows\Fonts\timesi.ttf`},
-	{"/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf", "/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf", "/usr/share/fonts/truetype/liberation/LiberationSerif-Italic.ttf"},
-	{"/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Italic.ttf"},
-	{"/Library/Fonts/Times New Roman.ttf", "/Library/Fonts/Times New Roman Bold.ttf", "/Library/Fonts/Times New Roman Italic.ttf"},
+// EN: Key points: sans has no fallback — failing to find it is the only case that aborts the export.
+var actFontFallbacks = map[string]string{
+	actFontSerif:   actFontSans,
+	actFontGeorgia: actFontSerif,
+	actFontTahoma:  actFontSans,
+}
+
+// EN: Function `actTemplateFont`.
+//
+// EN: What it does: actTemplateFont maps a blank onto the font family it is typeset with.
+//
+// EN: Key points: the typeface is a large part of what tells the blanks apart on paper.
+func actTemplateFont(template string) string {
+	switch template {
+	case ActTemplateFormal:
+		return actFontSerif
+	case ActTemplateContract:
+		return actFontGeorgia
+	case ActTemplateTabular:
+		return actFontTahoma
+	default:
+		return actFontSans
+	}
 }
 
 // EN: Function `resolvePDFFonts`.
 //
-// EN: What it does: resolvePDFFonts finds an installed regular/bold/italic trio for the requested style.
+// EN: What it does: resolvePDFFonts finds an installed regular/bold/italic trio for one font family.
 //
-// EN: Key points: only the family the chosen blank actually needs is resolved and embedded, which keeps the
-// EN: exported PDF small; a missing serif family silently falls back to the sans one.
-func resolvePDFFonts(serif bool) (string, string, string, error) {
-	candidates := sansPDFFontCandidates
-	if serif {
-		candidates = serifPDFFontCandidates
-	}
-	for _, candidate := range candidates {
-		if fileExists(candidate[0]) && fileExists(candidate[1]) && fileExists(candidate[2]) {
-			return candidate[0], candidate[1], candidate[2], nil
+// EN: Key points: the returned italic path is empty when the family has no italic face; a missing family falls back
+// EN: to a related one, and only a missing sans family is reported as an error.
+func resolvePDFFonts(family string) (string, string, string, error) {
+	for _, candidate := range actFontCandidates[family] {
+		if !fileExists(candidate[0]) || !fileExists(candidate[1]) {
+			continue
 		}
+		italic := candidate[2]
+		if italic != "" && !fileExists(italic) {
+			italic = ""
+		}
+		return candidate[0], candidate[1], italic, nil
 	}
 	if windir := os.Getenv("WINDIR"); windir != "" {
 		names := [3]string{"arial.ttf", "arialbd.ttf", "ariali.ttf"}
-		if serif {
+		if family == actFontSerif {
 			names = [3]string{"times.ttf", "timesbd.ttf", "timesi.ttf"}
 		}
 		regular := filepath.Join(windir, "Fonts", names[0])
 		bold := filepath.Join(windir, "Fonts", names[1])
 		italic := filepath.Join(windir, "Fonts", names[2])
-		if fileExists(regular) && fileExists(bold) && fileExists(italic) {
+		if fileExists(regular) && fileExists(bold) {
+			if !fileExists(italic) {
+				italic = ""
+			}
 			return regular, bold, italic, nil
 		}
 	}
-	if serif {
-		return resolvePDFFonts(false)
+	if fallback, ok := actFontFallbacks[family]; ok {
+		return resolvePDFFonts(fallback)
 	}
 	return "", "", "", errors.New("\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043d\u0430\u0439\u0442\u0438 \u0441\u0438\u0441\u0442\u0435\u043c\u043d\u044b\u0435 \u0448\u0440\u0438\u0444\u0442\u044b \u0434\u043b\u044f \u0433\u0435\u043d\u0435\u0440\u0430\u0446\u0438\u0438 PDF. \u0423\u0431\u0435\u0434\u0438\u0442\u0435\u0441\u044c, \u0447\u0442\u043e \u0432 Windows \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u044b Arial \u0438\u043b\u0438 Segoe UI.")
+}
+
+// EN: Function `drawActParagraph`.
+//
+// EN: What it does: drawActParagraph lays out one paragraph of a blank and returns its bottom edge.
+//
+// EN: Key points: shared by the blanks that measure and draw in a single walk — the height always comes from
+// EN: SplitText, so the measuring pass and the drawing pass can never disagree.
+func drawActParagraph(pdf *gofpdf.Fpdf, left float64, width float64, y float64, text string, style string, fontSize float64, lineHeight float64, align string, render bool) float64 {
+	pdf.SetFont("Mercel", style, fontSize)
+	lines := pdf.SplitText(text, width)
+	if len(lines) == 0 {
+		lines = []string{""}
+	}
+	if render {
+		pdf.SetXY(left, y)
+		pdf.MultiCell(width, lineHeight, text, "", align, false)
+	}
+	return y + (float64(len(lines)) * lineHeight)
 }
 
 func fileExists(path string) bool {

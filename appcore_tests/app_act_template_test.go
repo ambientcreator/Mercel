@@ -1,6 +1,7 @@
 package appcore_test
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -362,7 +363,7 @@ func TestEveryActTemplateRendersOnASinglePage(t *testing.T) {
 
 func TestActTemplatesProduceDifferentDocuments(t *testing.T) {
 	dir := t.TempDir()
-	sizes := make(map[string]int64)
+	seen := make(map[string]string)
 	for _, template := range ActTemplateIDsForTest() {
 		path := filepath.Join(dir, fmt.Sprintf("act_%s.pdf", template))
 		if err := RenderActPDFForTest(path, actTemplateExportRequest(4), &User{
@@ -371,16 +372,35 @@ func TestActTemplatesProduceDifferentDocuments(t *testing.T) {
 		}); err != nil {
 			t.Fatalf("RenderActPDFForTest(blank %s) error = %v", template, err)
 		}
-		info, err := os.Stat(path)
+		raw, err := os.ReadFile(path)
 		if err != nil {
-			t.Fatalf("stat pdf: %v", err)
+			t.Fatalf("read pdf: %v", err)
 		}
-		sizes[template] = info.Size()
+		digest := fmt.Sprintf("%x", sha256.Sum256(raw))
+		if other, exists := seen[digest]; exists {
+			t.Fatalf("blanks %s and %s render byte-identical documents", other, template)
+		}
+		seen[digest] = template
 	}
-	if len(sizes) < 2 {
-		t.Fatal("expected at least two blanks")
+	if len(seen) != len(ActTemplateIDsForTest()) {
+		t.Fatalf("expected %d distinct documents, got %d", len(ActTemplateIDsForTest()), len(seen))
 	}
-	if sizes[ActTemplateStandard] == sizes[ActTemplateTypographic] {
-		t.Fatalf("expected the blanks to differ, both are %d bytes", sizes[ActTemplateStandard])
+}
+
+func TestActTemplateFontsAreDistinctPerBlank(t *testing.T) {
+	fonts := map[string]string{}
+	for _, template := range ActTemplateIDsForTest() {
+		fonts[template] = ActTemplateFontForTest(template)
+	}
+	if fonts[ActTemplateStandard] == fonts[ActTemplateFormal] {
+		t.Fatalf("the standard blank and blank №1 must not share a font family, both use %q", fonts[ActTemplateStandard])
+	}
+	if fonts[ActTemplateContract] == fonts[ActTemplateFormal] {
+		t.Fatalf("blank №4 and blank №1 must not share a font family, both use %q", fonts[ActTemplateContract])
+	}
+	for template, family := range fonts {
+		if strings.TrimSpace(family) == "" {
+			t.Fatalf("blank %s has no font family", template)
+		}
 	}
 }

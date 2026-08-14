@@ -19,6 +19,8 @@ const (
 	ActTemplateStandard    = "standard"
 	ActTemplateFormal      = "blank1"
 	ActTemplateTypographic = "blank3"
+	ActTemplateContract    = "blank4"
+	ActTemplateTabular     = "blank5"
 )
 
 // EN: Variable `legacyActTemplateIDs`.
@@ -38,7 +40,7 @@ var legacyActTemplateIDs = map[string]string{
 //
 // EN: Key points: the random assignment picks from this slice, so adding a new blank here is enough to include it
 // EN: in the rotation; the order is not significant.
-var actTemplateIDs = []string{ActTemplateStandard, ActTemplateFormal, ActTemplateTypographic}
+var actTemplateIDs = []string{ActTemplateStandard, ActTemplateFormal, ActTemplateTypographic, ActTemplateContract, ActTemplateTabular}
 
 // EN: Function `actTemplateLabel`.
 //
@@ -51,6 +53,10 @@ func actTemplateLabel(id string) string {
 		return "Бланк №1 — типовой"
 	case ActTemplateTypographic:
 		return "Бланк №3 — типографский"
+	case ActTemplateContract:
+		return "Бланк №4 — договорный"
+	case ActTemplateTabular:
+		return "Бланк №5 — табличный"
 	default:
 		return "Стандартный бланк"
 	}

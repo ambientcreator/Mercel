@@ -281,7 +281,7 @@ func layoutTypographicAct(pdf *gofpdf.Fpdf, data actPDFData, layout typoActLayou
 		if index == len(parties)-1 {
 			gap = layout.BasisGap
 		}
-		y = drawTypoParagraph(pdf, layout, y, paragraph, layout.BodyFont, layout.BodyLineHeight, render) + gap
+		y = drawActParagraph(pdf, layout.Left, layout.ContentWidth, y, paragraph, "", layout.BodyFont, layout.BodyLineHeight, "J", render) + gap
 	}
 
 	// Price list.
@@ -289,10 +289,10 @@ func layoutTypographicAct(pdf *gofpdf.Fpdf, data actPDFData, layout typoActLayou
 	y = drawTypoActTable(pdf, layout, data, y, render) + layout.TableGap
 
 	// Total in words.
-	y = drawTypoParagraph(pdf, layout, y, actTotalText(data), layout.TotalsFont, layout.TotalsLineHeight, render) + layout.TotalsGap
+	y = drawActParagraph(pdf, layout.Left, layout.ContentWidth, y, actTotalText(data), "", layout.TotalsFont, layout.TotalsLineHeight, "J", render) + layout.TotalsGap
 
 	// Closing statement.
-	y = drawTypoParagraph(pdf, layout, y, typoClosingText(), layout.ClosingFont, layout.ClosingLineHeight, render) + layout.ClosingGap
+	y = drawActParagraph(pdf, layout.Left, layout.ContentWidth, y, typoClosingText(), "", layout.ClosingFont, layout.ClosingLineHeight, "J", render) + layout.ClosingGap
 
 	// Signatures.
 	y = drawTypoSignatures(pdf, layout, data, y, render)
@@ -310,24 +310,6 @@ func drawTypoSection(pdf *gofpdf.Fpdf, layout typoActLayout, y float64, title st
 		drawTrackedText(pdf, layout.Left, y, layout.SectionHeight, title, layout.SectionTracking)
 	}
 	return y + layout.SectionHeight + layout.SectionGap
-}
-
-// EN: Function `drawTypoParagraph`.
-//
-// EN: What it does: drawTypoParagraph lays out one justified paragraph and returns its bottom edge.
-//
-// EN: Key points: the height always comes from SplitText, so the measuring pass and the drawing pass agree.
-func drawTypoParagraph(pdf *gofpdf.Fpdf, layout typoActLayout, y float64, text string, fontSize float64, lineHeight float64, render bool) float64 {
-	pdf.SetFont("Mercel", "", fontSize)
-	lines := pdf.SplitText(text, layout.ContentWidth)
-	if len(lines) == 0 {
-		lines = []string{""}
-	}
-	if render {
-		pdf.SetXY(layout.Left, y)
-		pdf.MultiCell(layout.ContentWidth, lineHeight, text, "", "J", false)
-	}
-	return y + (float64(len(lines)) * lineHeight)
 }
 
 // EN: Function `drawTypoActTable`.

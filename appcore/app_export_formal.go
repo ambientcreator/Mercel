@@ -211,34 +211,16 @@ func layoutFormalAct(pdf *gofpdf.Fpdf, data actPDFData, layout formalActLayout, 
 	}
 	y += layout.MetaHeight + layout.MetaGap
 
-	y = drawFormalParagraph(pdf, layout, y, formalActIntro(data), "", layout.IntroFont, layout.IntroLineHeight, "J", render) + layout.IntroGap
+	y = drawActParagraph(pdf, layout.Left, layout.ContentWidth, y, formalActIntro(data), "", layout.IntroFont, layout.IntroLineHeight, "J", render) + layout.IntroGap
 
 	y = drawFormalActTable(pdf, layout, data, y, render) + layout.TableGap
 
-	y = drawFormalParagraph(pdf, layout, y, formalActTotalText(data), "I", layout.TotalFont, layout.TotalLineHeight, "L", render) + layout.TotalGap
+	y = drawActParagraph(pdf, layout.Left, layout.ContentWidth, y, formalActTotalText(data), "I", layout.TotalFont, layout.TotalLineHeight, "L", render) + layout.TotalGap
 
-	y = drawFormalParagraph(pdf, layout, y, actClosingText(), "", layout.ClosingFont, layout.ClosingLineHeight, "J", render) + layout.ClosingGap
+	y = drawActParagraph(pdf, layout.Left, layout.ContentWidth, y, actClosingText(), "", layout.ClosingFont, layout.ClosingLineHeight, "J", render) + layout.ClosingGap
 
 	y = drawFormalSignatures(pdf, layout, data, y, render)
 	return y
-}
-
-// EN: Function `drawFormalParagraph`.
-//
-// EN: What it does: drawFormalParagraph lays out one paragraph of blank №1 and returns its bottom edge.
-//
-// EN: Key points: the height always comes from SplitText, so measuring and drawing agree.
-func drawFormalParagraph(pdf *gofpdf.Fpdf, layout formalActLayout, y float64, text string, style string, fontSize float64, lineHeight float64, align string, render bool) float64 {
-	pdf.SetFont("Mercel", style, fontSize)
-	lines := pdf.SplitText(text, layout.ContentWidth)
-	if len(lines) == 0 {
-		lines = []string{""}
-	}
-	if render {
-		pdf.SetXY(layout.Left, y)
-		pdf.MultiCell(layout.ContentWidth, lineHeight, text, "", align, false)
-	}
-	return y + (float64(len(lines)) * lineHeight)
 }
 
 // EN: Function `drawFormalActTable`.

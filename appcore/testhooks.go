@@ -97,6 +97,10 @@ func (a *App) EnsureUserActTemplateForTest(userID int64, current string) (string
 	return a.ensureUserActTemplate(userID, current)
 }
 
+func ActTemplateFontForTest(template string) string {
+	return actTemplateFont(template)
+}
+
 func RoleCanCopyArchiveServicesForTest(role string) bool {
 	return roleCanCopyArchiveServices(role)
 }
