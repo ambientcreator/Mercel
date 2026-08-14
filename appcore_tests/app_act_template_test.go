@@ -82,6 +82,130 @@ func TestCreateUserAssignsRandomActTemplate(t *testing.T) {
 	}
 }
 
+func TestActTemplateAssignmentStaysBalanced(t *testing.T) {
+	app := withTempDB(t)
+	loginAsAdmin(t, app)
+
+	counts := make(map[string]int)
+	// The admin account already holds a blank, so count it in as well.
+	admin := app.GetSession()
+	if admin.User == nil {
+		t.Fatal("expected an authenticated admin session")
+	}
+	counts[admin.User.ActTemplate]++
+
+	for index := 0; index < 12; index++ {
+		user, err := app.CreateUser(UserWithPassword{
+			Username: fmt.Sprintf("balanced%d", index),
+			Password: "Str0ng!Passw0rd",
+			Role:     RoleTechnicalEmployee,
+		})
+		if err != nil {
+			t.Fatalf("CreateUser() error = %v", err)
+		}
+		counts[user.ActTemplate]++
+	}
+
+	least := -1
+	most := 0
+	for _, id := range ActTemplateIDsForTest() {
+		if least < 0 || counts[id] < least {
+			least = counts[id]
+		}
+		if counts[id] > most {
+			most = counts[id]
+		}
+	}
+	if most-least > 1 {
+		t.Fatalf("expected an even split across blanks, got %+v", counts)
+	}
+}
+
+func TestUpdateUserActTemplateChangesOwnBlank(t *testing.T) {
+	app := withTempDB(t)
+	loginAsAdmin(t, app)
+
+	session := app.GetSession()
+	if session.User == nil {
+		t.Fatal("expected an authenticated admin session")
+	}
+
+	target := ""
+	for _, id := range ActTemplateIDsForTest() {
+		if id != session.User.ActTemplate {
+			target = id
+			break
+		}
+	}
+	if target == "" {
+		t.Fatal("expected at least two blanks to switch between")
+	}
+
+	updated, err := app.UpdateUserActTemplate(UpdateUserActTemplateRequest{UserID: session.User.ID, ActTemplate: target})
+	if err != nil {
+		t.Fatalf("UpdateUserActTemplate() error = %v", err)
+	}
+	if updated.ActTemplate != target {
+		t.Fatalf("expected blank %q, got %q", target, updated.ActTemplate)
+	}
+	if current := app.GetSession(); current.User == nil || current.User.ActTemplate != target {
+		t.Fatalf("expected the session to carry blank %q, got %+v", target, current.User)
+	}
+
+	app.Logout()
+	loginAsAdmin(t, app)
+	if reloaded := app.GetSession(); reloaded.User == nil || reloaded.User.ActTemplate != target {
+		t.Fatalf("expected blank %q after relogin, got %+v", target, reloaded.User)
+	}
+}
+
+func TestUpdateUserActTemplateRejectsUnknownBlank(t *testing.T) {
+	app := withTempDB(t)
+	loginAsAdmin(t, app)
+
+	session := app.GetSession()
+	if session.User == nil {
+		t.Fatal("expected an authenticated admin session")
+	}
+	if _, err := app.UpdateUserActTemplate(UpdateUserActTemplateRequest{UserID: session.User.ID, ActTemplate: "42"}); err == nil {
+		t.Fatal("expected an unknown blank to be rejected")
+	}
+}
+
+func TestUpdateUserActTemplateRejectsForeignEmployee(t *testing.T) {
+	app := withTempDB(t)
+	loginAsAdmin(t, app)
+
+	first, err := app.CreateUser(UserWithPassword{Username: "blankowner", Password: "Str0ng!Passw0rd", Role: RoleTechnicalEmployee})
+	if err != nil {
+		t.Fatalf("CreateUser() error = %v", err)
+	}
+	if _, err := app.CreateUser(UserWithPassword{Username: "blankstranger", Password: "Str0ng!Passw0rd", Role: RoleTechnicalEmployee}); err != nil {
+		t.Fatalf("CreateUser() error = %v", err)
+	}
+
+	loginAsUser(t, app, "blankstranger", "Str0ng!Passw0rd")
+	if _, err := app.UpdateUserActTemplate(UpdateUserActTemplateRequest{UserID: first.ID, ActTemplate: ActTemplateTypographic}); err == nil {
+		t.Fatal("expected an employee to be unable to change somebody else's blank")
+	}
+}
+
+func TestListActTemplatesReturnsEveryBlank(t *testing.T) {
+	app := withTempDB(t)
+	options := app.ListActTemplates()
+	if len(options) != len(ActTemplateIDsForTest()) {
+		t.Fatalf("expected %d blanks, got %d", len(ActTemplateIDsForTest()), len(options))
+	}
+	for index, id := range ActTemplateIDsForTest() {
+		if options[index].ID != id {
+			t.Fatalf("expected blank %q at position %d, got %q", id, index, options[index].ID)
+		}
+		if strings.TrimSpace(options[index].Label) == "" {
+			t.Fatalf("expected a label for blank %q", id)
+		}
+	}
+}
+
 func TestActTemplateStaysWithTheEmployee(t *testing.T) {
 	app := withTempDB(t)
 	loginAsAdmin(t, app)

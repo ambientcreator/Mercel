@@ -1,6 +1,6 @@
 const appState = {
 
-  session: { authenticated: false, canManage: false, canAdmin: false, canModerate: false, user: null },
+  session: { authenticated: false, canManage: false, canAdmin: false, canModerate: false, canCopyArchiveServices: false, user: null },
 
   services: [],
 
@@ -23,6 +23,8 @@ const appState = {
   editingServiceId: 0,
 
   defaultGroupPercent: { primary: 0.79, secondary: 0.2, closing: 0.01 },
+
+  actTemplates: [],
 
   exportDraft: {
 
@@ -87,6 +89,14 @@ const contractDetailsButton = document.getElementById("contract-details-button")
 const contractDetailsSummary = document.getElementById("contract-details-summary");
 
 const saveOwnFullNameButton = document.getElementById("save-own-fullname-button");
+
+const actTemplatePanel = document.getElementById("act-template-panel");
+
+const actTemplateSelect = document.getElementById("act-template-select");
+
+const saveActTemplateButton = document.getElementById("save-act-template-button");
+
+const actTemplateMessage = document.getElementById("act-template-message");
 
 const calculateButton = document.getElementById("calculate-button");
 

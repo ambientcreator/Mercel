@@ -15,6 +15,7 @@ func (a *App) sessionStateLocked(message string) SessionState {
 		state.CanManage = roleCanManageUsers(copyUser.Role)
 		state.CanAdmin = normalizeRole(copyUser.Role) == RoleAdmin
 		state.CanModerate = canModerateArchives(copyUser.Role)
+		state.CanCopyArchiveServices = roleCanCopyArchiveServices(copyUser.Role)
 	}
 	return state
 }
@@ -95,6 +96,7 @@ func (a *App) GetBootstrap() (AppBootstrap, error) {
 		Users:               users,
 		SavedCalculations:   calculations,
 		DefaultGroupPercent: defaultGroupPercent(),
+		ActTemplates:        ActTemplateOptions(),
 	}, nil
 }
 

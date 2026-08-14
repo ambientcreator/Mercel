@@ -214,6 +214,27 @@ type UpdateUserFullNameRequest struct {
 	FullName string `json:"fullName"`
 }
 
+// EN: Data type `UpdateUserActTemplateRequest`.
+//
+// EN: What it does: UpdateUserActTemplateRequest carries a manual choice of the act blank for one user.
+//
+// EN: Key points: serves as a shared contract or reference point; the blank identifier is validated against the
+// EN: known blanks before anything is written.
+type UpdateUserActTemplateRequest struct {
+	UserID      int64  `json:"userID"`
+	ActTemplate string `json:"actTemplate"`
+}
+
+// EN: Data type `ActTemplateOption`.
+//
+// EN: What it does: ActTemplateOption is one selectable act blank with a human readable label.
+//
+// EN: Key points: used to fill the blank selector in the settings screen.
+type ActTemplateOption struct {
+	ID    string `json:"id"`
+	Label string `json:"label"`
+}
+
 type UpdateUserContractDetailsRequest struct {
 	UserID                int64  `json:"userID"`
 	FullName              string `json:"fullName"`
@@ -244,12 +265,15 @@ type LoginRequest struct {
 //
 // EN: Key points: serves as a shared contract or reference point; is reused across multiple areas of the project; changes here should be made carefully.
 type SessionState struct {
-	Authenticated bool   `json:"authenticated"`
-	User          *User  `json:"user,omitempty"`
-	CanManage     bool   `json:"canManage"`
-	CanAdmin      bool   `json:"canAdmin"`
-	CanModerate   bool   `json:"canModerate"`
-	Message       string `json:"message,omitempty"`
+	Authenticated bool  `json:"authenticated"`
+	User          *User `json:"user,omitempty"`
+	CanManage     bool  `json:"canManage"`
+	CanAdmin      bool  `json:"canAdmin"`
+	CanModerate   bool  `json:"canModerate"`
+	// CanCopyArchiveServices mirrors roleCanCopyArchiveServices so the archive screen
+	// can show the import button to directors and not only to the admin.
+	CanCopyArchiveServices bool   `json:"canCopyArchiveServices"`
+	Message                string `json:"message,omitempty"`
 }
 
 // EN: Data type `CalculationRequest`.
@@ -355,11 +379,12 @@ type CopyArchiveServicesResult struct {
 //
 // EN: Key points: serves as a shared contract or reference point; is reused across multiple areas of the project; changes here should be made carefully.
 type AppBootstrap struct {
-	Session             SessionState       `json:"session"`
-	Services            []Service          `json:"services"`
-	Users               []User             `json:"users"`
-	SavedCalculations   []SavedCalculation `json:"savedCalculations"`
-	DefaultGroupPercent map[string]float64 `json:"defaultGroupPercent"`
+	Session             SessionState        `json:"session"`
+	Services            []Service           `json:"services"`
+	Users               []User              `json:"users"`
+	SavedCalculations   []SavedCalculation  `json:"savedCalculations"`
+	DefaultGroupPercent map[string]float64  `json:"defaultGroupPercent"`
+	ActTemplates        []ActTemplateOption `json:"actTemplates"`
 }
 
 // EN: Data type `allocationState`.

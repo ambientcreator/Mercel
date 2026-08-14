@@ -97,6 +97,10 @@ func (a *App) EnsureUserActTemplateForTest(userID int64, current string) (string
 	return a.ensureUserActTemplate(userID, current)
 }
 
+func RoleCanCopyArchiveServicesForTest(role string) bool {
+	return roleCanCopyArchiveServices(role)
+}
+
 func RenderActPDFForTest(path string, req ExportCalculationRequest, currentUser *User) error {
 	data, err := buildActPDFData(req, currentUser)
 	if err != nil {

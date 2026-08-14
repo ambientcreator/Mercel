@@ -1,6 +1,7 @@
 package appcore
 
 import (
+	"errors"
 	"fmt"
 	"math/rand/v2"
 	"strings"
@@ -68,13 +69,126 @@ func actTemplateOrDefault(value string) string {
 	return ActTemplateClassic
 }
 
+// EN: Function `ActTemplateOptions`.
+//
+// EN: What it does: ActTemplateOptions lists every blank with its label so the settings screen can offer a choice.
+//
+// EN: Key points: the order matches actTemplateIDs, which is also the order used by the random assignment.
+func ActTemplateOptions() []ActTemplateOption {
+	options := make([]ActTemplateOption, 0, len(actTemplateIDs))
+	for _, id := range actTemplateIDs {
+		options = append(options, ActTemplateOption{ID: id, Label: actTemplateLabel(id)})
+	}
+	return options
+}
+
+// EN: Method `ListActTemplates`.
+//
+// EN: What it does: ListActTemplates exposes the available act blanks to the frontend.
+//
+// EN: Key points: the catalog is static, so it needs no authorization and never fails.
+func (a *App) ListActTemplates() []ActTemplateOption {
+	return ActTemplateOptions()
+}
+
 // EN: Function `randomActTemplate`.
 //
-// EN: What it does: randomActTemplate picks the blank a freshly created employee will use from now on.
+// EN: What it does: randomActTemplate picks one blank with equal probability.
 //
-// EN: Key points: the choice is made once and then persisted, so the same employee always exports the same blank.
+// EN: Key points: used as the fallback when the current distribution cannot be read from the database.
 func randomActTemplate() string {
 	return actTemplateIDs[rand.IntN(len(actTemplateIDs))]
+}
+
+// EN: Method `nextActTemplate`.
+//
+// EN: What it does: nextActTemplate picks the blank for a new employee, keeping the blanks evenly distributed.
+//
+// EN: Key points: a plain random draw makes one blank dominate on small teams, so the least used blank wins and ties
+// EN: are broken randomly; with N blanks the accounts end up split as evenly as N allows.
+func (a *App) nextActTemplate() string {
+	counts := make(map[string]int, len(actTemplateIDs))
+	for _, id := range actTemplateIDs {
+		counts[id] = 0
+	}
+
+	rows, err := a.db.Query(`SELECT act_template, COUNT(*) FROM users GROUP BY act_template`)
+	if err != nil {
+		return randomActTemplate()
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var template string
+		var count int
+		if err := rows.Scan(&template, &count); err != nil {
+			return randomActTemplate()
+		}
+		if id := normalizeActTemplate(template); id != "" {
+			counts[id] += count
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return randomActTemplate()
+	}
+
+	least := -1
+	candidates := make([]string, 0, len(actTemplateIDs))
+	for _, id := range actTemplateIDs {
+		switch {
+		case least < 0 || counts[id] < least:
+			least = counts[id]
+			candidates = append(candidates[:0], id)
+		case counts[id] == least:
+			candidates = append(candidates, id)
+		}
+	}
+	if len(candidates) == 0 {
+		return randomActTemplate()
+	}
+	return candidates[rand.IntN(len(candidates))]
+}
+
+// EN: Method `UpdateUserActTemplate`.
+//
+// EN: What it does: UpdateUserActTemplate switches the act blank of a user to a manually chosen one.
+//
+// EN: Key points: everyone may change their own blank; changing somebody else's blank follows the same rules as the
+// EN: other user edits, so an administrator can fix any account.
+func (a *App) UpdateUserActTemplate(req UpdateUserActTemplateRequest) (User, error) {
+	current, err := a.requireAuth()
+	if err != nil {
+		return User{}, err
+	}
+	template := normalizeActTemplate(req.ActTemplate)
+	if template == "" {
+		return User{}, errors.New("Выберите бланк акта из списка.")
+	}
+
+	target, err := a.getUserByID(req.UserID)
+	if err != nil {
+		return User{}, fmt.Errorf("find user: %w", err)
+	}
+	target.Role = normalizeRole(target.Role)
+
+	canEdit := target.Username == current.Username || canSeeUser(current.Role, target.Role) || normalizeRole(current.Role) == RoleAdmin
+	if !canEdit {
+		return User{}, errors.New("Недостаточно прав для изменения бланка акта.")
+	}
+
+	if _, err := a.db.Exec(`UPDATE users SET act_template = ? WHERE id = ?`, template, req.UserID); err != nil {
+		return User{}, fmt.Errorf("update act template: %w", err)
+	}
+
+	updated, err := a.getUserByID(req.UserID)
+	if err != nil {
+		return User{}, err
+	}
+	a.mu.Lock()
+	if a.currentSession != nil && a.currentSession.ID == updated.ID {
+		a.currentSession.ActTemplate = updated.ActTemplate
+	}
+	a.mu.Unlock()
+	return updated, nil
 }
 
 // EN: Method `ensureUserActTemplate`.
@@ -87,7 +201,7 @@ func (a *App) ensureUserActTemplate(userID int64, current string) (string, error
 	if id := normalizeActTemplate(current); id != "" {
 		return id, nil
 	}
-	assigned := randomActTemplate()
+	assigned := a.nextActTemplate()
 	if _, err := a.db.Exec(`UPDATE users SET act_template = ? WHERE id = ?`, assigned, userID); err != nil {
 		return "", fmt.Errorf("assign act template: %w", err)
 	}
@@ -128,7 +242,9 @@ func (a *App) backfillActTemplates() error {
 	}
 
 	for _, id := range pending {
-		if _, err := a.db.Exec(`UPDATE users SET act_template = ? WHERE id = ?`, randomActTemplate(), id); err != nil {
+		// The counts are re-read on every step, so the backfilled accounts land on
+		// the least used blank one by one instead of piling up on a single one.
+		if _, err := a.db.Exec(`UPDATE users SET act_template = ? WHERE id = ?`, a.nextActTemplate(), id); err != nil {
 			return fmt.Errorf("backfill act template: %w", err)
 		}
 	}

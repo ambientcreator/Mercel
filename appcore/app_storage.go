@@ -532,7 +532,7 @@ func (a *App) seedAdmin() error {
 		return fmt.Errorf("check admin user: %w", err)
 	}
 	if count == 0 {
-		_, err := a.db.Exec(`INSERT INTO users(username, password_hash, full_name, last_act_number, act_template, role, created_at) VALUES(?, ?, ?, ?, ?, ?, ?)`, "admin", passwordHash, "", 1, randomActTemplate(), RoleAdmin, time.Now().Format(time.RFC3339))
+		_, err := a.db.Exec(`INSERT INTO users(username, password_hash, full_name, last_act_number, act_template, role, created_at) VALUES(?, ?, ?, ?, ?, ?, ?)`, "admin", passwordHash, "", 1, a.nextActTemplate(), RoleAdmin, time.Now().Format(time.RFC3339))
 		if err != nil {
 			return fmt.Errorf("seed admin user: %w", err)
 		}

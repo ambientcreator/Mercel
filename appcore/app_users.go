@@ -32,7 +32,7 @@ func (a *App) CreateUser(req UserWithPassword) (User, error) {
 		return User{}, errors.New("Недостаточно прав для назначения этой роли.")
 	}
 	createdAt := time.Now().Format(time.RFC3339)
-	result, err := a.db.Exec(`INSERT INTO users(username, password_hash, full_name, last_act_number, preferred_contract_code, contract_spbks_number, contract_grizabl_number, contract_signed_at, act_template, role, created_at) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, username, hashPassword(password), "", 1, "1", "", "", "", randomActTemplate(), role, createdAt)
+	result, err := a.db.Exec(`INSERT INTO users(username, password_hash, full_name, last_act_number, preferred_contract_code, contract_spbks_number, contract_grizabl_number, contract_signed_at, act_template, role, created_at) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, username, hashPassword(password), "", 1, "1", "", "", "", a.nextActTemplate(), role, createdAt)
 	if err != nil {
 		return User{}, fmt.Errorf("create user: %w", err)
 	}

@@ -498,7 +498,7 @@ function roleViewDepartments(role) {
 
 }
 
-function roleCanCreateUsers(role) {
+function roleCanManageUsers(role) {
 
   switch (normalizeRole(role)) {
 
@@ -508,31 +508,15 @@ function roleCanCreateUsers(role) {
 
     case "support_sysadmin":
 
-    case "support_senior":
-
     case "technical_head":
-
-    case "technical_senior":
 
     case "telecom_construction_director":
 
     case "telecom_construction_head":
 
-    case "telecom_senior_vols":
-
-    case "telecom_senior_lvs":
-
     case "skud_head":
 
-    case "skud_project_manager":
-
-    case "skud_senior_service_engineer":
-
-    case "skud_senior_installer":
-
     case "approval_head":
-
-    case "approval_senior":
 
     case "marketing_head":
 
@@ -542,15 +526,9 @@ function roleCanCreateUsers(role) {
 
     case "commercial_active_sales_head":
 
-    case "commercial_senior_mrk":
-
-    case "commercial_senior_mryu":
-
     case "finance_head":
 
     case "development_head":
-
-    case "development_senior":
 
       return true;
 
@@ -559,6 +537,16 @@ function roleCanCreateUsers(role) {
       return false;
 
   }
+
+}
+
+function roleCanCreateUsers(role) {
+
+  // Mirrors the backend: heads and sysadmins manage users directly, senior
+
+  // specialists (level 2) and directors (level 4) may create them as well.
+
+  return roleCanManageUsers(role) || roleLevel(role) === 2 || roleLevel(role) === 4;
 
 }
 
@@ -742,11 +730,35 @@ function roleChoicesForUser(role) {
 
   } else if (roleCanCreateUsers(role)) {
 
-    const actorDept = roleDepartment(role);
+    // Mirrors canCreateRole on the backend: the target department must be one the
+
+    // actor oversees (a director covers several), nobody below admin may create
+
+    // another global-department account, and the target must be lower in rank.
+
+    const actorDepartments = roleViewDepartments(role);
 
     const actorLevel = roleLevel(role);
 
-    visibleRoles = allRoles.filter((candidate) => roleDepartment(candidate) === actorDept && roleLevel(candidate) < actorLevel);
+    visibleRoles = allRoles.filter((candidate) => {
+
+      const candidateDept = roleDepartment(candidate);
+
+      if (candidateDept === "global") {
+
+        return false;
+
+      }
+
+      if (!actorDepartments.includes(candidateDept)) {
+
+        return false;
+
+      }
+
+      return roleLevel(candidate) < actorLevel;
+
+    });
 
   }
 

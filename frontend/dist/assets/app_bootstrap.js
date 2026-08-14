@@ -12,6 +12,8 @@
 
   renderServicesAdmin();
 
+  renderActTemplateChoice();
+
   renderUsers();
 
   renderHistory();
@@ -858,6 +860,8 @@ loginPassword.addEventListener("keydown", (event) => {
 });
 
 calculateButton.addEventListener("click", calculate);
+
+saveActTemplateButton?.addEventListener("click", saveActTemplate);
 
 contractDetailsButton?.addEventListener("click", openContractModal);
 

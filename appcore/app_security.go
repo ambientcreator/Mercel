@@ -377,6 +377,33 @@ func canViewArchiveRole(actor *User, authorRole string, authorUsername string) b
 	}
 }
 
+// EN: Function `canCopyArchiveServices`.
+//
+// EN: What it does: canCopyArchiveServices decides who may import the services of an archived calculation.
+//
+// EN: Key points: importing rewrites the actor's own service list, so it stays a top-level tool: the admin and the
+// EN: directors may use it, each one limited to the archives they are allowed to see anyway.
+func canCopyArchiveServices(actor *User, authorRole string, authorUsername string) bool {
+	if actor == nil {
+		return false
+	}
+	if !roleCanCopyArchiveServices(actor.Role) {
+		return false
+	}
+	return canViewArchiveRole(actor, authorRole, authorUsername)
+}
+
+// EN: Function `roleCanCopyArchiveServices`.
+//
+// EN: What it does: roleCanCopyArchiveServices tells whether a role may import services from the archive at all.
+//
+// EN: Key points: the admin and every director (level 4) qualify; which archives they actually reach is still
+// EN: decided per calculation by canViewArchiveRole.
+func roleCanCopyArchiveServices(role string) bool {
+	role = normalizeRole(role)
+	return role == RoleAdmin || roleLevel(role) >= 4
+}
+
 func normalizeCategory(category string) string {
 	switch category {
 	case CategoryPrimary, CategorySecondary, CategoryClosing:
