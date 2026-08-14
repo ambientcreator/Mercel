@@ -12,8 +12,10 @@ import (
 // EN: What it does: this file renders the typewriter flavoured variant — everything is set in Courier New, the
 // EN: preamble sits in a heavy framed box and the price list is a plain fully gridded table.
 //
-// EN: Key points: the monospaced face is what tells it apart from the other blanks at a glance; like every blank it
-// EN: is scaled down until it fits a single A4 sheet, and one walk both measures and draws it.
+// EN: Key points: the monospaced face is what tells it apart from the other blanks at a glance; the bold weight is
+// EN: deliberate — regular Courier is a very light face and prints grey rather than black at this size, while the
+// EN: bold one reads like an actual typewritten sheet. Like every blank it is scaled down until it fits a single A4
+// EN: sheet, and one walk both measures and draws it.
 const (
 	typewriterActTargetScale = 1.00
 	typewriterActMinScale    = 0.60
@@ -213,9 +215,9 @@ func layoutTypewriterAct(pdf *gofpdf.Fpdf, data actPDFData, layout typewriterAct
 	y = drawTypewriterHeaderBox(pdf, layout, data, y, render) + layout.BoxGap
 	y = drawTypewriterTable(pdf, layout, data, y, render) + layout.TableGap
 
-	y = drawActParagraph(pdf, left, width, y, typewriterActWords(data), "", layout.BodyFont, layout.BodyLineHeight, "L", render) + layout.WordsGap
-	y = drawActParagraph(pdf, left, width, y, "Услуги выполнены полностью и в срок.", "", layout.BodyFont, layout.BodyLineHeight, "L", render) + layout.ClosingLineGap
-	y = drawActParagraph(pdf, left, width, y, "Заказчик претензий по объёму, качеству и срокам не имеет.", "", layout.BodyFont, layout.BodyLineHeight, "L", render) + layout.ClosingGap
+	y = drawActParagraph(pdf, left, width, y, typewriterActWords(data), "B", layout.BodyFont, layout.BodyLineHeight, "L", render) + layout.WordsGap
+	y = drawActParagraph(pdf, left, width, y, "Услуги выполнены полностью и в срок.", "B", layout.BodyFont, layout.BodyLineHeight, "L", render) + layout.ClosingLineGap
+	y = drawActParagraph(pdf, left, width, y, "Заказчик претензий по объёму, качеству и срокам не имеет.", "B", layout.BodyFont, layout.BodyLineHeight, "L", render) + layout.ClosingGap
 
 	y = drawTypewriterSignatures(pdf, layout, data, y, render)
 	return y
@@ -242,14 +244,14 @@ func drawTypewriterHeaderBox(pdf *gofpdf.Fpdf, layout typewriterActLayout, data 
 	cursor += layout.TitleHeight + layout.TitleGap
 
 	if render {
-		pdf.SetFont("Mercel", "", layout.SubtitleFont)
+		pdf.SetFont("Mercel", "B", layout.SubtitleFont)
 		pdf.SetXY(innerLeft, cursor)
 		pdf.CellFormat(innerWidth, layout.SubtitleHeight, "приёма-сдачи оказанных услуг", "", 0, "C", false, 0, "")
 	}
 	cursor += layout.SubtitleHeight + layout.SubtitleGap
 
 	if render {
-		pdf.SetFont("Mercel", "", layout.MetaFont)
+		pdf.SetFont("Mercel", "B", layout.MetaFont)
 		pdf.SetXY(innerLeft, cursor)
 		pdf.CellFormat(innerWidth/2, layout.MetaHeight, fmt.Sprintf("N %d   г. Санкт-Петербург", data.ActNumber), "", 0, "L", false, 0, "")
 		pdf.CellFormat(innerWidth/2, layout.MetaHeight, russianActDate(data.GeneratedAt), "", 0, "R", false, 0, "")
@@ -262,7 +264,7 @@ func drawTypewriterHeaderBox(pdf *gofpdf.Fpdf, layout typewriterActLayout, data 
 	}
 	for _, party := range parties {
 		if render {
-			pdf.SetFont("Mercel", "", layout.MetaFont)
+			pdf.SetFont("Mercel", "B", layout.MetaFont)
 			pdf.SetXY(innerLeft, cursor)
 			pdf.CellFormat(layout.PartyColumn, layout.PartyHeight, party[0], "", 0, "L", false, 0, "")
 			pdf.SetXY(innerLeft+layout.PartyColumn, cursor)
@@ -272,7 +274,7 @@ func drawTypewriterHeaderBox(pdf *gofpdf.Fpdf, layout typewriterActLayout, data 
 	}
 	cursor += layout.MetaGap - layout.PartyGap
 
-	cursor = drawActParagraph(pdf, innerLeft, innerWidth, cursor, typewriterActIntro(data), "", layout.MetaFont, layout.IntroLineHeight, "L", render)
+	cursor = drawActParagraph(pdf, innerLeft, innerWidth, cursor, typewriterActIntro(data), "B", layout.MetaFont, layout.IntroLineHeight, "L", render)
 	cursor += layout.BoxPad
 
 	if render {
@@ -308,7 +310,7 @@ func drawTypewriterTable(pdf *gofpdf.Fpdf, layout typewriterActLayout, data actP
 	}
 	y += layout.TableHeaderHeight
 
-	pdf.SetFont("Mercel", "", layout.TableBodyFont)
+	pdf.SetFont("Mercel", "B", layout.TableBodyFont)
 	for index, item := range data.Items {
 		lines := pdf.SplitText(item.Name, layout.ColName-(padX*2))
 		if len(lines) == 0 {
@@ -319,7 +321,7 @@ func drawTypewriterTable(pdf *gofpdf.Fpdf, layout typewriterActLayout, data actP
 			rowHeight = layout.TableRowMinHeight
 		}
 		if render {
-			pdf.SetFont("Mercel", "", layout.TableBodyFont)
+			pdf.SetFont("Mercel", "B", layout.TableBodyFont)
 			pdf.Rect(left, y, layout.ColNo, rowHeight, "")
 			pdf.Rect(xName, y, layout.ColName, rowHeight, "")
 			pdf.Rect(xQty, y, layout.ColQty, rowHeight, "")
@@ -376,7 +378,7 @@ func drawTypewriterSignatures(pdf *gofpdf.Fpdf, layout typewriterActLayout, data
 	y += layout.SignLabelHeight + layout.SignLabelGap
 
 	if render {
-		pdf.SetFont("Mercel", "", layout.BodyFont)
+		pdf.SetFont("Mercel", "B", layout.BodyFont)
 		pdf.SetXY(left, y)
 		pdf.CellFormat(layout.SignColumn, layout.SignLineHeight, typewriterSignatureLine(shortEmployeeSignatureName(data.EmployeeFullName)), "", 0, "L", false, 0, "")
 		pdf.SetXY(rightColumn, y)

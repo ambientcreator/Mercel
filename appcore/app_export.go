@@ -287,6 +287,9 @@ func renderActPDF(path string, data actPDFData) error {
 	if err := pdf.Error(); err != nil {
 		return fmt.Errorf("load pdf fonts: %w", err)
 	}
+	// Acts are printed documents: ink is pure black, never a softened grey.
+	pdf.SetTextColor(0, 0, 0)
+	pdf.SetDrawColor(0, 0, 0)
 	pdf.SetFont("Mercel", "", 10)
 	pdf.AddPage()
 
