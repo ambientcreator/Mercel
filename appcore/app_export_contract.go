@@ -264,25 +264,17 @@ func layoutContractAct(pdf *gofpdf.Fpdf, data actPDFData, layout contractActLayo
 
 // EN: Function `drawContractParties`.
 //
-// EN: What it does: drawContractParties renders the requisites header with both parties side by side.
+// EN: What it does: drawContractParties renders the header naming both parties side by side.
 //
-// EN: Key points: the tax identifiers are not part of the calculation data, so their lines stay blank for a manual
-// EN: fill-in exactly like in the source blank.
+// EN: Key points: the source blank also carries ИНН/ОГРНИП/КПП lines, but the contract is already signed by the
+// EN: time the act is issued, so only the names are printed.
 func drawContractParties(pdf *gofpdf.Fpdf, layout contractActLayout, data actPDFData, y float64, render bool) float64 {
 	columnWidth := (layout.ContentWidth - layout.PartyGutter) / 2
 	leftColumn := layout.Left
 	rightColumn := layout.Left + columnWidth + layout.PartyGutter
 
-	contractor := []string{
-		fmt.Sprintf("ИП %s", strings.TrimSpace(data.EmployeeFullName)),
-		"ИНН ________________",
-		"ОГРНИП ____________________",
-	}
-	customer := []string{
-		fmt.Sprintf("ООО «%s»", data.CustomerName),
-		"ИНН ________________",
-		"КПП ________________",
-	}
+	contractor := []string{fmt.Sprintf("ИП %s", strings.TrimSpace(data.EmployeeFullName))}
+	customer := []string{fmt.Sprintf("ООО «%s»", data.CustomerName)}
 
 	bottom := drawContractPartyColumn(pdf, layout, leftColumn, columnWidth, y, "ИСПОЛНИТЕЛЬ", contractor, render)
 	if right := drawContractPartyColumn(pdf, layout, rightColumn, columnWidth, y, "ЗАКАЗЧИК", customer, render); right > bottom {

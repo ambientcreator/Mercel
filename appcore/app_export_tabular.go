@@ -334,7 +334,7 @@ func drawTabularInfoRow(pdf *gofpdf.Fpdf, layout tabularActLayout, y float64, la
 	height := layout.InfoPadY + (float64(len(lines)) * layout.ValueLineHeight) + layout.InfoPadY
 
 	if render {
-		drawTabularLabel(pdf, layout, left+layout.CellPadX, y+layout.InfoPadY+((layout.ValueLineHeight-layout.LabelHeight)/2), layout.ColLabel-(layout.CellPadX*2), label)
+		drawTabularLabel(pdf, layout, left+layout.CellPadX, y+layout.InfoPadY+((layout.ValueLineHeight-layout.LabelHeight)/2), layout.ColLabel-(layout.CellPadX*3), label)
 		pdf.SetFont("Mercel", "", layout.ValueFont)
 		for index, line := range lines {
 			pdf.SetXY(valueX, y+layout.InfoPadY+(float64(index)*layout.ValueLineHeight))
@@ -482,10 +482,13 @@ func tabularActInfoRows(data actPDFData) [][2]string {
 // EN: Function `tabularActPeriod`.
 //
 // EN: What it does: tabularActPeriod returns the calendar month of the act as a "с … по …" period.
+//
+// EN: Key points: both bounds are written the way the standard blank writes the act date, so one document never
+// EN: mixes two date formats.
 func tabularActPeriod(value time.Time) string {
 	first := time.Date(value.Year(), value.Month(), 1, 0, 0, 0, 0, value.Location())
 	last := first.AddDate(0, 1, -1)
-	return fmt.Sprintf("с %s по %s", first.Format("02.01.2006"), last.Format("02.01.2006"))
+	return fmt.Sprintf("с %s по %s", russianActDate(first), russianActDate(last))
 }
 
 // EN: Function `tabularActWords`.
