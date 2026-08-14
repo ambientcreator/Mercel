@@ -20,18 +20,20 @@ const (
 	ActTemplateFormal      = "blank1"
 	ActTemplateTypographic = "blank3"
 	ActTemplateContract    = "blank4"
-	ActTemplateTabular     = "blank5"
+	ActTemplateTypewriter  = "blank10"
 )
 
 // EN: Variable `legacyActTemplateIDs`.
 //
 // EN: What it does: legacyActTemplateIDs maps the first generation of identifiers onto the current ones.
 //
-// EN: Key points: the very first version stored "1" for the standard blank and "3" for the typographic one; those
-// EN: rows are rewritten by the migration, and the mapping here keeps any stale value working in the meantime.
+// EN: Key points: the very first version stored "1" for the standard blank and "3" for the typographic one, and
+// EN: "blank5" was the tabular blank later replaced by the typewritten one; those rows are rewritten by the
+// EN: migration, and the mapping here keeps any stale value working in the meantime.
 var legacyActTemplateIDs = map[string]string{
-	"1": ActTemplateStandard,
-	"3": ActTemplateTypographic,
+	"1":      ActTemplateStandard,
+	"3":      ActTemplateTypographic,
+	"blank5": ActTemplateTypewriter,
 }
 
 // EN: Variable `actTemplateIDs`.
@@ -40,7 +42,7 @@ var legacyActTemplateIDs = map[string]string{
 //
 // EN: Key points: the random assignment picks from this slice, so adding a new blank here is enough to include it
 // EN: in the rotation; the order is not significant.
-var actTemplateIDs = []string{ActTemplateStandard, ActTemplateFormal, ActTemplateTypographic, ActTemplateContract, ActTemplateTabular}
+var actTemplateIDs = []string{ActTemplateStandard, ActTemplateFormal, ActTemplateTypographic, ActTemplateContract, ActTemplateTypewriter}
 
 // EN: Function `actTemplateLabel`.
 //
@@ -55,8 +57,8 @@ func actTemplateLabel(id string) string {
 		return "Бланк №3 — типографский"
 	case ActTemplateContract:
 		return "Бланк №4 — договорный"
-	case ActTemplateTabular:
-		return "Бланк №5 — табличный"
+	case ActTemplateTypewriter:
+		return "Бланк №10 — машинописный"
 	default:
 		return "Стандартный бланк"
 	}

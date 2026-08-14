@@ -291,9 +291,16 @@ func TestMigrationRewritesLegacyActTemplateIDs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateUser() error = %v", err)
 	}
-	// Values written by the very first version of the blank feature.
+	second, err := app.CreateUser(UserWithPassword{Username: "legacyblank2", Password: "Str0ng!Passw0rd", Role: RoleTechnicalEmployee})
+	if err != nil {
+		t.Fatalf("CreateUser() error = %v", err)
+	}
+	// Values written by earlier versions of the blank feature.
 	if _, err := app.DBForTest().Exec(`UPDATE users SET act_template = '3' WHERE id = ?`, created.ID); err != nil {
 		t.Fatalf("write legacy act template: %v", err)
+	}
+	if _, err := app.DBForTest().Exec(`UPDATE users SET act_template = 'blank5' WHERE id = ?`, second.ID); err != nil {
+		t.Fatalf("write replaced act template: %v", err)
 	}
 	if _, err := app.DBForTest().Exec(`UPDATE users SET act_template = '1' WHERE username = 'admin'`); err != nil {
 		t.Fatalf("write legacy admin act template: %v", err)
@@ -316,6 +323,14 @@ func TestMigrationRewritesLegacyActTemplateIDs(t *testing.T) {
 	}
 	if migrated.ActTemplate != ActTemplateTypographic {
 		t.Fatalf("expected legacy \"3\" to become %q, got %q", ActTemplateTypographic, migrated.ActTemplate)
+	}
+
+	replaced, err := reopened.GetUserByIDForTest(second.ID)
+	if err != nil {
+		t.Fatalf("GetUserByIDForTest() error = %v", err)
+	}
+	if replaced.ActTemplate != ActTemplateTypewriter {
+		t.Fatalf("expected the replaced \"blank5\" to become %q, got %q", ActTemplateTypewriter, replaced.ActTemplate)
 	}
 
 	if _, err := reopened.Login(LoginRequest{Username: "admin", Password: "siuW*R%wWkQS"}); err != nil {

@@ -298,8 +298,8 @@ func renderActPDF(path string, data actPDFData) error {
 		bottom, err = renderTypographicAct(pdf, data)
 	case ActTemplateContract:
 		bottom, err = renderContractAct(pdf, data)
-	case ActTemplateTabular:
-		bottom, err = renderTabularAct(pdf, data)
+	case ActTemplateTypewriter:
+		bottom, err = renderTypewriterAct(pdf, data)
 	default:
 		bottom, err = renderStandardAct(pdf, data)
 	}
@@ -369,7 +369,7 @@ const (
 	actFontSans    = "sans"
 	actFontSerif   = "serif"
 	actFontGeorgia = "georgia"
-	actFontTahoma  = "tahoma"
+	actFontMono    = "mono"
 )
 
 // EN: Variable `actFontCandidates`.
@@ -397,10 +397,11 @@ var actFontCandidates = map[string][][3]string{
 		{"/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Italic.ttf"},
 		{"/Library/Fonts/Georgia.ttf", "/Library/Fonts/Georgia Bold.ttf", "/Library/Fonts/Georgia Italic.ttf"},
 	},
-	actFontTahoma: {
-		{`C:\Windows\Fonts\tahoma.ttf`, `C:\Windows\Fonts\tahomabd.ttf`, ""},
-		{`C:\Windows\Fonts\verdana.ttf`, `C:\Windows\Fonts\verdanab.ttf`, `C:\Windows\Fonts\verdanai.ttf`},
-		{"/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf"},
+	actFontMono: {
+		{`C:\Windows\Fonts\cour.ttf`, `C:\Windows\Fonts\courbd.ttf`, `C:\Windows\Fonts\couri.ttf`},
+		{"/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf", "/usr/share/fonts/truetype/liberation/LiberationMono-Bold.ttf", "/usr/share/fonts/truetype/liberation/LiberationMono-Italic.ttf"},
+		{"/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Oblique.ttf"},
+		{"/Library/Fonts/Courier New.ttf", "/Library/Fonts/Courier New Bold.ttf", "/Library/Fonts/Courier New Italic.ttf"},
 	},
 }
 
@@ -412,7 +413,7 @@ var actFontCandidates = map[string][][3]string{
 var actFontFallbacks = map[string]string{
 	actFontSerif:   actFontSans,
 	actFontGeorgia: actFontSerif,
-	actFontTahoma:  actFontSans,
+	actFontMono:    actFontSans,
 }
 
 // EN: Function `actTemplateFont`.
@@ -426,8 +427,8 @@ func actTemplateFont(template string) string {
 		return actFontSerif
 	case ActTemplateContract:
 		return actFontGeorgia
-	case ActTemplateTabular:
-		return actFontTahoma
+	case ActTemplateTypewriter:
+		return actFontMono
 	default:
 		return actFontSans
 	}
