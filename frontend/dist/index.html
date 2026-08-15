@@ -12,7 +12,7 @@
 
     <title>Mercel</title>
 
-    <link rel="stylesheet" href="./assets/app.css?v=20260815-2" />
+    <link rel="stylesheet" href="./assets/app.css?v=20260815-3" />
 
   </head>
 
@@ -100,28 +100,19 @@
 
           <section class="glass panel control-panel">
 
-            <div class="panel-head">
+            <div class="amount-block">
 
-              <div>
+              <label class="amount-label" for="amount-input">Целевая сумма, р</label>
 
-                <span class="panel-kicker">Расчёт</span>
+              <div class="amount-row">
 
-                <h2>Подбор услуг</h2>
+                <input id="amount-input" type="number" min="1" step="1" placeholder="Например, 78920" />
+
+                <button id="calculate-button" class="primary">&#1056;&#1072;&#1089;&#1089;&#1095;&#1080;&#1090;&#1072;&#1090;&#1100;</button>
 
               </div>
 
             </div>
-
-            <label class="field">
-
-              <span>Сумма, р</span>
-
-              <input id="amount-input" type="number" min="1" step="1" placeholder="Например, 78920" />
-
-            </label>
-
-
-
 
 
 
@@ -139,15 +130,27 @@
 
 
 
-            <div class="compact-actions">
+            <div class="compact-actions hidden">
 
-              <button id="calculate-button" class="primary">&#1056;&#1072;&#1089;&#1089;&#1095;&#1080;&#1090;&#1072;&#1090;&#1100;</button>
-
-              <button id="contract-details-button" type="button" class="secondary hidden">&#1059;&#1082;&#1072;&#1079;&#1072;&#1090;&#1100; &#1076;&#1086;&#1075;&#1086;&#1074;&#1086;&#1088;</button>
+              <button id="contract-details-button" type="button" class="secondary">&#1059;&#1082;&#1072;&#1079;&#1072;&#1090;&#1100; &#1076;&#1086;&#1075;&#1086;&#1074;&#1086;&#1088;</button>
 
             </div>
 
-            <div id="contract-details-summary" class="message muted compact-note" role="button" tabindex="0" title="&#1054;&#1090;&#1082;&#1088;&#1099;&#1090;&#1100; &#1076;&#1072;&#1085;&#1085;&#1099;&#1077; &#1076;&#1086;&#1075;&#1086;&#1074;&#1086;&#1088;&#1072;">&#1044;&#1083;&#1103; &#1074;&#1099;&#1075;&#1088;&#1091;&#1079;&#1082;&#1080; &#1072;&#1082;&#1090;&#1072; &#1091;&#1082;&#1072;&#1078;&#1080;&#1090;&#1077; &#1085;&#1086;&#1084;&#1077;&#1088; &#1076;&#1086;&#1075;&#1086;&#1074;&#1086;&#1088;&#1072;, &#1076;&#1072;&#1090;&#1091; &#1087;&#1086;&#1076;&#1087;&#1080;&#1089;&#1072;&#1085;&#1080;&#1103; &#1080; &#1074;&#1072;&#1096;&#1077; &#1060;&#1048;&#1054;.</div>
+            <div id="contract-card" class="contract-card" role="button" tabindex="0">
+
+              <span id="contract-card-icon" class="contract-card-icon" aria-hidden="true">!</span>
+
+              <span class="contract-card-body">
+
+                <span class="contract-card-label">&#1044;&#1086;&#1075;&#1086;&#1074;&#1086;&#1088; &#1076;&#1083;&#1103; &#1072;&#1082;&#1090;&#1072;</span>
+
+                <span id="contract-details-summary" class="contract-card-value">&#1053;&#1077; &#1079;&#1072;&#1087;&#1086;&#1083;&#1085;&#1077;&#1085;</span>
+
+              </span>
+
+              <span class="contract-card-action">&#1047;&#1072;&#1087;&#1086;&#1083;&#1085;&#1080;&#1090;&#1100;</span>
+
+            </div>
 
             <div class="status-strip" id="status-strip">
 
@@ -804,11 +807,11 @@
 
 
 
-    <script src="./assets/app_state.js?v=20260815-2"></script>
-    <script src="./assets/app_utils.js?v=20260815-2"></script>
-    <script src="./assets/app_render.js?v=20260815-2"></script>
-    <script src="./assets/app_archive.js?v=20260815-2"></script>
-    <script src="./assets/app_bootstrap.js?v=20260815-2"></script>
+    <script src="./assets/app_state.js?v=20260815-3"></script>
+    <script src="./assets/app_utils.js?v=20260815-3"></script>
+    <script src="./assets/app_render.js?v=20260815-3"></script>
+    <script src="./assets/app_archive.js?v=20260815-3"></script>
+    <script src="./assets/app_bootstrap.js?v=20260815-3"></script>
 
   </body>
 

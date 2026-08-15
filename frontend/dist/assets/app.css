@@ -2043,7 +2043,7 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   display: flex;
   align-items: center;
   gap: 18px;
-  padding: 8px 12px 8px 18px;
+  padding: 8px 14px;
   min-height: 56px;
 }
 .topbar-brand {
@@ -2211,7 +2211,7 @@ input[type="date"]::-webkit-datetime-edit-year-field {
 .mini-card span { margin-bottom: 2px; font-size: 11px; }
 .mini-card strong { font-size: 17px; }
 
-:root[data-density="compact"] .topbar { padding: 6px 10px 6px 14px; min-height: 48px; }
+:root[data-density="compact"] .topbar { padding: 6px 12px; min-height: 48px; }
 :root[data-density="compact"] .topbar-icon-button,
 :root[data-density="compact"] .topbar-icon-button { width: 32px; height: 32px; }
 :root[data-density="compact"] .weight-row { padding: 5px 8px; }
@@ -2220,3 +2220,143 @@ input[type="date"]::-webkit-datetime-edit-year-field {
 .contract-choice-card > span { min-height: 0; font-size: 12px; line-height: 1.35; }
 .contract-choice-grid { gap: 10px; margin-bottom: 10px; }
 .radio-inline { font-size: 12px; min-height: 0; margin-top: 10px; }
+
+
+/* ---------------------------------------------------------------------------
+   Round 3: centred tabs, uniform list actions, explicit contract card,
+   and a calmer head for the calculator panel.
+   --------------------------------------------------------------------------- */
+
+/* Three equal-weight columns put the tabs on the true centre of the bar,
+   regardless of how wide the brand or the session block happen to be. */
+.topbar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+}
+.topbar-brand { justify-self: start; }
+.topbar .tabs { justify-self: center; margin-bottom: 0; }
+.topbar-actions { justify-self: end; }
+
+/* Every action button in a list row gets one silhouette. .ghost-button and
+   .danger-button carried different padding and font-size, which is what made
+   "Изменить" and "Удалить" visibly different sizes. */
+.settings-item-actions button,
+.archive-actions button:not(.archive-action-icon),
+.user-actions button,
+.user-fullname-row button,
+.user-password-row button {
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  min-width: 104px;
+  min-height: 36px;
+  line-height: 1.2;
+  border-radius: var(--radius-control);
+}
+.settings-item-actions,
+.user-actions { display: flex; align-items: center; gap: 8px; }
+
+/* ---- Calculator head: the amount is the one thing you type here ---- */
+.amount-block { margin-bottom: 14px; }
+.amount-label {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 8px;
+}
+.amount-row { display: flex; gap: 10px; align-items: stretch; }
+.amount-row #amount-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 22px;
+  font-weight: 700;
+  padding: 12px 14px;
+  border-radius: var(--radius-control);
+  border: 1px solid rgba(var(--rgb-slate), 0.22);
+  background: rgba(var(--rgb-field), 0.6);
+  color: var(--text);
+}
+.amount-row #amount-input:focus {
+  outline: none;
+  border-color: rgba(var(--rgb-accent), 0.6);
+  background: rgba(var(--rgb-field-strong), 0.85);
+}
+.amount-row #calculate-button {
+  flex: 0 0 auto;
+  padding: 0 22px;
+  font-size: 15px;
+}
+
+/* ---- Contract card: a labelled control, not an anonymous grey plate ---- */
+.contract-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-card);
+  border: 1px solid rgba(var(--rgb-slate), 0.22);
+  background: rgba(var(--rgb-white), 0.02);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+.contract-card:hover,
+.contract-card:focus-visible {
+  border-color: rgba(var(--rgb-accent), 0.55);
+  background: rgba(var(--rgb-accent), 0.06);
+  outline: none;
+}
+.contract-card-icon {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-control);
+  background: rgba(var(--rgb-slate), 0.14);
+  color: var(--muted);
+  font-size: 15px;
+}
+.contract-card.is-complete .contract-card-icon {
+  background: rgba(var(--rgb-accent), 0.16);
+  color: var(--accent);
+}
+.contract-card-body { flex: 1 1 auto; min-width: 0; display: block; }
+.contract-card-label {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+}
+.contract-card-value {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.contract-card.is-complete .contract-card-value { color: var(--text); }
+.contract-card-icon { font-weight: 700; }
+.contract-card.is-complete .contract-card-icon { font-size: 16px; }
+.contract-card-action {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
+}
+.contract-card-action::after { content: " \203A"; }
+
+:root[data-density="compact"] .amount-row #amount-input { font-size: 18px; padding: 9px 12px; }
+:root[data-density="compact"] .contract-card { padding: 8px 10px; }

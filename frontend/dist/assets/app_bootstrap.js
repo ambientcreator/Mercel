@@ -972,13 +972,13 @@ contractBackdrop?.addEventListener("click", () => {
 
 // The status line on the calculator is the entry point into the contract form now,
 // so the whole strip is clickable rather than carrying a separate button.
-contractDetailsSummary?.addEventListener("click", () => {
+contractCard?.addEventListener("click", () => {
 
   openContractModal();
 
 });
 
-contractDetailsSummary?.addEventListener("keydown", (event) => {
+contractCard?.addEventListener("keydown", (event) => {
 
   if (event.key === "Enter" || event.key === " ") {
 
