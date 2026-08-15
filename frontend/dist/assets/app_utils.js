@@ -32,7 +32,7 @@ function syncExportFields() {
 
   if (!["1", "2"].includes(String(appState.exportDraft.contractCode || ""))) {
 
-    appState.exportDraft.contractCode = "1";
+    appState.exportDraft.contractCode = String(sessionUser?.preferredContractCode ?? "1").trim() || "1";
 
   }
 
@@ -106,7 +106,13 @@ function closeContractModal() {
 
 function setSettingsSection(name) {
 
-  const section = name || "appearance";
+  let section = name || "appearance";
+
+  if (section === "blank" && settingsBlankTab?.classList.contains("hidden")) {
+
+    section = "appearance";
+
+  }
 
   settingsSectionButtons.forEach((button) => {
 
@@ -119,6 +125,69 @@ function setSettingsSection(name) {
     panel.classList.toggle("active", panel.dataset.settingsPanel === section);
 
   });
+
+}
+
+// The blank picker is a testing affordance for the admin: it switches which act
+// template the signed-in account exports with, without demanding the contract
+// number, date and full name that the contract dialog validates.
+async function loadContractTemplates() {
+
+  if (!settingsBlankSelect || !api?.ListContractTemplates) {
+
+    return;
+
+  }
+
+  try {
+
+    const templates = await api.ListContractTemplates();
+
+    appState.contractTemplates = Array.isArray(templates) ? templates : [];
+
+  } catch (error) {
+
+    appState.contractTemplates = [];
+
+    setSettingsMessage(error, "error");
+
+    return;
+
+  }
+
+  renderContractTemplateOptions();
+
+}
+
+async function applyContractTemplate(code) {
+
+  try {
+
+    const updated = await api.SetPreferredContractTemplate(code);
+
+    if (updated && appState.session?.user) {
+
+      appState.session.user = { ...appState.session.user, ...updated };
+
+    }
+
+    appState.exportDraft.contractCode = String(updated?.preferredContractCode ?? code);
+
+    updateHiddenExportInputs();
+
+    renderContractDetailsSummary();
+
+    renderContractTemplateOptions();
+
+    setSettingsMessage("\u0411\u043b\u0430\u043d\u043a \u0430\u043a\u0442\u0430 \u043f\u0435\u0440\u0435\u043a\u043b\u044e\u0447\u0451\u043d. \u0412\u044b\u0433\u0440\u0443\u0437\u043a\u0430 PDF \u0442\u0435\u043f\u0435\u0440\u044c \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0435\u0442 \u0435\u0433\u043e.", "success");
+
+  } catch (error) {
+
+    renderContractTemplateOptions();
+
+    setSettingsMessage(error, "error");
+
+  }
 
 }
 
@@ -135,6 +204,8 @@ function openSettingsModal(section = "appearance") {
   settingsModal?.setAttribute("aria-hidden", "false");
 
   loadAppInfo();
+
+  loadContractTemplates();
 
 }
 

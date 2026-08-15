@@ -1038,6 +1038,12 @@ settingsFontScaleSelect?.addEventListener("change", () => {
 
 });
 
+settingsBlankSelect?.addEventListener("change", () => {
+
+  applyContractTemplate(settingsBlankSelect.value);
+
+});
+
 document.addEventListener("keydown", (event) => {
 
   if (event.key === "Escape" && activeDatePopover) {

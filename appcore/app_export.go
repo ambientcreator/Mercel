@@ -475,8 +475,15 @@ func resolveContractDirectorShort(contractTitle string) string {
 	return info.CustomerDirectorShort
 }
 
+// EN: Variable `contractTemplateCodes`.
+//
+// EN: What it does: contractTemplateCodes lists every act blank the exporter knows about, in display order.
+//
+// EN: Key points: the single place that enumerates blanks; resolveContractInfo stays the only place that describes one.
+var contractTemplateCodes = []string{"1", "2"}
+
 func resolveContractInfoFromTitle(title string) (contractInfo, error) {
-	for _, code := range []string{"1", "2"} {
+	for _, code := range contractTemplateCodes {
 		info, err := resolveContractInfo(code)
 		if err == nil && info.Title == title {
 			return info, nil

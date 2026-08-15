@@ -90,6 +90,38 @@ function renderSettingsPreferences() {
 
 }
 
+function renderContractTemplateOptions() {
+
+  if (!settingsBlankSelect) {
+
+    return;
+
+  }
+
+  const current = String(appState.session?.user?.preferredContractCode || appState.exportDraft.contractCode || "1");
+
+  settingsBlankSelect.innerHTML = appState.contractTemplates
+
+    .map((template) => `<option value="${escapeAttribute(template.code)}"${template.code === current ? " selected" : ""}>${escapeHtml(template.title)}</option>`)
+
+    .join("");
+
+  settingsBlankSelect.value = current;
+
+  const active = appState.contractTemplates.find((template) => template.code === current);
+
+  if (settingsBlankDetails) {
+
+    settingsBlankDetails.textContent = active
+
+      ? `Заказчик: ${active.customerName}. Подписант: ${active.directorShort}.`
+
+      : "Список бланков недоступен.";
+
+  }
+
+}
+
 function setPreference(key, value) {
 
   if (!PREFERENCE_CHOICES[key]?.includes(value)) {
@@ -151,7 +183,7 @@ function applyBootstrap(data) {
 
       employeeFullName: String(appState.session?.user?.fullName ?? "").trim(),
 
-      contractCode: "1",
+      contractCode: String(appState.session?.user?.preferredContractCode ?? "1").trim() || "1",
 
       contractSpbksNumber: String(appState.session?.user?.contractSPBKSNumber ?? "").trim(),
 
@@ -228,6 +260,8 @@ function renderShellState() {
   sessionRole.textContent = roleLabel(appState.session.user?.role);
 
   usersPanel.classList.toggle("hidden", !appState.session.canModerate);
+
+  settingsBlankTab?.classList.toggle("hidden", !appState.session.canAdmin);
 
 }
 

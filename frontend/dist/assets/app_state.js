@@ -42,6 +42,8 @@ const appState = {
 
   preferences: { theme: "dark", density: "comfortable", fontScale: "medium" },
 
+  contractTemplates: [],
+
 };
 
 const PREFERENCES_STORAGE_KEY = "mercel.preferences";
@@ -355,6 +357,12 @@ const settingsThemeSelect = document.getElementById("settings-theme-select");
 const settingsDensitySelect = document.getElementById("settings-density-select");
 
 const settingsFontScaleSelect = document.getElementById("settings-font-scale-select");
+
+const settingsBlankTab = document.getElementById("settings-blank-tab");
+
+const settingsBlankSelect = document.getElementById("settings-blank-select");
+
+const settingsBlankDetails = document.getElementById("settings-blank-details");
 
 const settingsAppVersion = document.getElementById("settings-app-version");
 

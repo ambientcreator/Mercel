@@ -419,6 +419,18 @@ var AppSupportContact = "support@mercel.local"
 // EN: What it does: AppInfo carries read-only environment facts the settings dialog shows to the user.
 //
 // EN: Key points: it exposes no secrets and needs no session, so it stays callable before login.
+// EN: Data type `ContractTemplate`.
+//
+// EN: What it does: ContractTemplate describes one act blank for the settings picker.
+//
+// EN: Key points: a read-only projection of contractInfo; blanks themselves stay defined in app_export.go.
+type ContractTemplate struct {
+	Code          string `json:"code"`
+	Title         string `json:"title"`
+	CustomerName  string `json:"customerName"`
+	DirectorShort string `json:"directorShort"`
+}
+
 type AppInfo struct {
 	Version        string `json:"version"`
 	DatabasePath   string `json:"databasePath"`

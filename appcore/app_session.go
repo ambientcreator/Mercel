@@ -233,3 +233,63 @@ func (a *App) GetServices() ([]Service, error) {
 // EN: What it does: formatMoney produces a compact Russian-currency string for generated descriptions and archive titles.
 //
 // EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
+
+// EN: Method `ListContractTemplates`.
+//
+// EN: What it does: ListContractTemplates returns every act blank the exporter supports, so the UI never duplicates their names.
+//
+// EN: Key points: derived from resolveContractInfo, which stays the only description of a blank.
+func (a *App) ListContractTemplates() ([]ContractTemplate, error) {
+	if _, err := a.requireAuth(); err != nil {
+		return nil, err
+	}
+
+	templates := make([]ContractTemplate, 0, len(contractTemplateCodes))
+	for _, code := range contractTemplateCodes {
+		info, err := resolveContractInfo(code)
+		if err != nil {
+			return nil, err
+		}
+		templates = append(templates, ContractTemplate{
+			Code:          info.Code,
+			Title:         info.Title,
+			CustomerName:  info.CustomerName,
+			DirectorShort: info.CustomerDirectorShort,
+		})
+	}
+	return templates, nil
+}
+
+// EN: Method `SetPreferredContractTemplate`.
+//
+// EN: What it does: SetPreferredContractTemplate switches which act blank the signed-in user exports with.
+//
+// EN: Key points: touches only the blank column, so it works before the contract number, date and full name are filled in — unlike UpdateUserContractDetails, which validates all of them.
+func (a *App) SetPreferredContractTemplate(code string) (User, error) {
+	current, err := a.requireAuth()
+	if err != nil {
+		return User{}, err
+	}
+
+	code = strings.TrimSpace(code)
+	if _, err := resolveContractInfo(code); err != nil {
+		return User{}, err
+	}
+
+	if _, err := a.db.Exec(`UPDATE users SET preferred_contract_code = ? WHERE id = ?`, code, current.ID); err != nil {
+		return User{}, fmt.Errorf("update preferred contract template: %w", err)
+	}
+
+	updated, err := a.getUserByID(current.ID)
+	if err != nil {
+		return User{}, err
+	}
+
+	a.mu.Lock()
+	if a.currentSession != nil && a.currentSession.ID == updated.ID {
+		a.currentSession.PreferredContractCode = updated.PreferredContractCode
+	}
+	a.mu.Unlock()
+
+	return updated, nil
+}
