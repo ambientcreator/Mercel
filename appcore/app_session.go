@@ -98,6 +98,35 @@ func (a *App) GetBootstrap() (AppBootstrap, error) {
 	}, nil
 }
 
+// EN: Method `GetAppInfo`.
+//
+// EN: What it does: GetAppInfo reports the version, the resolved database file and the support contact for the settings dialog.
+//
+// EN: Key points: kept out of GetBootstrap because it never changes during a session, while the bootstrap payload is refetched after every mutation; gated on an open session so the login screen cannot read the storage layout.
+func (a *App) GetAppInfo() (AppInfo, error) {
+	if _, err := a.requireAuth(); err != nil {
+		return AppInfo{}, err
+	}
+
+	a.mu.RLock()
+	databasePath := a.dbPath
+	a.mu.RUnlock()
+
+	if databasePath == "" {
+		resolved, err := resolveDatabasePath()
+		if err != nil {
+			return AppInfo{}, fmt.Errorf("resolve database path: %w", err)
+		}
+		databasePath = resolved
+	}
+
+	return AppInfo{
+		Version:        AppVersion,
+		DatabasePath:   databasePath,
+		SupportContact: AppSupportContact,
+	}, nil
+}
+
 // EN: Method `Login`.
 //
 // EN: What it does: Login validates credentials, opens a session and returns capability flags for the current user.

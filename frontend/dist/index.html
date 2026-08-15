@@ -12,7 +12,7 @@
 
     <title>Mercel</title>
 
-    <link rel="stylesheet" href="./assets/app.css?v=20260410-2" />
+    <link rel="stylesheet" href="./assets/app.css?v=20260815-1" />
 
   </head>
 
@@ -82,6 +82,8 @@
 
             </div>
 
+            <button id="settings-button" type="button" class="secondary topbar-icon-button" aria-label="&#1053;&#1072;&#1089;&#1090;&#1088;&#1086;&#1081;&#1082;&#1080; &#1087;&#1088;&#1080;&#1083;&#1086;&#1078;&#1077;&#1085;&#1080;&#1103;" title="&#1053;&#1072;&#1089;&#1090;&#1088;&#1086;&#1081;&#1082;&#1080; &#1087;&#1088;&#1080;&#1083;&#1086;&#1078;&#1077;&#1085;&#1080;&#1103;">&#9881;</button>
+
             <button id="logout-button" type="button" class="secondary">Выйти</button>
 
           </div>
@@ -96,7 +98,7 @@
 
           <button type="button" class="tab-button" data-tab="archive">Архив</button>
 
-          <button type="button" class="tab-button hidden" data-tab="settings" id="settings-tab-button">Настройки</button>
+          <button type="button" class="tab-button hidden" data-tab="settings" id="settings-tab-button">Управление</button>
 
         </div>
 
@@ -149,7 +151,7 @@
 
               <button id="calculate-button" class="primary">&#1056;&#1072;&#1089;&#1089;&#1095;&#1080;&#1090;&#1072;&#1090;&#1100;</button>
 
-              <button id="contract-details-button" type="button" class="secondary">&#1059;&#1082;&#1072;&#1079;&#1072;&#1090;&#1100; &#1076;&#1086;&#1075;&#1086;&#1074;&#1086;&#1088;</button>
+              <button id="contract-details-button" type="button" class="secondary hidden">&#1059;&#1082;&#1072;&#1079;&#1072;&#1090;&#1100; &#1076;&#1086;&#1075;&#1086;&#1074;&#1086;&#1088;</button>
 
             </div>
 
@@ -251,7 +253,7 @@
 
                 <tbody id="result-body">
 
-                  <tr><td colspan="4" class="placeholder">Результаты появятся здесь после расчёта.</td></tr>
+                  <tr><td colspan="4" class="placeholder">Введите сумму слева и задайте веса — расчёт выполнится автоматически.</td></tr>
 
                 </tbody>
 
@@ -412,7 +414,7 @@
 
               <div>
 
-                <span class="panel-kicker">Настройки</span>
+                <span class="panel-kicker">Управление</span>
 
                 <h2>Услуги</h2>
 
@@ -578,11 +580,41 @@
 
       </section>
 
-    </div>    <div id="contract-modal" class="confirm-modal hidden" aria-hidden="true">
+    </div>
 
-      <div id="contract-backdrop" class="confirm-backdrop"></div>
+    <div id="settings-modal" class="confirm-modal settings-modal hidden" aria-hidden="true">
 
-      <section class="confirm-dialog contract-dialog glass" role="dialog" aria-modal="true" aria-labelledby="contract-title">
+      <div id="settings-backdrop" class="confirm-backdrop"></div>
+
+      <section id="settings-dialog" class="confirm-dialog settings-dialog glass" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
+
+        <div class="settings-modal-head">
+
+          <div>
+
+            <div class="panel-kicker">Mercel</div>
+
+            <h3 id="settings-modal-title">&#1053;&#1072;&#1089;&#1090;&#1088;&#1086;&#1081;&#1082;&#1080; &#1087;&#1088;&#1080;&#1083;&#1086;&#1078;&#1077;&#1085;&#1080;&#1103;</h3>
+
+          </div>
+
+          <button id="settings-close" type="button" class="ghost-button settings-close-button" aria-label="&#1047;&#1072;&#1082;&#1088;&#1099;&#1090;&#1100;" title="&#1047;&#1072;&#1082;&#1088;&#1099;&#1090;&#1100;">&#10005;</button>
+
+        </div>
+
+        <div id="settings-nav" class="settings-modal-nav">
+
+          <button type="button" class="tab-button active" data-settings-section="profile">&#1055;&#1088;&#1086;&#1092;&#1080;&#1083;&#1100; &#1080; &#1076;&#1086;&#1075;&#1086;&#1074;&#1086;&#1088;</button>
+
+          <button type="button" class="tab-button" data-settings-section="appearance">&#1054;&#1092;&#1086;&#1088;&#1084;&#1083;&#1077;&#1085;&#1080;&#1077;</button>
+
+          <button type="button" class="tab-button" data-settings-section="about">&#1054; &#1087;&#1088;&#1086;&#1075;&#1088;&#1072;&#1084;&#1084;&#1077;</button>
+
+        </div>
+
+        <div class="settings-modal-body">
+
+        <section class="settings-modal-section active" data-settings-panel="profile">
 
         <div class="panel-kicker">&#1044;&#1072;&#1085;&#1085;&#1099;&#1077; &#1076;&#1083;&#1103; &#1072;&#1082;&#1090;&#1072;</div>
 
@@ -648,11 +680,93 @@
 
         <div class="confirm-actions">
 
-          <button id="contract-cancel" type="button" class="secondary">&#1054;&#1090;&#1084;&#1077;&#1085;&#1072;</button>
-
           <button id="contract-save" type="button" class="primary">&#1057;&#1086;&#1093;&#1088;&#1072;&#1085;&#1080;&#1090;&#1100; &#1076;&#1072;&#1085;&#1085;&#1099;&#1077;</button>
 
         </div>
+
+        </section>
+
+        <section class="settings-modal-section" data-settings-panel="appearance">
+
+          <p class="confirm-text">&#1054;&#1092;&#1086;&#1088;&#1084;&#1083;&#1077;&#1085;&#1080;&#1077; &#1093;&#1088;&#1072;&#1085;&#1080;&#1090;&#1089;&#1103; &#1085;&#1072; &#1101;&#1090;&#1086;&#1084; &#1082;&#1086;&#1084;&#1087;&#1100;&#1102;&#1090;&#1077;&#1088;&#1077; &#1080; &#1087;&#1088;&#1080;&#1084;&#1077;&#1085;&#1103;&#1077;&#1090;&#1089;&#1103; &#1089;&#1088;&#1072;&#1079;&#1091;.</p>
+
+          <label class="field">
+
+            <span>&#1058;&#1077;&#1084;&#1072;</span>
+
+            <select id="settings-theme-select" class="input-select">
+
+              <option value="dark">&#1058;&#1105;&#1084;&#1085;&#1072;&#1103;</option>
+
+              <option value="light">&#1057;&#1074;&#1077;&#1090;&#1083;&#1072;&#1103;</option>
+
+            </select>
+
+          </label>
+
+          <label class="field">
+
+            <span>&#1055;&#1083;&#1086;&#1090;&#1085;&#1086;&#1089;&#1090;&#1100; &#1080;&#1085;&#1090;&#1077;&#1088;&#1092;&#1077;&#1081;&#1089;&#1072;</span>
+
+            <select id="settings-density-select" class="input-select">
+
+              <option value="comfortable">&#1054;&#1073;&#1099;&#1095;&#1085;&#1072;&#1103;</option>
+
+              <option value="compact">&#1050;&#1086;&#1084;&#1087;&#1072;&#1082;&#1090;&#1085;&#1072;&#1103;</option>
+
+            </select>
+
+          </label>
+
+          <label class="field">
+
+            <span>&#1056;&#1072;&#1079;&#1084;&#1077;&#1088; &#1096;&#1088;&#1080;&#1092;&#1090;&#1072;</span>
+
+            <select id="settings-font-scale-select" class="input-select">
+
+              <option value="small">&#1052;&#1077;&#1083;&#1082;&#1080;&#1081;</option>
+
+              <option value="medium">&#1054;&#1073;&#1099;&#1095;&#1085;&#1099;&#1081;</option>
+
+              <option value="large">&#1050;&#1088;&#1091;&#1087;&#1085;&#1099;&#1081;</option>
+
+            </select>
+
+          </label>
+
+        </section>
+
+        <section class="settings-modal-section" data-settings-panel="about">
+
+          <div class="settings-about-row">
+
+            <span>&#1042;&#1077;&#1088;&#1089;&#1080;&#1103;</span>
+
+            <strong id="settings-app-version">&#8212;</strong>
+
+          </div>
+
+          <div class="settings-about-row">
+
+            <span>&#1041;&#1072;&#1079;&#1072; &#1076;&#1072;&#1085;&#1085;&#1099;&#1093;</span>
+
+            <strong id="settings-db-path" class="settings-path">&#8212;</strong>
+
+          </div>
+
+          <div class="settings-about-row">
+
+            <span>&#1055;&#1086;&#1076;&#1076;&#1077;&#1088;&#1078;&#1082;&#1072;</span>
+
+            <strong id="settings-support">&#8212;</strong>
+
+          </div>
+
+        </section>
+
+        </div>
+
+        <div id="settings-message" class="message muted">&#1048;&#1079;&#1084;&#1077;&#1085;&#1077;&#1085;&#1080;&#1103; &#1087;&#1088;&#1080;&#1084;&#1077;&#1085;&#1103;&#1102;&#1090;&#1089;&#1103; &#1089;&#1088;&#1072;&#1079;&#1091; &#1087;&#1086;&#1089;&#1083;&#1077; &#1089;&#1086;&#1093;&#1088;&#1072;&#1085;&#1077;&#1085;&#1080;&#1103;.</div>
 
       </section>
 
@@ -686,11 +800,11 @@
 
 
 
-    <script src="./assets/app_state.js?v=20260410-2"></script>
-    <script src="./assets/app_utils.js?v=20260410-2"></script>
-    <script src="./assets/app_render.js?v=20260410-2"></script>
-    <script src="./assets/app_archive.js?v=20260410-2"></script>
-    <script src="./assets/app_bootstrap.js?v=20260410-2"></script>
+    <script src="./assets/app_state.js?v=20260815-1"></script>
+    <script src="./assets/app_utils.js?v=20260815-1"></script>
+    <script src="./assets/app_render.js?v=20260815-1"></script>
+    <script src="./assets/app_archive.js?v=20260815-1"></script>
+    <script src="./assets/app_bootstrap.js?v=20260815-1"></script>
 
   </body>
 

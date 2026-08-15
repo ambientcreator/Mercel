@@ -40,7 +40,113 @@ const appState = {
 
   },
 
+  preferences: { theme: "dark", density: "comfortable", fontScale: "medium" },
+
 };
+
+const PREFERENCES_STORAGE_KEY = "mercel.preferences";
+
+const PREFERENCE_CHOICES = {
+
+  theme: ["dark", "light"],
+
+  density: ["comfortable", "compact"],
+
+  fontScale: ["small", "medium", "large"],
+
+};
+
+const PREFERENCE_DEFAULTS = { theme: "dark", density: "comfortable", fontScale: "medium" };
+
+const FONT_SCALE_ZOOM = { small: "0.92", medium: "1", large: "1.1" };
+
+// Preferences are read and applied here, in the first script, so the shell paints
+// with the chosen theme instead of flashing the dark default through bootstrap.
+function readStoredPreferences() {
+
+  const stored = { ...PREFERENCE_DEFAULTS };
+
+  let raw = null;
+
+  try {
+
+    raw = window.localStorage?.getItem(PREFERENCES_STORAGE_KEY) ?? null;
+
+  } catch (error) {
+
+    return stored;
+
+  }
+
+  if (!raw) {
+
+    return stored;
+
+  }
+
+  let parsed = null;
+
+  try {
+
+    parsed = JSON.parse(raw);
+
+  } catch (error) {
+
+    return stored;
+
+  }
+
+  if (!parsed || typeof parsed !== "object") {
+
+    return stored;
+
+  }
+
+  Object.keys(PREFERENCE_CHOICES).forEach((key) => {
+
+    if (PREFERENCE_CHOICES[key].includes(parsed[key])) {
+
+      stored[key] = parsed[key];
+
+    }
+
+  });
+
+  return stored;
+
+}
+
+function applyPreferences(preferences) {
+
+  const root = document.documentElement;
+
+  root.dataset.theme = preferences.theme;
+
+  root.dataset.density = preferences.density;
+
+  root.dataset.fontScale = preferences.fontScale;
+
+  root.style.zoom = FONT_SCALE_ZOOM[preferences.fontScale] ?? "1";
+
+}
+
+function savePreferences() {
+
+  try {
+
+    window.localStorage?.setItem(PREFERENCES_STORAGE_KEY, JSON.stringify(appState.preferences));
+
+  } catch (error) {
+
+    // Storage can be unavailable in a locked-down webview; the in-memory value still applies.
+
+  }
+
+}
+
+appState.preferences = readStoredPreferences();
+
+applyPreferences(appState.preferences);
 
 const api = window.go?.appcore?.App || window.go?.main?.App;
 
@@ -200,12 +306,6 @@ const confirmCancel = document.getElementById("confirm-cancel");
 
 const confirmSubmit = document.getElementById("confirm-submit");
 
-const contractModal = document.getElementById("contract-modal");
-
-const contractBackdrop = document.getElementById("contract-backdrop");
-
-const contractCancel = document.getElementById("contract-cancel");
-
 const contractSave = document.getElementById("contract-save");
 
 const contractModalSPBKSNumberInput = document.getElementById("contract-modal-spbks-number-input");
@@ -221,6 +321,34 @@ const contractModalDatePickerButton = document.getElementById("contract-modal-da
 const contractModalDatePicker = document.getElementById("contract-modal-date-picker");
 
 const contractModalFullNameInput = document.getElementById("contract-modal-fullname-input");
+
+const settingsButton = document.getElementById("settings-button");
+
+const settingsModal = document.getElementById("settings-modal");
+
+const settingsBackdrop = document.getElementById("settings-backdrop");
+
+const settingsCloseButton = document.getElementById("settings-close");
+
+const settingsNav = document.getElementById("settings-nav");
+
+const settingsMessage = document.getElementById("settings-message");
+
+const settingsThemeSelect = document.getElementById("settings-theme-select");
+
+const settingsDensitySelect = document.getElementById("settings-density-select");
+
+const settingsFontScaleSelect = document.getElementById("settings-font-scale-select");
+
+const settingsAppVersion = document.getElementById("settings-app-version");
+
+const settingsDbPath = document.getElementById("settings-db-path");
+
+const settingsSupport = document.getElementById("settings-support");
+
+const settingsSectionButtons = document.querySelectorAll("[data-settings-section]");
+
+const settingsSectionPanels = document.querySelectorAll("[data-settings-panel]");
 
 let confirmResolver = null;
 

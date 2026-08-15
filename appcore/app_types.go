@@ -395,8 +395,34 @@ type groupAllocation struct {
 type App struct {
 	ctx            context.Context
 	db             *sql.DB
+	dbPath         string
 	mu             sync.RWMutex
 	currentSession *User
+}
+
+// EN: Variable `AppVersion`.
+//
+// EN: What it does: AppVersion is the human-readable release version shown in the "About" section of the settings dialog.
+//
+// EN: Key points: declared as a var rather than a const so a build can override it with -ldflags "-X"; it is the only place the version is declared.
+var AppVersion = "1.1.0"
+
+// EN: Variable `AppSupportContact`.
+//
+// EN: What it does: AppSupportContact is the support address shown in the "About" section of the settings dialog.
+//
+// EN: Key points: a var for the same -ldflags reason as AppVersion.
+var AppSupportContact = "support@mercel.local"
+
+// EN: Data type `AppInfo`.
+//
+// EN: What it does: AppInfo carries read-only environment facts the settings dialog shows to the user.
+//
+// EN: Key points: it exposes no secrets and needs no session, so it stays callable before login.
+type AppInfo struct {
+	Version        string `json:"version"`
+	DatabasePath   string `json:"databasePath"`
+	SupportContact string `json:"supportContact"`
 }
 
 // EN: Function `NewApp`.

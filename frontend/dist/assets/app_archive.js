@@ -673,7 +673,25 @@ function renderHistory() {
 
   if (!visibleCalculations.length) {
 
-    historyList.innerHTML = '<div class="history-empty">Пока ничего не сохранено.</div>';
+    historyList.innerHTML = `
+
+      <div class="empty-state">
+
+        <div class="empty-state-title">Архив пуст</div>
+
+        <p class="empty-state-text">Записи появляются здесь автоматически: каждый расчёт сохраняется сразу после нажатия «Рассчитать».</p>
+
+        <button type="button" class="primary empty-state-action" data-goto-calculator>Перейти к расчёту</button>
+
+      </div>`;
+
+    historyList.querySelector("[data-goto-calculator]")?.addEventListener("click", () => {
+
+      setActiveTab("calculator");
+
+      amountInput?.focus();
+
+    });
 
     appState.activeHistoryId = null;
 

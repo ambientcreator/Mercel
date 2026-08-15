@@ -672,8 +672,14 @@ function positionDatePopover() {
     left = margin;
   }
 
-  datePopover.style.left = `${left}px`;
-  datePopover.style.top = `${top}px`;
+  // The font-scale preference sets `zoom` on the root element. getBoundingClientRect and
+  // window.innerWidth/Height report in the zoomed space, but the popover is a child of the
+  // zoomed root, so its left/top are interpreted before scaling — divide to bring them back.
+  // At the default scale the divisor is 1 and this is a no-op.
+  const rootZoom = Number(getComputedStyle(document.documentElement).zoom) || 1;
+
+  datePopover.style.left = `${left / rootZoom}px`;
+  datePopover.style.top = `${top / rootZoom}px`;
 }
 
 function applyDatePopoverValue(isoValue) {
@@ -946,21 +952,57 @@ confirmBackdrop.addEventListener("click", () => {
 
 });
 
-contractCancel?.addEventListener("click", () => {
-
-  closeContractModal();
-
-});
-
 contractSave?.addEventListener("click", () => {
 
   saveContractDetails();
 
 });
 
-contractBackdrop?.addEventListener("click", () => {
+settingsButton?.addEventListener("click", () => {
 
-  closeContractModal();
+  openSettingsModal("profile");
+
+});
+
+settingsCloseButton?.addEventListener("click", () => {
+
+  closeSettingsModal();
+
+});
+
+settingsBackdrop?.addEventListener("click", () => {
+
+  closeSettingsModal();
+
+});
+
+settingsNav?.addEventListener("click", (event) => {
+
+  const button = event.target.closest("[data-settings-section]");
+
+  if (button) {
+
+    setSettingsSection(button.dataset.settingsSection);
+
+  }
+
+});
+
+settingsThemeSelect?.addEventListener("change", () => {
+
+  setPreference("theme", settingsThemeSelect.value);
+
+});
+
+settingsDensitySelect?.addEventListener("change", () => {
+
+  setPreference("density", settingsDensitySelect.value);
+
+});
+
+settingsFontScaleSelect?.addEventListener("change", () => {
+
+  setPreference("fontScale", settingsFontScaleSelect.value);
 
 });
 
@@ -982,9 +1024,9 @@ document.addEventListener("keydown", (event) => {
 
   }
 
-  if (event.key === "Escape" && contractModal && !contractModal.classList.contains("hidden")) {
+  if (event.key === "Escape" && settingsModal && !settingsModal.classList.contains("hidden")) {
 
-    closeContractModal();
+    closeSettingsModal();
 
     return;
 

@@ -30,7 +30,70 @@ function setUserFormMessage(text, type = "muted") {
 
 }
 
+function setSettingsMessage(text, type = "muted") {
+
+  if (!settingsMessage) {
+
+    return;
+
+  }
+
+  settingsMessage.textContent = normalizeErrorText(text, "Не удалось сохранить настройки.");
+
+  settingsMessage.className = `message ${type}`;
+
+}
+
+function renderSettingsPreferences() {
+
+  if (settingsThemeSelect) {
+
+    settingsThemeSelect.value = appState.preferences.theme;
+
+  }
+
+  if (settingsDensitySelect) {
+
+    settingsDensitySelect.value = appState.preferences.density;
+
+  }
+
+  if (settingsFontScaleSelect) {
+
+    settingsFontScaleSelect.value = appState.preferences.fontScale;
+
+  }
+
+}
+
+function setPreference(key, value) {
+
+  if (!PREFERENCE_CHOICES[key]?.includes(value)) {
+
+    renderSettingsPreferences();
+
+    return;
+
+  }
+
+  appState.preferences[key] = value;
+
+  applyPreferences(appState.preferences);
+
+  savePreferences();
+
+  setSettingsMessage("Оформление обновлено.", "success");
+
+}
+
 function setActiveTab(tab) {
+
+  // A stale activeTab can survive a logout, so never land on a tab the current session cannot see.
+  if (tab === "settings" && settingsTabButton?.classList.contains("hidden")) {
+
+    tab = "calculator";
+
+  }
 
   appState.activeTab = tab;
 
@@ -122,7 +185,13 @@ function renderShellState() {
 
   appShell.classList.toggle("hidden", !authenticated);
 
+  // Every user keeps their own service list, so the management tab is for everyone who is
+  // logged in — but it must hide again on logout, hence toggle rather than remove.
+  settingsTabButton.classList.toggle("hidden", !authenticated);
+
   if (!authenticated) {
+
+    closeSettingsModal();
 
     return;
 
@@ -131,8 +200,6 @@ function renderShellState() {
   sessionUsername.textContent = appState.session.user?.username ?? "Гость";
 
   sessionRole.textContent = roleLabel(appState.session.user?.role);
-
-  settingsTabButton.classList.remove("hidden");
 
   usersPanel.classList.toggle("hidden", !appState.session.canModerate);
 
@@ -488,7 +555,7 @@ function renderResult(result) {
 
     renderActNumberControls();
 
-    resultBody.innerHTML = '<tr><td colspan="4" class="placeholder">\u0420\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442\u044b \u043f\u043e\u044f\u0432\u044f\u0442\u0441\u044f \u0437\u0434\u0435\u0441\u044c \u043f\u043e\u0441\u043b\u0435 \u0440\u0430\u0441\u0447\u0451\u0442\u0430.</td></tr>';
+    resultBody.innerHTML = '<tr><td colspan="4" class="placeholder">\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0441\u0443\u043c\u043c\u0443 \u0441\u043b\u0435\u0432\u0430 \u0438 \u0437\u0430\u0434\u0430\u0439\u0442\u0435 \u0432\u0435\u0441\u0430 \u2014 \u0440\u0430\u0441\u0447\u0451\u0442 \u0432\u044b\u043f\u043e\u043b\u043d\u0438\u0442\u0441\u044f \u0430\u0432\u0442\u043e\u043c\u0430\u0442\u0438\u0447\u0435\u0441\u043a\u0438. \u041a\u043d\u043e\u043f\u043a\u0430 \u00ab\u0421\u043a\u0430\u0447\u0430\u0442\u044c \u0430\u043a\u0442 PDF\u00bb \u0441\u0442\u0430\u043d\u0435\u0442 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0439 \u043f\u0440\u0438 \u0442\u043e\u0447\u043d\u043e\u043c \u0441\u043e\u0432\u043f\u0430\u0434\u0435\u043d\u0438\u0438 \u0441\u0443\u043c\u043c\u044b.</td></tr>';
 
     return;
 
@@ -544,7 +611,25 @@ function renderServices() {
 
   if (!appState.services.length) {
 
-    servicesList.innerHTML = '<div class="service-card">\u0423\u0441\u043b\u0443\u0433\u0438 \u0435\u0449\u0451 \u043d\u0435 \u0441\u043e\u0437\u0434\u0430\u043d\u044b. \u0414\u043e\u0431\u0430\u0432\u044c\u0442\u0435 \u0438\u0445 \u0432\u043e \u0432\u043a\u043b\u0430\u0434\u043a\u0435 \u043d\u0430\u0441\u0442\u0440\u043e\u0435\u043a.</div>';
+    servicesList.innerHTML = `
+
+      <div class="empty-state">
+
+        <div class="empty-state-title">\u0423\u0441\u043b\u0443\u0433\u0438 \u0435\u0449\u0451 \u043d\u0435 \u0441\u043e\u0437\u0434\u0430\u043d\u044b</div>
+
+        <p class="empty-state-text">\u0420\u0430\u0441\u0447\u0451\u0442 \u0441\u0442\u0440\u043e\u0438\u0442\u0441\u044f \u0438\u0437 \u0432\u0430\u0448\u0435\u0433\u043e \u043b\u0438\u0447\u043d\u043e\u0433\u043e \u043d\u0430\u0431\u043e\u0440\u0430 \u0443\u0441\u043b\u0443\u0433. \u0414\u043e\u0431\u0430\u0432\u044c\u0442\u0435 \u043f\u0435\u0440\u0432\u0443\u044e \u0443\u0441\u043b\u0443\u0433\u0443 \u0432\u043e \u0432\u043a\u043b\u0430\u0434\u043a\u0435 \u00ab\u0423\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435\u00bb \u2014 \u043e\u043d\u0430 \u0441\u0440\u0430\u0437\u0443 \u043f\u043e\u044f\u0432\u0438\u0442\u0441\u044f \u0437\u0434\u0435\u0441\u044c.</p>
+
+        <button type="button" class="primary empty-state-action" data-goto-services>\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u043f\u0435\u0440\u0432\u0443\u044e \u0443\u0441\u043b\u0443\u0433\u0443</button>
+
+      </div>`;
+
+    servicesList.querySelector("[data-goto-services]")?.addEventListener("click", () => {
+
+      setActiveTab("settings");
+
+      serviceNameInput?.focus();
+
+    });
 
     return;
 
@@ -674,7 +759,23 @@ function renderServicesAdmin() {
 
   if (!appState.services.length) {
 
-    servicesAdminList.innerHTML = '<div class="settings-empty">\u0421\u043f\u0438\u0441\u043e\u043a \u0443\u0441\u043b\u0443\u0433 \u043f\u0443\u0441\u0442.</div>';
+    servicesAdminList.innerHTML = `
+
+      <div class="empty-state">
+
+        <div class="empty-state-title">\u0421\u043f\u0438\u0441\u043e\u043a \u0443\u0441\u043b\u0443\u0433 \u043f\u0443\u0441\u0442</div>
+
+        <p class="empty-state-text">\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u0435 \u0444\u043e\u0440\u043c\u0443 \u0441\u043f\u0440\u0430\u0432\u0430: \u043d\u0430\u0437\u0432\u0430\u043d\u0438\u0435, \u0435\u0434\u0438\u043d\u0438\u0446\u0443, \u0441\u0442\u043e\u0438\u043c\u043e\u0441\u0442\u044c \u0438 \u0433\u0440\u0443\u043f\u043f\u0443. \u0423\u0441\u043b\u0443\u0433\u0430 \u0441\u0440\u0430\u0437\u0443 \u0441\u0442\u0430\u043d\u0435\u0442 \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u0430 \u0432 \u0440\u0430\u0441\u0447\u0451\u0442\u0435.</p>
+
+        <button type="button" class="primary empty-state-action" data-focus-service-form>\u0421\u043e\u0437\u0434\u0430\u0442\u044c \u0443\u0441\u043b\u0443\u0433\u0443</button>
+
+      </div>`;
+
+    servicesAdminList.querySelector("[data-focus-service-form]")?.addEventListener("click", () => {
+
+      serviceNameInput?.focus();
+
+    });
 
     setServiceFormMessage("\u0423 \u0432\u0430\u0441 \u043f\u043e\u043a\u0430 \u043d\u0435\u0442 \u0443\u0441\u043b\u0443\u0433. \u041c\u043e\u0436\u043d\u043e \u0441\u043e\u0437\u0434\u0430\u0442\u044c \u043f\u0435\u0440\u0432\u0443\u044e \u043f\u0440\u044f\u043c\u043e \u0441\u0435\u0439\u0447\u0430\u0441.", "muted");
 

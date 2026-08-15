@@ -24,7 +24,7 @@ func NewApp() (*App, error) {
 		return nil, fmt.Errorf("open database: %w", err)
 	}
 
-	app := &App{db: db}
+	app := &App{db: db, dbPath: dbPath}
 	if err := app.initDatabase(); err != nil {
 		db.Close()
 		return nil, err
