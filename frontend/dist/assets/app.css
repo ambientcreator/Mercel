@@ -2360,3 +2360,136 @@ input[type="date"]::-webkit-datetime-edit-year-field {
 
 :root[data-density="compact"] .amount-row #amount-input { font-size: 18px; padding: 9px 12px; }
 :root[data-density="compact"] .contract-card { padding: 8px 10px; }
+
+
+/* ---------------------------------------------------------------------------
+   Users list: identity on top, edit controls as joined field+button units.
+   Replaces the stacked layout where four differently-sized buttons floated
+   around two columns.
+   --------------------------------------------------------------------------- */
+
+.user-item {
+  display: block;
+  padding: 12px 14px;
+}
+.user-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.user-identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.user-identity strong { font-size: 15px; line-height: 1.2; }
+.user-role-badge {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(var(--rgb-accent), 0.12);
+  border: 1px solid rgba(var(--rgb-accent), 0.24);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.user-head-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+.user-created { color: var(--muted); font-size: 11px; white-space: nowrap; }
+
+.icon-danger-button {
+  width: 28px;
+  height: 28px;
+  min-width: 0;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-control);
+  border: 1px solid rgba(var(--rgb-danger), 0.28);
+  background: rgba(var(--rgb-red), 0.1);
+  color: var(--text-danger);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+}
+.icon-danger-button:hover:not(:disabled) { background: rgba(var(--rgb-red), 0.2); }
+
+/* Each control is one bordered unit, so a field and the button that commits it
+   read as a single thing instead of two loose elements. */
+.user-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.inline-field {
+  display: flex;
+  align-items: stretch;
+  flex: 1 1 260px;
+  min-width: 0;
+  height: 34px;
+  border: 1px solid rgba(var(--rgb-slate), 0.2);
+  border-radius: var(--radius-control);
+  overflow: hidden;
+  background: rgba(var(--rgb-field), 0.5);
+}
+.inline-field:focus-within { border-color: rgba(var(--rgb-accent), 0.5); }
+.inline-field-label {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  flex: 0 0 auto;
+  border-right: 1px solid rgba(var(--rgb-slate), 0.16);
+  background: rgba(var(--rgb-slate), 0.08);
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+.inline-field input,
+.inline-field select {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  padding: 0 10px;
+  border: none;
+  background: none;
+  color: var(--text);
+  font-size: 13px;
+}
+.inline-field input:focus,
+.inline-field select:focus { outline: none; }
+.inline-field select { cursor: pointer; }
+.inline-field > button {
+  flex: 0 0 auto;
+  min-width: 0;
+  height: 100%;
+  padding: 0 12px;
+  border: none;
+  border-left: 1px solid rgba(var(--rgb-slate), 0.16);
+  border-radius: 0;
+  background: rgba(var(--rgb-slate), 0.1);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.inline-field > button:hover:not(:disabled) { background: rgba(var(--rgb-accent), 0.18); transform: none; }
+.inline-field-role { flex: 1 1 320px; }
+.user-controls-note { color: var(--muted); font-size: 12px; flex: 1 1 100%; line-height: 1.4; }
+
+/* The generic list-action sizing must not reach inside these joined units. */
+.user-controls button { min-width: 0; min-height: 0; }
+
+:root[data-density="compact"] .user-item { padding: 9px 11px; }
+:root[data-density="compact"] .inline-field { height: 30px; }

@@ -84,25 +84,33 @@
 
       <article class="settings-item glass user-item">
 
-        <div>
+        <div class="user-head">
 
-          <strong>${escapeHtml(user.username)}</strong>
+          <div class="user-identity">
 
-          <div class="service-meta">${roleLabel(user.role)}</div>
+            <strong>${escapeHtml(user.username)}</strong>
 
-          <div class="service-meta">\u0421\u043e\u0437\u0434\u0430\u043d: ${formatDate(user.createdAt)}</div>
+            <span class="user-role-badge">${roleLabel(user.role)}</span>
 
-          ${canEditFullName ? `<div class="user-fullname-row"><input type="text" class="input-select compact-select inline-fullname-input" placeholder="\u0424\u0418\u041e \u0441\u043e\u0442\u0440\u0443\u0434\u043d\u0438\u043a\u0430" value="${escapeHtml(user.fullName || "")}" data-user-fullname-id="${user.id}" /><button type="button" class="ghost-button compact-action-button" data-save-fullname-id="${user.id}">\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u0424\u0418\u041e</button></div>` : ""}
+          </div>
 
-          ${canResetPassword ? `<div class="user-password-row"><input type="password" class="input-select compact-select inline-password-input" placeholder="\u041d\u043e\u0432\u044b\u0439 \u043f\u0430\u0440\u043e\u043b\u044c" data-user-password-id="${user.id}" /><button type="button" class="ghost-button compact-action-button" data-apply-password-id="${user.id}">\u0421\u043c\u0435\u043d\u0438\u0442\u044c \u043f\u0430\u0440\u043e\u043b\u044c</button></div>` : ""}
+          <div class="user-head-meta">
+
+            <span class="user-created">${formatDate(user.createdAt)}</span>
+
+            <button type="button" class="icon-danger-button" title="\u0423\u0434\u0430\u043b\u0438\u0442\u044c \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044f" aria-label="\u0423\u0434\u0430\u043b\u0438\u0442\u044c \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044f" ${canDelete ? `data-delete-user-id="${user.id}"` : "disabled"}>&#10005;</button>
+
+          </div>
 
         </div>
 
-        <div class="settings-item-actions stacked-actions">
+        <div class="user-controls">
 
-          ${canChangeRole ? `<select class="input-select compact-select" data-user-role-id="${user.id}">${roleOptions}</select><button type="button" class="ghost-button" data-apply-role-id="${user.id}">\u0421\u043c\u0435\u043d\u0438\u0442\u044c \u0440\u043e\u043b\u044c</button>` : `<div class="service-meta">\u0421\u043c\u0435\u043d\u0430 \u0440\u043e\u043b\u0435\u0439 \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u0430 \u0442\u043e\u043b\u044c\u043a\u043e \u0440\u0443\u043a\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044e \u043e\u0442\u0434\u0435\u043b\u0430 \u0438 \u0430\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u043e\u0440\u0443.</div>`}
+          ${canEditFullName ? `<label class="inline-field"><span class="inline-field-label">\u0424\u0418\u041e</span><input type="text" class="inline-fullname-input" placeholder="\u0424\u0430\u043c\u0438\u043b\u0438\u044f \u0418\u043c\u044f \u041e\u0442\u0447\u0435\u0441\u0442\u0432\u043e" value="${escapeAttribute(user.fullName || "")}" data-user-fullname-id="${user.id}" /><button type="button" data-save-fullname-id="${user.id}">\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c</button></label>` : ""}
 
-          <button type="button" class="danger-button" ${canDelete ? `data-delete-user-id="${user.id}"` : "disabled"}>\u0423\u0434\u0430\u043b\u0438\u0442\u044c</button>
+          ${canResetPassword ? `<label class="inline-field"><span class="inline-field-label">\u041f\u0430\u0440\u043e\u043b\u044c</span><input type="password" class="inline-password-input" placeholder="\u041d\u043e\u0432\u044b\u0439 \u043f\u0430\u0440\u043e\u043b\u044c" autocomplete="new-password" data-user-password-id="${user.id}" /><button type="button" data-apply-password-id="${user.id}">\u0421\u043c\u0435\u043d\u0438\u0442\u044c</button></label>` : ""}
+
+          ${canChangeRole ? `<label class="inline-field inline-field-role"><span class="inline-field-label">\u0420\u043e\u043b\u044c</span><select data-user-role-id="${user.id}">${roleOptions}</select><button type="button" data-apply-role-id="${user.id}">\u041f\u0440\u0438\u043c\u0435\u043d\u0438\u0442\u044c</button></label>` : `<div class="user-controls-note">\u0421\u043c\u0435\u043d\u0443 \u0440\u043e\u043b\u0438 \u0432\u044b\u043f\u043e\u043b\u043d\u044f\u0435\u0442 \u0440\u0443\u043a\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c \u043e\u0442\u0434\u0435\u043b\u0430 \u0438\u043b\u0438 \u0430\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u043e\u0440.</div>`}
 
         </div>
 
