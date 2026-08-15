@@ -49,6 +49,7 @@
 
   --glass-blur: 0px;
   --table-wrap-bg: rgba(var(--rgb-white), 0.02);
+  --option-selected-bg: #22303f;
 
   --radius-panel: 12px;
   --radius-card: 10px;
@@ -105,6 +106,7 @@
 
   --glass-blur: 0px;
   --table-wrap-bg: rgba(var(--rgb-slate), 0.05);
+  --option-selected-bg: #d7e6f3;
 }
 
 * { box-sizing: border-box; }
@@ -2493,3 +2495,47 @@ input[type="date"]::-webkit-datetime-edit-year-field {
 
 :root[data-density="compact"] .user-item { padding: 9px 11px; }
 :root[data-density="compact"] .inline-field { height: 30px; }
+
+
+/* ---------------------------------------------------------------------------
+   Two regressions from the reskin.
+   --------------------------------------------------------------------------- */
+
+/* The native <select> popup paints itself from the option colours. Once the
+   select inside a joined field lost its own background, the popup fell back to
+   the system light sheet while the text stayed near-white — invisible. Options
+   and group headers therefore need explicit colours of their own, in both themes. */
+select option,
+select optgroup {
+  background-color: var(--panel);
+  color: var(--text);
+}
+select optgroup {
+  font-weight: 700;
+  color: var(--muted);
+}
+/* Must be fully opaque: the native popup composites a translucent option over the
+   system sheet, which is exactly the bug this block exists to fix. */
+select option:checked,
+select option:hover {
+  background-color: var(--option-selected-bg);
+  color: var(--text);
+}
+.inline-field select { background-color: transparent; }
+
+/* Day cells stretched to the full grid column (≈30px) while keeping a fixed 32px
+   height, so the selected-day highlight came out taller than it was wide.
+   A fixed square, centred in its column, makes the highlight symmetric. */
+.app-date-cell {
+  width: 32px;
+  height: 32px;
+  margin: 0 auto;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-variant-numeric: tabular-nums;
+}
+/* The global button hover lift makes a calendar day jump under the cursor. */
+.app-date-day:hover:not(:disabled) { transform: none; }
