@@ -25,6 +25,7 @@ type actPDFData struct {
 	Items            []CalculationItem
 	TotalWords       string
 	TotalCurrency    string
+	ActTemplate      string
 }
 
 const (
@@ -84,6 +85,12 @@ func (a *App) ExportCurrentCalculationPDF(req ExportCalculationRequest) (string,
 	if err != nil {
 		return "", err
 	}
+
+	template, err := a.ensureUserActTemplate(user.ID, user.ActTemplate)
+	if err != nil {
+		return "", err
+	}
+	user.ActTemplate = template
 
 	data, err := buildActPDFData(req, user)
 	if err != nil {
@@ -202,7 +209,21 @@ func buildActPDFData(req ExportCalculationRequest, currentUser *User) (actPDFDat
 		Items:            exportItems,
 		TotalWords:       totalWords,
 		TotalCurrency:    rubleNoun(total),
+		ActTemplate:      actTemplateOrDefault(currentUserActTemplate(currentUser)),
 	}, nil
+}
+
+// EN: Function `currentUserActTemplate`.
+//
+// EN: What it does: currentUserActTemplate reads the blank assigned to the acting user without panicking on a nil session.
+//
+// EN: Key points: buildActPDFData is also called from tests with a bare user, so a missing blank must simply fall
+// EN: back to the classic act instead of failing the export.
+func currentUserActTemplate(currentUser *User) string {
+	if currentUser == nil {
+		return ""
+	}
+	return currentUser.ActTemplate
 }
 
 func resolveContractInfo(code string) (contractInfo, error) {
@@ -228,8 +249,24 @@ func resolveContractInfo(code string) (contractInfo, error) {
 	}
 }
 
+// EN: Function `errActDoesNotFit`.
+//
+// EN: What it does: errActDoesNotFit is the single message shown when no blank scale keeps the act on one sheet.
+//
+// EN: Key points: every blank must fit exactly one A4 page, so all renderers report the same actionable hint.
+func errActDoesNotFit() error {
+	return errors.New("\u0414\u043e\u043a\u0443\u043c\u0435\u043d\u0442 \u043d\u0435 \u043f\u043e\u043c\u0435\u0449\u0430\u0435\u0442\u0441\u044f \u043d\u0430 \u043e\u0434\u0438\u043d \u043b\u0438\u0441\u0442 PDF. \u0423\u043c\u0435\u043d\u044c\u0448\u0438\u0442\u0435 \u043a\u043e\u043b\u0438\u0447\u0435\u0441\u0442\u0432\u043e \u0443\u0441\u043b\u0443\u0433 \u0438\u043b\u0438 \u0434\u043b\u0438\u043d\u0443 \u043d\u0430\u0437\u0432\u0430\u043d\u0438\u0439.")
+}
+
+// EN: Function `renderActPDF`.
+//
+// EN: What it does: renderActPDF prepares the shared PDF canvas and hands it to the blank assigned to the employee.
+//
+// EN: Key points: every blank draws on the same A4 page with auto page breaks disabled, and the result is rejected
+// EN: when the content spilled past the printable area, so an act is always exactly one sheet.
 func renderActPDF(path string, data actPDFData) error {
-	fontRegular, fontBold, fontItalic, err := resolvePDFFonts()
+	template := actTemplateOrDefault(data.ActTemplate)
+	fontRegular, fontBold, fontItalic, err := resolvePDFFonts(actTemplateFont(template))
 	if err != nil {
 		return err
 	}
@@ -237,23 +274,46 @@ func renderActPDF(path string, data actPDFData) error {
 	pdf := gofpdf.New("P", "mm", "A4", "")
 	pdf.SetMargins(10, 12, 10)
 	pdf.SetAutoPageBreak(false, 0)
-	pdf.AddUTF8Font("Mercel", "", fontRegular)
-	pdf.AddUTF8Font("Mercel", "B", fontBold)
-	pdf.AddUTF8Font("Mercel", "I", fontItalic)
+	for _, font := range [][2]string{{"", fontRegular}, {"B", fontBold}, {"I", fontItalic}} {
+		if font[1] == "" {
+			continue
+		}
+		raw, err := os.ReadFile(font[1])
+		if err != nil {
+			return fmt.Errorf("read font %s: %w", font[1], err)
+		}
+		pdf.AddUTF8FontFromBytes("Mercel", font[0], raw)
+	}
+	if err := pdf.Error(); err != nil {
+		return fmt.Errorf("load pdf fonts: %w", err)
+	}
+	// Acts are printed documents: ink is pure black, never a softened grey.
+	pdf.SetTextColor(0, 0, 0)
+	pdf.SetDrawColor(0, 0, 0)
 	pdf.SetFont("Mercel", "", 10)
 	pdf.AddPage()
 
-	layout, err := fitActPDFLayout(pdf, data)
+	var bottom float64
+	switch template {
+	case ActTemplateFormal:
+		bottom, err = renderFormalAct(pdf, data)
+	case ActTemplateTypographic:
+		bottom, err = renderTypographicAct(pdf, data)
+	case ActTemplateContract:
+		bottom, err = renderContractAct(pdf, data)
+	case ActTemplateTypewriter:
+		bottom, err = renderTypewriterAct(pdf, data)
+	default:
+		bottom, err = renderStandardAct(pdf, data)
+	}
 	if err != nil {
 		return err
 	}
-
-	drawActPDF(pdf, data, layout)
 	if pdf.PageNo() > 1 {
-		return errors.New("\u0414\u043e\u043a\u0443\u043c\u0435\u043d\u0442 \u043d\u0435 \u043f\u043e\u043c\u0435\u0449\u0430\u0435\u0442\u0441\u044f \u043d\u0430 \u043e\u0434\u0438\u043d \u043b\u0438\u0441\u0442 PDF. \u0423\u043c\u0435\u043d\u044c\u0448\u0438\u0442\u0435 \u043a\u043e\u043b\u0438\u0447\u0435\u0441\u0442\u0432\u043e \u0443\u0441\u043b\u0443\u0433 \u0438\u043b\u0438 \u0434\u043b\u0438\u043d\u0443 \u043d\u0430\u0437\u0432\u0430\u043d\u0438\u0439.")
+		return errActDoesNotFit()
 	}
-	if pdf.GetY() > layout.Bottom {
-		return errors.New("\u0414\u043e\u043a\u0443\u043c\u0435\u043d\u0442 \u043d\u0435 \u043f\u043e\u043c\u0435\u0449\u0430\u0435\u0442\u0441\u044f \u043d\u0430 \u043e\u0434\u0438\u043d \u043b\u0438\u0441\u0442 PDF. \u0423\u043c\u0435\u043d\u044c\u0448\u0438\u0442\u0435 \u043a\u043e\u043b\u0438\u0447\u0435\u0441\u0442\u0432\u043e \u0443\u0441\u043b\u0443\u0433 \u0438\u043b\u0438 \u0434\u043b\u0438\u043d\u0443 \u043d\u0430\u0437\u0432\u0430\u043d\u0438\u0439.")
+	if pdf.GetY() > bottom {
+		return errActDoesNotFit()
 	}
 	if err := pdf.OutputFileAndClose(path); err != nil {
 		return fmt.Errorf("save pdf: %w", err)
@@ -261,25 +321,177 @@ func renderActPDF(path string, data actPDFData) error {
 	return nil
 }
 
-func resolvePDFFonts() (string, string, string, error) {
-	candidates := [][3]string{
+// EN: Function `renderStandardAct`.
+//
+// EN: What it does: renderStandardAct draws the standard Mercel blank and reports the bottom edge the content had to stay above.
+//
+// EN: Key points: the scale is fitted first so the whole act lands on a single page.
+func renderStandardAct(pdf *gofpdf.Fpdf, data actPDFData) (float64, error) {
+	layout, err := fitActPDFLayout(pdf, data)
+	if err != nil {
+		return 0, err
+	}
+	drawActPDF(pdf, data, layout)
+	return layout.Bottom, nil
+}
+
+// EN: Function `fitActScale`.
+//
+// EN: What it does: fitActScale finds the largest scale between minimum and target for which the blank still fits.
+//
+// EN: Key points: shared by every blank; returns false when even the smallest scale overflows the page, which the
+// EN: caller turns into a user facing error.
+func fitActScale(minimum float64, target float64, fits func(scale float64) bool) (float64, bool) {
+	if fits(target) {
+		return target, true
+	}
+	if !fits(minimum) {
+		return 0, false
+	}
+	low := minimum
+	high := target
+	for i := 0; i < 12; i++ {
+		mid := (low + high) / 2
+		if fits(mid) {
+			low = mid
+			continue
+		}
+		high = mid
+	}
+	return low, true
+}
+
+// EN: Font families used by the act blanks.
+//
+// EN: What it does: every blank names the typeface it is designed for; the exporter resolves and embeds only that
+// EN: one, which both keeps the PDF small and makes the blanks visibly different from each other.
+//
+// EN: Key points: Windows faces come first, then the Linux/macOS fallbacks used by build and test machines; a
+// EN: family that is not installed degrades to its fallback family instead of failing the export.
+const (
+	actFontSans    = "sans"
+	actFontSerif   = "serif"
+	actFontGeorgia = "georgia"
+	actFontMono    = "mono"
+)
+
+// EN: Variable `actFontCandidates`.
+//
+// EN: What it does: actFontCandidates lists the regular/bold/italic file trios of every font family.
+//
+// EN: Key points: an empty italic slot means the family ships without one (Tahoma), and the italic style is then
+// EN: simply not registered — no blank that uses such a family asks for italics.
+var actFontCandidates = map[string][][3]string{
+	actFontSans: {
 		{`C:\Windows\Fonts\arial.ttf`, `C:\Windows\Fonts\arialbd.ttf`, `C:\Windows\Fonts\ariali.ttf`},
 		{`C:\Windows\Fonts\segoeui.ttf`, `C:\Windows\Fonts\segoeuib.ttf`, `C:\Windows\Fonts\segoeuii.ttf`},
+		{"/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf", "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf", "/usr/share/fonts/truetype/liberation/LiberationSans-Italic.ttf"},
+		{"/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf"},
+		{"/Library/Fonts/Arial.ttf", "/Library/Fonts/Arial Bold.ttf", "/Library/Fonts/Arial Italic.ttf"},
+	},
+	actFontSerif: {
+		{`C:\Windows\Fonts\times.ttf`, `C:\Windows\Fonts\timesbd.ttf`, `C:\Windows\Fonts\timesi.ttf`},
+		{"/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf", "/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf", "/usr/share/fonts/truetype/liberation/LiberationSerif-Italic.ttf"},
+		{"/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Italic.ttf"},
+		{"/Library/Fonts/Times New Roman.ttf", "/Library/Fonts/Times New Roman Bold.ttf", "/Library/Fonts/Times New Roman Italic.ttf"},
+	},
+	actFontGeorgia: {
+		{`C:\Windows\Fonts\georgia.ttf`, `C:\Windows\Fonts\georgiab.ttf`, `C:\Windows\Fonts\georgiai.ttf`},
+		{"/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Italic.ttf"},
+		{"/Library/Fonts/Georgia.ttf", "/Library/Fonts/Georgia Bold.ttf", "/Library/Fonts/Georgia Italic.ttf"},
+	},
+	actFontMono: {
+		{`C:\Windows\Fonts\cour.ttf`, `C:\Windows\Fonts\courbd.ttf`, `C:\Windows\Fonts\couri.ttf`},
+		{"/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf", "/usr/share/fonts/truetype/liberation/LiberationMono-Bold.ttf", "/usr/share/fonts/truetype/liberation/LiberationMono-Italic.ttf"},
+		{"/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Oblique.ttf"},
+		{"/Library/Fonts/Courier New.ttf", "/Library/Fonts/Courier New Bold.ttf", "/Library/Fonts/Courier New Italic.ttf"},
+	},
+}
+
+// EN: Variable `actFontFallbacks`.
+//
+// EN: What it does: actFontFallbacks says which family to try next when the requested one is missing.
+//
+// EN: Key points: sans has no fallback — failing to find it is the only case that aborts the export.
+var actFontFallbacks = map[string]string{
+	actFontSerif:   actFontSans,
+	actFontGeorgia: actFontSerif,
+	actFontMono:    actFontSans,
+}
+
+// EN: Function `actTemplateFont`.
+//
+// EN: What it does: actTemplateFont maps a blank onto the font family it is typeset with.
+//
+// EN: Key points: the typeface is a large part of what tells the blanks apart on paper.
+func actTemplateFont(template string) string {
+	switch template {
+	case ActTemplateFormal:
+		return actFontSerif
+	case ActTemplateContract:
+		return actFontGeorgia
+	case ActTemplateTypewriter:
+		return actFontMono
+	default:
+		return actFontSans
 	}
-	for _, candidate := range candidates {
-		if fileExists(candidate[0]) && fileExists(candidate[1]) && fileExists(candidate[2]) {
-			return candidate[0], candidate[1], candidate[2], nil
+}
+
+// EN: Function `resolvePDFFonts`.
+//
+// EN: What it does: resolvePDFFonts finds an installed regular/bold/italic trio for one font family.
+//
+// EN: Key points: the returned italic path is empty when the family has no italic face; a missing family falls back
+// EN: to a related one, and only a missing sans family is reported as an error.
+func resolvePDFFonts(family string) (string, string, string, error) {
+	for _, candidate := range actFontCandidates[family] {
+		if !fileExists(candidate[0]) || !fileExists(candidate[1]) {
+			continue
 		}
+		italic := candidate[2]
+		if italic != "" && !fileExists(italic) {
+			italic = ""
+		}
+		return candidate[0], candidate[1], italic, nil
 	}
 	if windir := os.Getenv("WINDIR"); windir != "" {
-		regular := filepath.Join(windir, "Fonts", "arial.ttf")
-		bold := filepath.Join(windir, "Fonts", "arialbd.ttf")
-		italic := filepath.Join(windir, "Fonts", "ariali.ttf")
-		if fileExists(regular) && fileExists(bold) && fileExists(italic) {
+		names := [3]string{"arial.ttf", "arialbd.ttf", "ariali.ttf"}
+		if family == actFontSerif {
+			names = [3]string{"times.ttf", "timesbd.ttf", "timesi.ttf"}
+		}
+		regular := filepath.Join(windir, "Fonts", names[0])
+		bold := filepath.Join(windir, "Fonts", names[1])
+		italic := filepath.Join(windir, "Fonts", names[2])
+		if fileExists(regular) && fileExists(bold) {
+			if !fileExists(italic) {
+				italic = ""
+			}
 			return regular, bold, italic, nil
 		}
 	}
+	if fallback, ok := actFontFallbacks[family]; ok {
+		return resolvePDFFonts(fallback)
+	}
 	return "", "", "", errors.New("\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043d\u0430\u0439\u0442\u0438 \u0441\u0438\u0441\u0442\u0435\u043c\u043d\u044b\u0435 \u0448\u0440\u0438\u0444\u0442\u044b \u0434\u043b\u044f \u0433\u0435\u043d\u0435\u0440\u0430\u0446\u0438\u0438 PDF. \u0423\u0431\u0435\u0434\u0438\u0442\u0435\u0441\u044c, \u0447\u0442\u043e \u0432 Windows \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u044b Arial \u0438\u043b\u0438 Segoe UI.")
+}
+
+// EN: Function `drawActParagraph`.
+//
+// EN: What it does: drawActParagraph lays out one paragraph of a blank and returns its bottom edge.
+//
+// EN: Key points: shared by the blanks that measure and draw in a single walk — the height always comes from
+// EN: SplitText, so the measuring pass and the drawing pass can never disagree.
+func drawActParagraph(pdf *gofpdf.Fpdf, left float64, width float64, y float64, text string, style string, fontSize float64, lineHeight float64, align string, render bool) float64 {
+	pdf.SetFont("Mercel", style, fontSize)
+	lines := pdf.SplitText(text, width)
+	if len(lines) == 0 {
+		lines = []string{""}
+	}
+	if render {
+		pdf.SetXY(left, y)
+		pdf.MultiCell(width, lineHeight, text, "", align, false)
+	}
+	return y + (float64(len(lines)) * lineHeight)
 }
 
 func fileExists(path string) bool {
@@ -289,28 +501,14 @@ func fileExists(path string) bool {
 
 func fitActPDFLayout(pdf *gofpdf.Fpdf, data actPDFData) (actPDFLayout, error) {
 	// Prefer a larger print-friendly layout, but back off just enough to keep A4 on one page.
-	target := newActPDFLayout(pdf, actPDFTargetScale)
-	if estimateActPDFHeight(pdf, data, target) <= target.Bottom {
-		return target, nil
+	scale, ok := fitActScale(actPDFMinScale, actPDFTargetScale, func(scale float64) bool {
+		candidate := newActPDFLayout(pdf, scale)
+		return estimateActPDFHeight(pdf, data, candidate) <= candidate.Bottom
+	})
+	if !ok {
+		return actPDFLayout{}, errActDoesNotFit()
 	}
-
-	minimum := newActPDFLayout(pdf, actPDFMinScale)
-	if estimateActPDFHeight(pdf, data, minimum) > minimum.Bottom {
-		return actPDFLayout{}, errors.New("\u0414\u043e\u043a\u0443\u043c\u0435\u043d\u0442 \u043d\u0435 \u043f\u043e\u043c\u0435\u0449\u0430\u0435\u0442\u0441\u044f \u043d\u0430 \u043e\u0434\u0438\u043d \u043b\u0438\u0441\u0442 PDF. \u0423\u043c\u0435\u043d\u044c\u0448\u0438\u0442\u0435 \u043a\u043e\u043b\u0438\u0447\u0435\u0441\u0442\u0432\u043e \u0443\u0441\u043b\u0443\u0433 \u0438\u043b\u0438 \u0434\u043b\u0438\u043d\u0443 \u043d\u0430\u0437\u0432\u0430\u043d\u0438\u0439.")
-	}
-
-	low := actPDFMinScale
-	high := actPDFTargetScale
-	for i := 0; i < 12; i++ {
-		mid := (low + high) / 2
-		layout := newActPDFLayout(pdf, mid)
-		if estimateActPDFHeight(pdf, data, layout) <= layout.Bottom {
-			low = mid
-			continue
-		}
-		high = mid
-	}
-	return newActPDFLayout(pdf, low), nil
+	return newActPDFLayout(pdf, scale), nil
 }
 
 func newActPDFLayout(pdf *gofpdf.Fpdf, scale float64) actPDFLayout {
@@ -475,15 +673,16 @@ func resolveContractDirectorShort(contractTitle string) string {
 	return info.CustomerDirectorShort
 }
 
-// EN: Variable `contractTemplateCodes`.
+// EN: Variable `contractCompanyCodes`.
 //
-// EN: What it does: contractTemplateCodes lists every act blank the exporter knows about, in display order.
+// EN: What it does: contractCompanyCodes lists the counterparties an act can be issued for.
 //
-// EN: Key points: the single place that enumerates blanks; resolveContractInfo stays the only place that describes one.
-var contractTemplateCodes = []string{"1", "2"}
+// EN: Key points: not to be confused with act blanks (app_act_template.go) — this is the company on the contract,
+// EN: while a blank is the printed layout; resolveContractInfo stays the only place that describes a company.
+var contractCompanyCodes = []string{"1", "2"}
 
 func resolveContractInfoFromTitle(title string) (contractInfo, error) {
-	for _, code := range contractTemplateCodes {
+	for _, code := range contractCompanyCodes {
 		info, err := resolveContractInfo(code)
 		if err == nil && info.Title == title {
 			return info, nil

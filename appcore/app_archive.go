@@ -186,11 +186,13 @@ func (a *App) UpdateCalculationAsAdmin(req UpdateSavedCalculationRequest) (Saved
 
 // EN: Method `CopyArchiveServicesToAdmin`.
 //
-// EN: What it does: CopyArchiveServicesToAdmin lets an administrator import services from a selected archived calculation into the admin-owned service list.
+// EN: What it does: CopyArchiveServicesToAdmin imports the services of a selected archived calculation into the service list of the caller.
 //
-// EN: Key points: available only to the admin role; performs an upsert by service name to avoid duplicate admin services; copies rate, unit, category and per-service allocation from the archive.
+// EN: Key points: available to the admin and to anyone who may moderate archives and see this particular one, so a
+// EN: director can pick up the services of any employee they oversee; the caller's own list is replaced by the
+// EN: archived one, and duplicate names inside the archive are imported once.
 func (a *App) CopyArchiveServicesToAdmin(calculationID int64) (CopyArchiveServicesResult, error) {
-	admin, err := a.requireAdmin()
+	actor, err := a.requireAuth()
 	if err != nil {
 		return CopyArchiveServicesResult{}, err
 	}
@@ -199,12 +201,17 @@ func (a *App) CopyArchiveServicesToAdmin(calculationID int64) (CopyArchiveServic
 	}
 
 	var payload string
-	err = a.db.QueryRow(`SELECT items_json FROM calculations WHERE id = ?`, calculationID).Scan(&payload)
+	var authorUsername string
+	var authorRole string
+	err = a.db.QueryRow(`SELECT items_json, created_by, created_role FROM calculations WHERE id = ?`, calculationID).Scan(&payload, &authorUsername, &authorRole)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return CopyArchiveServicesResult{}, errors.New("Архивный расчёт не найден.")
 		}
 		return CopyArchiveServicesResult{}, fmt.Errorf("load calculation for copy: %w", err)
+	}
+	if !canCopyArchiveServices(actor, authorRole, authorUsername) {
+		return CopyArchiveServicesResult{}, errors.New("Недостаточно прав для копирования услуг из этого расчёта.")
 	}
 
 	var items []CalculationItem
@@ -239,11 +246,11 @@ func (a *App) CopyArchiveServicesToAdmin(calculationID int64) (CopyArchiveServic
 	if len(requests) == 0 {
 		return CopyArchiveServicesResult{}, errors.New("В архивном расчёте нет подходящих услуг для копирования.")
 	}
-	if _, err := a.db.Exec(`DELETE FROM services WHERE created_by = ?`, admin.Username); err != nil {
-		return CopyArchiveServicesResult{}, fmt.Errorf("clear admin services before copy: %w", err)
+	if _, err := a.db.Exec(`DELETE FROM services WHERE created_by = ?`, actor.Username); err != nil {
+		return CopyArchiveServicesResult{}, fmt.Errorf("clear own services before copy: %w", err)
 	}
 	for _, req := range requests {
-		if _, err := a.saveServiceForOwner(req, admin.Username); err != nil {
+		if _, err := a.saveServiceForOwner(req, actor.Username); err != nil {
 			return CopyArchiveServicesResult{}, fmt.Errorf("copy archive service %q: %w", req.Name, err)
 		}
 		result.Created++

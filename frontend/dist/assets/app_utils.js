@@ -108,7 +108,7 @@ function setSettingsSection(name) {
 
   let section = name || "appearance";
 
-  if (section === "blank" && settingsBlankTab?.classList.contains("hidden")) {
+  if (section === "blank" && !appState.session?.canAdmin) {
 
     section = "appearance";
 
@@ -126,68 +126,9 @@ function setSettingsSection(name) {
 
   });
 
-}
-
-// The blank picker is a testing affordance for the admin: it switches which act
-// template the signed-in account exports with, without demanding the contract
-// number, date and full name that the contract dialog validates.
-async function loadContractTemplates() {
-
-  if (!settingsBlankSelect || !api?.ListContractTemplates) {
-
-    return;
-
-  }
-
-  try {
-
-    const templates = await api.ListContractTemplates();
-
-    appState.contractTemplates = Array.isArray(templates) ? templates : [];
-
-  } catch (error) {
-
-    appState.contractTemplates = [];
-
-    setSettingsMessage(error, "error");
-
-    return;
-
-  }
-
-  renderContractTemplateOptions();
-
-}
-
-async function applyContractTemplate(code) {
-
-  try {
-
-    const updated = await api.SetPreferredContractTemplate(code);
-
-    if (updated && appState.session?.user) {
-
-      appState.session.user = { ...appState.session.user, ...updated };
-
-    }
-
-    appState.exportDraft.contractCode = String(updated?.preferredContractCode ?? code);
-
-    updateHiddenExportInputs();
-
-    renderContractDetailsSummary();
-
-    renderContractTemplateOptions();
-
-    setSettingsMessage("\u0411\u043b\u0430\u043d\u043a \u0430\u043a\u0442\u0430 \u043f\u0435\u0440\u0435\u043a\u043b\u044e\u0447\u0451\u043d. \u0412\u044b\u0433\u0440\u0443\u0437\u043a\u0430 PDF \u0442\u0435\u043f\u0435\u0440\u044c \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0435\u0442 \u0435\u0433\u043e.", "success");
-
-  } catch (error) {
-
-    renderContractTemplateOptions();
-
-    setSettingsMessage(error, "error");
-
-  }
+  // The blank section carries its own status line, so the dialog-wide one would
+  // just stack a second grey box under it.
+  settingsMessage?.classList.toggle("hidden", section === "blank");
 
 }
 
@@ -204,8 +145,6 @@ function openSettingsModal(section = "appearance") {
   settingsModal?.setAttribute("aria-hidden", "false");
 
   loadAppInfo();
-
-  loadContractTemplates();
 
 }
 
@@ -667,7 +606,7 @@ function roleViewDepartments(role) {
 
 }
 
-function roleCanCreateUsers(role) {
+function roleCanManageUsers(role) {
 
   switch (normalizeRole(role)) {
 
@@ -677,31 +616,15 @@ function roleCanCreateUsers(role) {
 
     case "support_sysadmin":
 
-    case "support_senior":
-
     case "technical_head":
-
-    case "technical_senior":
 
     case "telecom_construction_director":
 
     case "telecom_construction_head":
 
-    case "telecom_senior_vols":
-
-    case "telecom_senior_lvs":
-
     case "skud_head":
 
-    case "skud_project_manager":
-
-    case "skud_senior_service_engineer":
-
-    case "skud_senior_installer":
-
     case "approval_head":
-
-    case "approval_senior":
 
     case "marketing_head":
 
@@ -711,15 +634,9 @@ function roleCanCreateUsers(role) {
 
     case "commercial_active_sales_head":
 
-    case "commercial_senior_mrk":
-
-    case "commercial_senior_mryu":
-
     case "finance_head":
 
     case "development_head":
-
-    case "development_senior":
 
       return true;
 
@@ -728,6 +645,16 @@ function roleCanCreateUsers(role) {
       return false;
 
   }
+
+}
+
+function roleCanCreateUsers(role) {
+
+  // Mirrors the backend: heads and sysadmins manage users directly, senior
+
+  // specialists (level 2) and directors (level 4) may create them as well.
+
+  return roleCanManageUsers(role) || roleLevel(role) === 2 || roleLevel(role) === 4;
 
 }
 
@@ -911,11 +838,35 @@ function roleChoicesForUser(role) {
 
   } else if (roleCanCreateUsers(role)) {
 
-    const actorDept = roleDepartment(role);
+    // Mirrors canCreateRole on the backend: the target department must be one the
+
+    // actor oversees (a director covers several), nobody below admin may create
+
+    // another global-department account, and the target must be lower in rank.
+
+    const actorDepartments = roleViewDepartments(role);
 
     const actorLevel = roleLevel(role);
 
-    visibleRoles = allRoles.filter((candidate) => roleDepartment(candidate) === actorDept && roleLevel(candidate) < actorLevel);
+    visibleRoles = allRoles.filter((candidate) => {
+
+      const candidateDept = roleDepartment(candidate);
+
+      if (candidateDept === "global") {
+
+        return false;
+
+      }
+
+      if (!actorDepartments.includes(candidateDept)) {
+
+        return false;
+
+      }
+
+      return roleLevel(candidate) < actorLevel;
+
+    });
 
   }
 

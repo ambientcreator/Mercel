@@ -40,6 +40,20 @@ function setUserFormMessage(text, type = "muted") {
 
 }
 
+function setActTemplateMessage(text, type = "muted") {
+
+  if (!actTemplateMessage) {
+
+    return;
+
+  }
+
+  actTemplateMessage.textContent = normalizeErrorText(text, "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u0431\u043b\u0430\u043d\u043a \u0430\u043a\u0442\u0430.");
+
+  actTemplateMessage.className = `message ${type}`;
+
+}
+
 function setSettingsMessage(text, type = "muted") {
 
   if (!settingsMessage) {
@@ -85,38 +99,6 @@ function renderSettingsPreferences() {
   if (settingsFontScaleSelect) {
 
     settingsFontScaleSelect.value = appState.preferences.fontScale;
-
-  }
-
-}
-
-function renderContractTemplateOptions() {
-
-  if (!settingsBlankSelect) {
-
-    return;
-
-  }
-
-  const current = String(appState.session?.user?.preferredContractCode || appState.exportDraft.contractCode || "1");
-
-  settingsBlankSelect.innerHTML = appState.contractTemplates
-
-    .map((template) => `<option value="${escapeAttribute(template.code)}"${template.code === current ? " selected" : ""}>${escapeHtml(template.title)}</option>`)
-
-    .join("");
-
-  settingsBlankSelect.value = current;
-
-  const active = appState.contractTemplates.find((template) => template.code === current);
-
-  if (settingsBlankDetails) {
-
-    settingsBlankDetails.textContent = active
-
-      ? `Заказчик: ${active.customerName}. Подписант: ${active.directorShort}.`
-
-      : "Список бланков недоступен.";
 
   }
 
@@ -171,7 +153,7 @@ function applyBootstrap(data) {
 
   const previousUserID = appState.session?.user?.id ?? 0;
 
-  appState.session = data.session ?? { authenticated: false, canManage: false, canAdmin: false, canModerate: false, user: null };
+  appState.session = data.session ?? { authenticated: false, canManage: false, canAdmin: false, canModerate: false, canCopyArchiveServices: false, user: null };
 
   const currentUserID = appState.session?.user?.id ?? 0;
 
@@ -202,6 +184,8 @@ function applyBootstrap(data) {
   appState.savedCalculations = Array.isArray(data.savedCalculations) ? data.savedCalculations : [];
 
   appState.defaultGroupPercent = data.defaultGroupPercent ?? appState.defaultGroupPercent;
+
+  appState.actTemplates = Array.isArray(data.actTemplates) ? data.actTemplates : appState.actTemplates;
 
   const nextWeights = {};
 
@@ -261,7 +245,6 @@ function renderShellState() {
 
   usersPanel.classList.toggle("hidden", !appState.session.canModerate);
 
-  settingsBlankTab?.classList.toggle("hidden", !appState.session.canAdmin);
 
 }
 
@@ -828,6 +811,103 @@ function startEditService(id) {
   setActiveTab("settings");
 
   setServiceFormMessage(`\u0420\u0435\u0434\u0430\u043a\u0442\u0438\u0440\u0443\u0435\u0442\u0441\u044f \u0443\u0441\u043b\u0443\u0433\u0430 \u00ab${service.name}\u00bb.`, "muted");
+
+}
+
+function renderActTemplateChoice() {
+
+  // Blanks are handed out randomly on purpose, so only the admin gets to override
+
+  // their own one from the settings screen.
+
+  const canChooseActTemplate = Boolean(appState.session?.authenticated && appState.session?.canAdmin);
+
+  actTemplatePanel?.classList.toggle("hidden", !canChooseActTemplate);
+
+  // The section lives in the settings dialog now, so its nav tab has to be gated too.
+  settingsBlankTab?.classList.toggle("hidden", !canChooseActTemplate);
+
+  if (!actTemplateSelect) {
+
+    return;
+
+  }
+
+  const templates = Array.isArray(appState.actTemplates) ? appState.actTemplates : [];
+
+  const current = String(appState.session?.user?.actTemplate ?? "");
+
+  actTemplateSelect.innerHTML = "";
+
+  templates.forEach((template) => {
+
+    const option = document.createElement("option");
+
+    option.value = String(template.id ?? "");
+
+    option.textContent = String(template.label ?? template.id ?? "");
+
+    actTemplateSelect.appendChild(option);
+
+  });
+
+  actTemplateSelect.value = templates.some((template) => String(template.id) === current)
+
+    ? current
+
+    : String(templates[0]?.id ?? "");
+
+  actTemplateSelect.disabled = !canChooseActTemplate || templates.length === 0;
+
+  if (saveActTemplateButton) {
+
+    saveActTemplateButton.disabled = !canChooseActTemplate || templates.length === 0;
+
+  }
+
+}
+
+async function saveActTemplate() {
+
+  const userId = Number(appState.session?.user?.id ?? 0);
+
+  const template = String(actTemplateSelect?.value ?? "").trim();
+
+  if (!userId || !template) {
+
+    setActTemplateMessage("Выберите бланк акта из списка.", "error");
+
+    return;
+
+  }
+
+  if (saveActTemplateButton) {
+
+    saveActTemplateButton.disabled = true;
+
+  }
+
+  try {
+
+    await api.UpdateUserActTemplate({ userID: userId, actTemplate: template });
+
+    await refreshBootstrap({ keepArchiveSelection: true });
+
+    setActTemplateMessage("Бланк акта сохранён. Следующая выгрузка будет по нему.", "success");
+
+  } catch (error) {
+
+    setActTemplateMessage(normalizeErrorText(error, "Не удалось сохранить бланк акта."), "error");
+
+  } finally {
+
+    if (saveActTemplateButton) {
+
+      saveActTemplateButton.disabled = false;
+
+    }
+
+  }
 
 }
 

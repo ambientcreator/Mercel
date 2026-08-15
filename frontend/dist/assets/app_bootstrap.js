@@ -12,6 +12,8 @@
 
   renderServicesAdmin();
 
+  renderActTemplateChoice();
+
   renderUsers();
 
   renderHistory();
@@ -865,6 +867,8 @@ loginPassword.addEventListener("keydown", (event) => {
 
 calculateButton.addEventListener("click", calculate);
 
+saveActTemplateButton?.addEventListener("click", saveActTemplate);
+
 contractDetailsButton?.addEventListener("click", openContractModal);
 
 saveOwnFullNameButton?.addEventListener("click", saveOwnFullName);
@@ -1038,11 +1042,7 @@ settingsFontScaleSelect?.addEventListener("change", () => {
 
 });
 
-settingsBlankSelect?.addEventListener("change", () => {
 
-  applyContractTemplate(settingsBlankSelect.value);
-
-});
 
 document.addEventListener("keydown", (event) => {
 

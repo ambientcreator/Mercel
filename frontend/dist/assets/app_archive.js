@@ -246,7 +246,7 @@ function canDeleteArchiveCalculation(saved) {
 
 function renderArchiveDetails(saved) {
 
-  const canCopyArchiveServices = Boolean(appState.session?.canAdmin && saved);
+  const canCopyArchiveServices = Boolean((appState.session?.canAdmin || appState.session?.canCopyArchiveServices) && saved);
 
   const canDeleteArchive = canDeleteArchiveCalculation(saved);
 
@@ -536,7 +536,7 @@ async function saveArchiveEdit() {
 
 async function copyArchiveServicesToAdmin(calculationId) {
 
-  if (!appState.session?.canAdmin || !calculationId) {
+  if (!(appState.session?.canAdmin || appState.session?.canCopyArchiveServices) || !calculationId) {
 
     return;
 

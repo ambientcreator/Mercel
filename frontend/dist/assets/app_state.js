@@ -1,6 +1,6 @@
 const appState = {
 
-  session: { authenticated: false, canManage: false, canAdmin: false, canModerate: false, user: null },
+  session: { authenticated: false, canManage: false, canAdmin: false, canModerate: false, canCopyArchiveServices: false, user: null },
 
   services: [],
 
@@ -24,6 +24,8 @@ const appState = {
 
   defaultGroupPercent: { primary: 0.79, secondary: 0.2, closing: 0.01 },
 
+  actTemplates: [],
+
   exportDraft: {
 
     actNumber: 1,
@@ -41,8 +43,6 @@ const appState = {
   },
 
   preferences: { theme: "dark", density: "comfortable", fontScale: "medium" },
-
-  contractTemplates: [],
 
 };
 
@@ -202,6 +202,16 @@ const contractCardIcon = document.getElementById("contract-card-icon");
 
 const saveOwnFullNameButton = document.getElementById("save-own-fullname-button");
 
+const actTemplatePanel = document.getElementById("act-template-panel");
+
+const settingsBlankTab = document.getElementById("settings-blank-tab");
+
+const actTemplateSelect = document.getElementById("act-template-select");
+
+const saveActTemplateButton = document.getElementById("save-act-template-button");
+
+const actTemplateMessage = document.getElementById("act-template-message");
+
 const calculateButton = document.getElementById("calculate-button");
 
 const resetWeightsButton = document.getElementById("reset-weights-button");
@@ -357,12 +367,6 @@ const settingsThemeSelect = document.getElementById("settings-theme-select");
 const settingsDensitySelect = document.getElementById("settings-density-select");
 
 const settingsFontScaleSelect = document.getElementById("settings-font-scale-select");
-
-const settingsBlankTab = document.getElementById("settings-blank-tab");
-
-const settingsBlankSelect = document.getElementById("settings-blank-select");
-
-const settingsBlankDetails = document.getElementById("settings-blank-details");
 
 const settingsAppVersion = document.getElementById("settings-app-version");
 

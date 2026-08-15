@@ -32,7 +32,7 @@ func (a *App) CreateUser(req UserWithPassword) (User, error) {
 		return User{}, errors.New("Недостаточно прав для назначения этой роли.")
 	}
 	createdAt := time.Now().Format(time.RFC3339)
-	result, err := a.db.Exec(`INSERT INTO users(username, password_hash, full_name, last_act_number, preferred_contract_code, contract_spbks_number, contract_grizabl_number, contract_signed_at, role, created_at) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, username, hashPassword(password), "", 1, "1", "", "", "", role, createdAt)
+	result, err := a.db.Exec(`INSERT INTO users(username, password_hash, full_name, last_act_number, preferred_contract_code, contract_spbks_number, contract_grizabl_number, contract_signed_at, act_template, role, created_at) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, username, hashPassword(password), "", 1, "1", "", "", "", a.nextActTemplate(), role, createdAt)
 	if err != nil {
 		return User{}, fmt.Errorf("create user: %w", err)
 	}
@@ -45,8 +45,8 @@ func (a *App) CreateUser(req UserWithPassword) (User, error) {
 
 func (a *App) getUserByID(id int64) (User, error) {
 	var user User
-	err := a.db.QueryRow(`SELECT id, username, full_name, last_act_number, preferred_contract_code, contract_spbks_number, contract_grizabl_number, contract_signed_at, role, created_at FROM users WHERE id = ?`, id).
-		Scan(&user.ID, &user.Username, &user.FullName, &user.LastActNumber, &user.PreferredContractCode, &user.ContractSPBKSNumber, &user.ContractGrizablNumber, &user.ContractSignedAt, &user.Role, &user.CreatedAt)
+	err := a.db.QueryRow(`SELECT id, username, full_name, last_act_number, preferred_contract_code, contract_spbks_number, contract_grizabl_number, contract_signed_at, act_template, role, created_at FROM users WHERE id = ?`, id).
+		Scan(&user.ID, &user.Username, &user.FullName, &user.LastActNumber, &user.PreferredContractCode, &user.ContractSPBKSNumber, &user.ContractGrizablNumber, &user.ContractSignedAt, &user.ActTemplate, &user.Role, &user.CreatedAt)
 	if err != nil {
 		return User{}, err
 	}
@@ -66,7 +66,7 @@ func (a *App) ListUsers() ([]User, error) {
 	if !canViewManagedUsers(user.Role) {
 		return []User{}, nil
 	}
-	rows, err := a.db.Query(`SELECT id, username, full_name, last_act_number, preferred_contract_code, contract_spbks_number, contract_grizabl_number, contract_signed_at, role, created_at FROM users WHERE username <> 'admin' ORDER BY id ASC`)
+	rows, err := a.db.Query(`SELECT id, username, full_name, last_act_number, preferred_contract_code, contract_spbks_number, contract_grizabl_number, contract_signed_at, act_template, role, created_at FROM users WHERE username <> 'admin' ORDER BY id ASC`)
 	if err != nil {
 		return nil, fmt.Errorf("list users: %w", err)
 	}
@@ -75,7 +75,7 @@ func (a *App) ListUsers() ([]User, error) {
 	users := make([]User, 0)
 	for rows.Next() {
 		var item User
-		if err := rows.Scan(&item.ID, &item.Username, &item.FullName, &item.LastActNumber, &item.PreferredContractCode, &item.ContractSPBKSNumber, &item.ContractGrizablNumber, &item.ContractSignedAt, &item.Role, &item.CreatedAt); err != nil {
+		if err := rows.Scan(&item.ID, &item.Username, &item.FullName, &item.LastActNumber, &item.PreferredContractCode, &item.ContractSPBKSNumber, &item.ContractGrizablNumber, &item.ContractSignedAt, &item.ActTemplate, &item.Role, &item.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scan user: %w", err)
 		}
 		item.Role = normalizeRole(item.Role)
