@@ -216,6 +216,8 @@ const saveArchiveEditButton = document.getElementById("save-archive-edit-button"
 
 const messageNode = document.getElementById("message");
 
+const statusStrip = document.getElementById("status-strip");
+
 const resultBody = document.getElementById("result-body");
 
 const resultTotal = document.getElementById("result-total");
@@ -305,6 +307,14 @@ const confirmText = document.getElementById("confirm-text");
 const confirmCancel = document.getElementById("confirm-cancel");
 
 const confirmSubmit = document.getElementById("confirm-submit");
+
+const contractModal = document.getElementById("contract-modal");
+
+const contractBackdrop = document.getElementById("contract-backdrop");
+
+const contractCancel = document.getElementById("contract-cancel");
+
+const contractMessage = document.getElementById("contract-message");
 
 const contractSave = document.getElementById("contract-save");
 

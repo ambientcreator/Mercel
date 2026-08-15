@@ -80,19 +80,33 @@ function syncContractFieldsFromDraft() {
 
 }
 
-// The contract fields now live inside the settings dialog, so every historical entry
-// point into "fill in the contract" resolves to the profile section of that dialog.
 function openContractModal() {
 
-  openSettingsModal("profile");
+  syncContractFieldsFromDraft();
+
+  setContractMessage("\u042d\u0442\u0438 \u0434\u0430\u043d\u043d\u044b\u0435 \u043d\u0443\u0436\u043d\u044b \u0442\u043e\u043b\u044c\u043a\u043e \u0434\u043b\u044f \u0430\u043a\u0442\u0430 PDF.", "muted");
+
+  contractModal?.classList.remove("hidden");
+
+  contractModal?.setAttribute("aria-hidden", "false");
 
   contractModalSPBKSNumberInput?.focus();
 
 }
 
+function closeContractModal() {
+
+  closeDatePopover();
+
+  contractModal?.classList.add("hidden");
+
+  contractModal?.setAttribute("aria-hidden", "true");
+
+}
+
 function setSettingsSection(name) {
 
-  const section = name || "profile";
+  const section = name || "appearance";
 
   settingsSectionButtons.forEach((button) => {
 
@@ -108,9 +122,7 @@ function setSettingsSection(name) {
 
 }
 
-function openSettingsModal(section = "profile") {
-
-  syncContractFieldsFromDraft();
+function openSettingsModal(section = "appearance") {
 
   renderSettingsPreferences();
 
@@ -198,7 +210,7 @@ async function saveContractDetails() {
 
   if (!selectedNumber) {
 
-    setSettingsMessage("\u0423\u043a\u0430\u0436\u0438\u0442\u0435 \u043d\u043e\u043c\u0435\u0440 \u0434\u043e\u0433\u043e\u0432\u043e\u0440\u0430 \u0434\u043b\u044f \u0432\u044b\u0431\u0440\u0430\u043d\u043d\u043e\u0433\u043e \u0448\u0430\u0431\u043b\u043e\u043d\u0430.", "error");
+    setContractMessage("\u0423\u043a\u0430\u0436\u0438\u0442\u0435 \u043d\u043e\u043c\u0435\u0440 \u0434\u043e\u0433\u043e\u0432\u043e\u0440\u0430 \u0434\u043b\u044f \u0432\u044b\u0431\u0440\u0430\u043d\u043d\u043e\u0433\u043e \u0448\u0430\u0431\u043b\u043e\u043d\u0430.", "error");
 
     if (contractCode === "2") {
 
@@ -216,7 +228,7 @@ async function saveContractDetails() {
 
   if (!contractDate) {
 
-    setSettingsMessage("\u0423\u043a\u0430\u0436\u0438\u0442\u0435 \u0434\u0430\u0442\u0443 \u043f\u043e\u0434\u043f\u0438\u0441\u0430\u043d\u0438\u044f \u0434\u043e\u0433\u043e\u0432\u043e\u0440\u0430.", "error");
+    setContractMessage("\u0423\u043a\u0430\u0436\u0438\u0442\u0435 \u0434\u0430\u0442\u0443 \u043f\u043e\u0434\u043f\u0438\u0441\u0430\u043d\u0438\u044f \u0434\u043e\u0433\u043e\u0432\u043e\u0440\u0430.", "error");
 
     contractModalDateInput?.focus();
 
@@ -226,7 +238,7 @@ async function saveContractDetails() {
 
   if (!fullName) {
 
-    setSettingsMessage("\u0423\u043a\u0430\u0436\u0438\u0442\u0435 \u0432\u0430\u0448\u0435 \u0424\u0418\u041e \u0434\u043b\u044f \u0430\u043a\u0442\u0430.", "error");
+    setContractMessage("\u0423\u043a\u0430\u0436\u0438\u0442\u0435 \u0432\u0430\u0448\u0435 \u0424\u0418\u041e \u0434\u043b\u044f \u0430\u043a\u0442\u0430.", "error");
 
     contractModalFullNameInput?.focus();
 
@@ -272,17 +284,19 @@ async function saveContractDetails() {
 
       appState.exportDraft.employeeFullName = fullName;
 
+      closeContractModal();
+
       updateHiddenExportInputs();
 
       renderContractDetailsSummary();
 
-      setSettingsMessage("\u0414\u0430\u043d\u043d\u044b\u0435 \u0434\u043e\u0433\u043e\u0432\u043e\u0440\u0430 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u044b. \u0422\u0435\u043f\u0435\u0440\u044c \u043c\u043e\u0436\u043d\u043e \u0441\u043a\u0430\u0447\u0430\u0442\u044c \u0430\u043a\u0442 PDF.", "success");
+      setContractMessage("\u0414\u0430\u043d\u043d\u044b\u0435 \u0434\u043e\u0433\u043e\u0432\u043e\u0440\u0430 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u044b. \u0422\u0435\u043f\u0435\u0440\u044c \u043c\u043e\u0436\u043d\u043e \u0441\u043a\u0430\u0447\u0430\u0442\u044c \u0430\u043a\u0442 PDF.", "success");
 
     }
 
   } catch (error) {
 
-    setSettingsMessage(error, "error");
+    setContractMessage(error, "error");
 
   }
 

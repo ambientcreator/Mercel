@@ -12,7 +12,7 @@
 
     <title>Mercel</title>
 
-    <link rel="stylesheet" href="./assets/app.css?v=20260815-1" />
+    <link rel="stylesheet" href="./assets/app.css?v=20260815-2" />
 
   </head>
 
@@ -64,11 +64,15 @@
 
         <header class="topbar glass">
 
-          <div>
+          <div class="topbar-brand">Mercel</div>
 
-            <div class="panel-kicker">Mercel</div>
+          <div class="tabs" id="main-tabs">
 
-            <h2>Панель работы с расчётами</h2>
+            <button type="button" class="tab-button active" data-tab="calculator">Расчёт</button>
+
+            <button type="button" class="tab-button" data-tab="archive">Архив</button>
+
+            <button type="button" class="tab-button hidden" data-tab="settings" id="settings-tab-button">Управление</button>
 
           </div>
 
@@ -82,25 +86,13 @@
 
             </div>
 
-            <button id="settings-button" type="button" class="secondary topbar-icon-button" aria-label="&#1053;&#1072;&#1089;&#1090;&#1088;&#1086;&#1081;&#1082;&#1080; &#1087;&#1088;&#1080;&#1083;&#1086;&#1078;&#1077;&#1085;&#1080;&#1103;" title="&#1053;&#1072;&#1089;&#1090;&#1088;&#1086;&#1081;&#1082;&#1080; &#1087;&#1088;&#1080;&#1083;&#1086;&#1078;&#1077;&#1085;&#1080;&#1103;">&#9881;</button>
+            <button id="settings-button" type="button" class="topbar-icon-button" aria-label="&#1053;&#1072;&#1089;&#1090;&#1088;&#1086;&#1081;&#1082;&#1080; &#1087;&#1088;&#1080;&#1083;&#1086;&#1078;&#1077;&#1085;&#1080;&#1103;" title="&#1053;&#1072;&#1089;&#1090;&#1088;&#1086;&#1081;&#1082;&#1080; &#1087;&#1088;&#1080;&#1083;&#1086;&#1078;&#1077;&#1085;&#1080;&#1103;">&#9881;</button>
 
-            <button id="logout-button" type="button" class="secondary">Выйти</button>
+            <button id="logout-button" type="button" class="topbar-icon-button" aria-label="&#1042;&#1099;&#1081;&#1090;&#1080;" title="&#1042;&#1099;&#1081;&#1090;&#1080;">&#8629;</button>
 
           </div>
 
         </header>
-
-
-
-        <div class="tabs" id="main-tabs">
-
-          <button type="button" class="tab-button active" data-tab="calculator">Расчёт</button>
-
-          <button type="button" class="tab-button" data-tab="archive">Архив</button>
-
-          <button type="button" class="tab-button hidden" data-tab="settings" id="settings-tab-button">Управление</button>
-
-        </div>
 
 
 
@@ -155,9 +147,17 @@
 
             </div>
 
-            <div id="contract-details-summary" class="message muted compact-note">&#1044;&#1083;&#1103; &#1074;&#1099;&#1075;&#1088;&#1091;&#1079;&#1082;&#1080; &#1072;&#1082;&#1090;&#1072; &#1091;&#1082;&#1072;&#1078;&#1080;&#1090;&#1077; &#1085;&#1086;&#1084;&#1077;&#1088; &#1076;&#1086;&#1075;&#1086;&#1074;&#1086;&#1088;&#1072;, &#1076;&#1072;&#1090;&#1091; &#1087;&#1086;&#1076;&#1087;&#1080;&#1089;&#1072;&#1085;&#1080;&#1103; &#1080; &#1074;&#1072;&#1096;&#1077; &#1060;&#1048;&#1054;.</div>
+            <div id="contract-details-summary" class="message muted compact-note" role="button" tabindex="0" title="&#1054;&#1090;&#1082;&#1088;&#1099;&#1090;&#1100; &#1076;&#1072;&#1085;&#1085;&#1099;&#1077; &#1076;&#1086;&#1075;&#1086;&#1074;&#1086;&#1088;&#1072;">&#1044;&#1083;&#1103; &#1074;&#1099;&#1075;&#1088;&#1091;&#1079;&#1082;&#1080; &#1072;&#1082;&#1090;&#1072; &#1091;&#1082;&#1072;&#1078;&#1080;&#1090;&#1077; &#1085;&#1086;&#1084;&#1077;&#1088; &#1076;&#1086;&#1075;&#1086;&#1074;&#1086;&#1088;&#1072;, &#1076;&#1072;&#1090;&#1091; &#1087;&#1086;&#1076;&#1087;&#1080;&#1089;&#1072;&#1085;&#1080;&#1103; &#1080; &#1074;&#1072;&#1096;&#1077; &#1060;&#1048;&#1054;.</div>
 
-            <div id="message" class="message muted">Введите сумму и задайте веса для нужных услуг.</div>
+            <div class="status-strip" id="status-strip">
+
+              <span class="status-dot"></span>
+
+              <span id="message" class="status-strip-text">Введите сумму и задайте веса для нужных услуг.</span>
+
+              <strong id="exact-status" class="status-strip-exact">Ожидание расчёта</strong>
+
+            </div>
 
 
 
@@ -173,25 +173,21 @@
 
 
 
-            <div class="exact-inline glass">
-
-              <span>Точное совпадение</span>
-
-              <strong id="exact-status">Ожидание расчёта</strong>
-
-            </div>
-
-
-
             <div class="service-list-block">
 
               <div class="service-list-head">
 
                 <div>
 
-                  <div class="block-title">Приоритеты, проценты и веса</div>
+                  <div class="block-title">Веса услуг</div>
 
-                  <div id="default-percentages" class="legend">Загрузка настроек процентов...</div>
+                  <details class="weights-help">
+
+                    <summary>&#1050;&#1072;&#1082; &#1088;&#1072;&#1073;&#1086;&#1090;&#1072;&#1102;&#1090; &#1087;&#1088;&#1086;&#1094;&#1077;&#1085;&#1090;&#1099; &#1080; &#1074;&#1077;&#1089;&#1072;</summary>
+
+                    <div id="default-percentages" class="legend">Загрузка настроек процентов...</div>
+
+                  </details>
 
                 </div>
 
@@ -582,47 +578,19 @@
 
     </div>
 
-    <div id="settings-modal" class="confirm-modal settings-modal hidden" aria-hidden="true">
+    <div id="contract-modal" class="confirm-modal hidden" aria-hidden="true">
 
-      <div id="settings-backdrop" class="confirm-backdrop"></div>
+      <div id="contract-backdrop" class="confirm-backdrop"></div>
 
-      <section id="settings-dialog" class="confirm-dialog settings-dialog glass" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
-
-        <div class="settings-modal-head">
-
-          <div>
-
-            <div class="panel-kicker">Mercel</div>
-
-            <h3 id="settings-modal-title">&#1053;&#1072;&#1089;&#1090;&#1088;&#1086;&#1081;&#1082;&#1080; &#1087;&#1088;&#1080;&#1083;&#1086;&#1078;&#1077;&#1085;&#1080;&#1103;</h3>
-
-          </div>
-
-          <button id="settings-close" type="button" class="ghost-button settings-close-button" aria-label="&#1047;&#1072;&#1082;&#1088;&#1099;&#1090;&#1100;" title="&#1047;&#1072;&#1082;&#1088;&#1099;&#1090;&#1100;">&#10005;</button>
-
-        </div>
-
-        <div id="settings-nav" class="settings-modal-nav">
-
-          <button type="button" class="tab-button active" data-settings-section="profile">&#1055;&#1088;&#1086;&#1092;&#1080;&#1083;&#1100; &#1080; &#1076;&#1086;&#1075;&#1086;&#1074;&#1086;&#1088;</button>
-
-          <button type="button" class="tab-button" data-settings-section="appearance">&#1054;&#1092;&#1086;&#1088;&#1084;&#1083;&#1077;&#1085;&#1080;&#1077;</button>
-
-          <button type="button" class="tab-button" data-settings-section="about">&#1054; &#1087;&#1088;&#1086;&#1075;&#1088;&#1072;&#1084;&#1084;&#1077;</button>
-
-        </div>
-
-        <div class="settings-modal-body">
-
-        <section class="settings-modal-section active" data-settings-panel="profile">
+      <section class="confirm-dialog contract-dialog glass" role="dialog" aria-modal="true" aria-labelledby="contract-title">
 
         <div class="panel-kicker">&#1044;&#1072;&#1085;&#1085;&#1099;&#1077; &#1076;&#1083;&#1103; &#1072;&#1082;&#1090;&#1072;</div>
 
         <h3 id="contract-title">&#1059;&#1082;&#1072;&#1079;&#1072;&#1090;&#1100; &#1076;&#1086;&#1075;&#1086;&#1074;&#1086;&#1088;</h3>
 
-        <p class="confirm-text">&#1069;&#1090;&#1080; &#1076;&#1072;&#1085;&#1085;&#1099;&#1077; &#1085;&#1091;&#1078;&#1085;&#1099; &#1076;&#1083;&#1103; &#1074;&#1099;&#1075;&#1088;&#1091;&#1079;&#1082;&#1080; &#1072;&#1082;&#1090;&#1072; &#1087;&#1088;&#1080;&#1105;&#1084;&#1072;-&#1089;&#1076;&#1072;&#1095;&#1080; &#1086;&#1082;&#1072;&#1079;&#1072;&#1085;&#1085;&#1099;&#1093; &#1091;&#1089;&#1083;&#1091;&#1075;. &#1044;&#1072;&#1085;&#1085;&#1099;&#1077; &#1089;&#1086;&#1093;&#1088;&#1072;&#1085;&#1103;&#1102;&#1090;&#1089;&#1103;, &#1087;&#1086;&#1101;&#1090;&#1086;&#1084;&#1091; &#1080;&#1093; &#1084;&#1086;&#1078;&#1085;&#1086; &#1088;&#1077;&#1076;&#1072;&#1082;&#1090;&#1080;&#1088;&#1086;&#1074;&#1072;&#1090;&#1100; &#1087;&#1086;&#1079;&#1078;&#1077;.</p>
+        <p class="confirm-text">&#1069;&#1090;&#1080; &#1076;&#1072;&#1085;&#1085;&#1099;&#1077; &#1085;&#1091;&#1078;&#1085;&#1099; &#1076;&#1083;&#1103; &#1074;&#1099;&#1075;&#1088;&#1091;&#1079;&#1082;&#1080; &#1072;&#1082;&#1090;&#1072;. &#1054;&#1085;&#1080; &#1089;&#1086;&#1093;&#1088;&#1072;&#1085;&#1103;&#1102;&#1090;&#1089;&#1103; &#1080; &#1087;&#1086;&#1076;&#1089;&#1090;&#1072;&#1074;&#1083;&#1103;&#1102;&#1090;&#1089;&#1103; &#1072;&#1074;&#1090;&#1086;&#1084;&#1072;&#1090;&#1080;&#1095;&#1077;&#1089;&#1082;&#1080;.</p>
 
-        <div class="contract-choice-grid">
+<div class="contract-choice-grid">
 
           <label class="field contract-choice-card">
 
@@ -680,11 +648,47 @@
 
         <div class="confirm-actions">
 
+          <button id="contract-cancel" type="button" class="secondary">&#1054;&#1090;&#1084;&#1077;&#1085;&#1072;</button>
+
           <button id="contract-save" type="button" class="primary">&#1057;&#1086;&#1093;&#1088;&#1072;&#1085;&#1080;&#1090;&#1100; &#1076;&#1072;&#1085;&#1085;&#1099;&#1077;</button>
 
         </div>
 
-        </section>
+        <div id="contract-message" class="message muted">&#1069;&#1090;&#1080; &#1076;&#1072;&#1085;&#1085;&#1099;&#1077; &#1085;&#1091;&#1078;&#1085;&#1099; &#1090;&#1086;&#1083;&#1100;&#1082;&#1086; &#1076;&#1083;&#1103; &#1072;&#1082;&#1090;&#1072; PDF.</div>
+
+      </section>
+
+    </div>
+
+    <div id="settings-modal" class="confirm-modal settings-modal hidden" aria-hidden="true">
+
+      <div id="settings-backdrop" class="confirm-backdrop"></div>
+
+      <section id="settings-dialog" class="confirm-dialog settings-dialog glass" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
+
+        <div class="settings-modal-head">
+
+          <div>
+
+            <div class="panel-kicker">Mercel</div>
+
+            <h3 id="settings-modal-title">&#1053;&#1072;&#1089;&#1090;&#1088;&#1086;&#1081;&#1082;&#1080; &#1087;&#1088;&#1080;&#1083;&#1086;&#1078;&#1077;&#1085;&#1080;&#1103;</h3>
+
+          </div>
+
+          <button id="settings-close" type="button" class="ghost-button settings-close-button" aria-label="&#1047;&#1072;&#1082;&#1088;&#1099;&#1090;&#1100;" title="&#1047;&#1072;&#1082;&#1088;&#1099;&#1090;&#1100;">&#10005;</button>
+
+        </div>
+
+        <div id="settings-nav" class="settings-modal-nav">
+
+          <button type="button" class="tab-button active" data-settings-section="appearance">&#1054;&#1092;&#1086;&#1088;&#1084;&#1083;&#1077;&#1085;&#1080;&#1077;</button>
+
+          <button type="button" class="tab-button" data-settings-section="about">&#1054; &#1087;&#1088;&#1086;&#1075;&#1088;&#1072;&#1084;&#1084;&#1077;</button>
+
+        </div>
+
+        <div class="settings-modal-body">
 
         <section class="settings-modal-section" data-settings-panel="appearance">
 
@@ -800,11 +804,11 @@
 
 
 
-    <script src="./assets/app_state.js?v=20260815-1"></script>
-    <script src="./assets/app_utils.js?v=20260815-1"></script>
-    <script src="./assets/app_render.js?v=20260815-1"></script>
-    <script src="./assets/app_archive.js?v=20260815-1"></script>
-    <script src="./assets/app_bootstrap.js?v=20260815-1"></script>
+    <script src="./assets/app_state.js?v=20260815-2"></script>
+    <script src="./assets/app_utils.js?v=20260815-2"></script>
+    <script src="./assets/app_render.js?v=20260815-2"></script>
+    <script src="./assets/app_archive.js?v=20260815-2"></script>
+    <script src="./assets/app_bootstrap.js?v=20260815-2"></script>
 
   </body>
 

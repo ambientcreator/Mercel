@@ -1,8 +1,18 @@
+// #message is a span inside the single status strip now, so the state is expressed by a
+// modifier on the strip rather than by rewriting the span's own class.
 function setMessage(text, type = "muted") {
 
   messageNode.textContent = normalizeErrorText(text, "\u041f\u0440\u043e\u0438\u0437\u043e\u0448\u043b\u0430 \u043e\u0448\u0438\u0431\u043a\u0430.");
 
-  messageNode.className = `message ${type}`;
+  if (!statusStrip) {
+
+    return;
+
+  }
+
+  statusStrip.classList.toggle("is-ready", type === "success");
+
+  statusStrip.classList.toggle("is-error", type === "error");
 
 }
 
@@ -41,6 +51,20 @@ function setSettingsMessage(text, type = "muted") {
   settingsMessage.textContent = normalizeErrorText(text, "Не удалось сохранить настройки.");
 
   settingsMessage.className = `message ${type}`;
+
+}
+
+function setContractMessage(text, type = "muted") {
+
+  if (!contractMessage) {
+
+    return;
+
+  }
+
+  contractMessage.textContent = normalizeErrorText(text, "Не удалось сохранить данные договора.");
+
+  contractMessage.className = `message ${type}`;
 
 }
 
@@ -192,6 +216,8 @@ function renderShellState() {
   if (!authenticated) {
 
     closeSettingsModal();
+
+    closeContractModal();
 
     return;
 
@@ -641,33 +667,59 @@ function renderServices() {
 
     const weightClass = weight > 0 ? "weight-positive" : (weight < 0 ? "weight-negative" : "weight-neutral");
 
+    const label = `${index + 1}. ${service.name}`;
+
     return `
 
-      <article class="service-card glass">
+      <div class="weight-row">
 
-        <div>
+        <div class="weight-row-main">
 
-          <strong class="truncate-text" title="${escapeHtml(`${index + 1}. ${service.name}`)}">${escapeHtml(`${index + 1}. ${service.name}`)}</strong>
+          <span class="weight-row-name" title="${escapeAttribute(label)}">${escapeHtml(label)}</span>
 
-          <div class="service-meta">${formatMoney(service.rate)} / ${escapeHtml(service.unit)}</div>
-
-                    <span class="category-pill ${categoryClass(service.category)}">${categoryLabel(service.category)}</span>
+          <span class="weight-row-meta">${formatMoney(service.rate)} / ${escapeHtml(service.unit)} · ${categoryLabel(service.category)}</span>
 
         </div>
 
-        <label class="weight-field">
+        <div class="weight-stepper">
 
-          <span>\u0412\u0435\u0441</span>
+          <button type="button" data-weight-step="-1" data-weight-target="${escapeAttribute(service.code)}" aria-label="Уменьшить вес">−</button>
 
-          <input type="text" inputmode="numeric" autocomplete="off" value="${weight}" class="${weightClass}" data-weight-code="${service.code}" />
+          <input type="text" inputmode="numeric" autocomplete="off" value="${weight}" class="${weightClass}" data-weight-code="${escapeAttribute(service.code)}" aria-label="Вес услуги" />
 
-        </label>
+          <button type="button" data-weight-step="1" data-weight-target="${escapeAttribute(service.code)}" aria-label="Увеличить вес">+</button>
 
-      </article>
+        </div>
+
+      </div>
 
     `;
 
   }).join("");
+
+  servicesList.querySelectorAll("[data-weight-step]").forEach((button) => {
+
+    button.addEventListener("click", () => {
+
+      const code = button.dataset.weightTarget;
+
+      const current = Number(appState.weights[code] ?? 0);
+
+      const next = clampWeightValue(current + Number(button.dataset.weightStep));
+
+      if (next === current) {
+
+        return;
+
+      }
+
+      appState.weights[code] = next;
+
+      renderServices();
+
+    });
+
+  });
 
   servicesList.querySelectorAll("[data-weight-code]").forEach((node) => {
 

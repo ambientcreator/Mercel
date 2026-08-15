@@ -1,121 +1,117 @@
-﻿/* Every colour in this file resolves through the tokens below. The hue channels are
-   kept as bare "r, g, b" triplets so the existing alpha values keep working via
-   rgba(<token>, 0.18) — that is what lets one override block reskin the whole app. */
 :root {
-  --rgb-slate: 148, 163, 184;
-  --rgb-accent: 110, 231, 200;
-  --rgb-emerald: 16, 185, 129;
-  --rgb-emerald-soft: 52, 211, 153;
-  --rgb-blue: 59, 130, 246;
-  --rgb-blue-deep: 44, 130, 201;
-  --rgb-danger: 248, 113, 113;
-  --rgb-red: 239, 68, 68;
-  --rgb-orange: 251, 146, 60;
-  --rgb-amber: 251, 191, 36;
-  --rgb-pink: 244, 114, 182;
-  --rgb-white: 255, 255, 255;
-  --rgb-field: 8, 15, 29;
-  --rgb-field-strong: 9, 17, 31;
-  --rgb-panel: 15, 23, 42;
-  --rgb-popover: 17, 24, 39;
-  --rgb-backdrop: 3, 8, 18;
-  --rgb-shadow: 2, 10, 24;
-  --rgb-shadow-soft: 3, 8, 17;
-  --rgb-shadow-mid: 5, 10, 20;
-  --rgb-muted: 159, 176, 200;
-  --rgb-success-deep: 8, 32, 24;
-  --rgb-danger-deep: 43, 14, 28;
+  /* Cold minimal: desaturated blue-grey surfaces, one steel-blue accent, no decoration. */
+  --rgb-slate: 138, 149, 165;
+  --rgb-accent: 123, 167, 208;
+  --rgb-emerald: 111, 158, 143;
+  --rgb-emerald-soft: 123, 167, 208;
+  --rgb-blue: 123, 167, 208;
+  --rgb-blue-deep: 123, 167, 208;
+  --rgb-danger: 208, 122, 122;
+  --rgb-red: 208, 122, 122;
+  --rgb-orange: 202, 148, 108;
+  --rgb-amber: 197, 165, 108;
+  --rgb-pink: 190, 137, 166;
+  --rgb-white: 226, 232, 240;
+  --rgb-field: 17, 21, 27;
+  --rgb-field-strong: 13, 16, 21;
+  --rgb-panel: 22, 27, 34;
+  --rgb-popover: 26, 32, 40;
+  --rgb-backdrop: 8, 10, 13;
+  --rgb-shadow: 0, 0, 0;
+  --rgb-shadow-soft: 0, 0, 0;
+  --rgb-shadow-mid: 0, 0, 0;
+  --rgb-muted: 138, 149, 165;
+  --rgb-success-deep: 24, 38, 34;
+  --rgb-danger-deep: 42, 26, 26;
 
-  --bg: #09111f;
-  --bg-1: #08111d;
-  --bg-2: #0c1425;
-  --bg-3: #101a2f;
-  --panel: rgba(var(--rgb-panel), 0.72);
-  --panel-strong: rgba(var(--rgb-panel), 0.92);
-  --stroke: rgba(var(--rgb-slate), 0.18);
-  --text: #eef4ff;
-  --muted: #9fb0c8;
-  --accent: #6ee7c8;
-  --accent-strong: #34d399;
-  --danger: #f87171;
-  --shadow: 0 24px 60px rgba(var(--rgb-shadow), 0.42);
+  --bg: #0d1014;
+  --bg-1: #0d1014;
+  --bg-2: #0d1014;
+  --bg-3: #0d1014;
+  --panel: rgb(var(--rgb-panel));
+  --panel-strong: rgb(var(--rgb-panel));
+  --stroke: rgba(var(--rgb-slate), 0.16);
+  --text: #e6ebf2;
+  --muted: #8a95a5;
+  --accent: #7ba7d0;
+  --accent-strong: #5b8cb8;
+  --danger: #d07a7a;
+  --shadow: none;
 
-  --text-on-accent: #07211d;
-  --text-success: #d8fff2;
-  --text-accent-soft: #9ff3da;
-  --text-danger: #ffd7d7;
-  --text-error: #ffe5d1;
-  --text-warn: #ffe09c;
-  --text-pink: #ffc8dc;
-  --text-info: #b9d6ff;
+  --text-on-accent: #0d1014;
+  --text-success: #9ec7b7;
+  --text-accent-soft: #9dc2e0;
+  --text-danger: #e2a5a5;
+  --text-error: #d8ab8e;
+  --text-warn: #cbb182;
+  --text-pink: #cfa3bb;
+  --text-info: #9dc2e0;
 
-  --glass-blur: 22px;
-  --table-wrap-bg: rgba(var(--rgb-shadow-soft), 0.26);
+  --glass-blur: 0px;
+  --table-wrap-bg: rgba(var(--rgb-white), 0.02);
+
+  --radius-panel: 12px;
+  --radius-card: 10px;
+  --radius-control: 8px;
 }
 
-/* Light theme: only the tokens are redefined, no selector is duplicated. The glass
-   effect needs different alphas here — translucent dark panels over a light ground
-   read as muddy grey, so the panel tokens go light and the shadow gets deeper. */
 :root[data-theme="light"] {
-  --rgb-slate: 100, 116, 139;
-  --rgb-accent: 13, 148, 122;
-  --rgb-emerald: 5, 150, 105;
-  --rgb-emerald-soft: 16, 185, 129;
-  --rgb-blue: 37, 99, 235;
-  --rgb-blue-deep: 37, 99, 235;
-  --rgb-danger: 220, 38, 38;
-  --rgb-red: 220, 38, 38;
-  --rgb-orange: 234, 88, 12;
-  --rgb-amber: 217, 119, 6;
-  --rgb-pink: 219, 39, 119;
-  --rgb-white: 15, 23, 42;
+  --rgb-slate: 110, 122, 138;
+  --rgb-accent: 47, 111, 159;
+  --rgb-emerald: 47, 122, 104;
+  --rgb-emerald-soft: 47, 111, 159;
+  --rgb-blue: 47, 111, 159;
+  --rgb-blue-deep: 47, 111, 159;
+  --rgb-danger: 183, 61, 61;
+  --rgb-red: 183, 61, 61;
+  --rgb-orange: 172, 94, 40;
+  --rgb-amber: 156, 116, 32;
+  --rgb-pink: 158, 61, 108;
+  --rgb-white: 22, 32, 43;
   --rgb-field: 255, 255, 255;
   --rgb-field-strong: 255, 255, 255;
   --rgb-panel: 255, 255, 255;
   --rgb-popover: 255, 255, 255;
-  --rgb-backdrop: 30, 41, 59;
-  --rgb-shadow: 15, 23, 42;
-  --rgb-shadow-soft: 15, 23, 42;
-  --rgb-shadow-mid: 15, 23, 42;
-  --rgb-muted: 71, 85, 105;
-  --rgb-success-deep: 209, 250, 229;
-  --rgb-danger-deep: 254, 226, 226;
+  --rgb-backdrop: 22, 32, 43;
+  --rgb-shadow: 22, 32, 43;
+  --rgb-shadow-soft: 22, 32, 43;
+  --rgb-shadow-mid: 22, 32, 43;
+  --rgb-muted: 91, 103, 116;
+  --rgb-success-deep: 226, 240, 235;
+  --rgb-danger-deep: 250, 231, 231;
 
-  --bg: #eef2f8;
-  --bg-1: #eef2f8;
-  --bg-2: #e6ecf5;
-  --bg-3: #dde5f0;
-  --panel: rgba(var(--rgb-panel), 0.86);
-  --panel-strong: rgba(var(--rgb-panel), 0.96);
-  --stroke: rgba(var(--rgb-slate), 0.28);
-  --text: #0f172a;
-  --muted: #475569;
-  --accent: #0d947a;
-  --accent-strong: #047857;
-  --danger: #dc2626;
-  --shadow: 0 18px 44px rgba(var(--rgb-shadow), 0.14);
+  --bg: #f4f6f9;
+  --bg-1: #f4f6f9;
+  --bg-2: #f4f6f9;
+  --bg-3: #f4f6f9;
+  --panel: rgb(var(--rgb-panel));
+  --panel-strong: rgb(var(--rgb-panel));
+  --stroke: rgba(var(--rgb-slate), 0.24);
+  --text: #16202b;
+  --muted: #5b6774;
+  --accent: #2f6f9f;
+  --accent-strong: #245981;
+  --danger: #b73d3d;
+  --shadow: none;
 
   --text-on-accent: #ffffff;
-  --text-success: #065f46;
-  --text-accent-soft: #0f766e;
-  --text-danger: #991b1b;
-  --text-error: #9a3412;
-  --text-warn: #92400e;
-  --text-pink: #9d174d;
-  --text-info: #1e40af;
+  --text-success: #1f5d4c;
+  --text-accent-soft: #235a83;
+  --text-danger: #8f2f2f;
+  --text-error: #8a4620;
+  --text-warn: #7a5a18;
+  --text-pink: #83325a;
+  --text-info: #235a83;
 
-  --glass-blur: 8px;
-  --table-wrap-bg: rgba(var(--rgb-slate), 0.08);
+  --glass-blur: 0px;
+  --table-wrap-bg: rgba(var(--rgb-slate), 0.05);
 }
 
 * { box-sizing: border-box; }
 html, body {
   margin: 0;
   min-height: 100%;
-  background:
-    radial-gradient(circle at top left, rgba(var(--rgb-blue-deep), 0.18), transparent 32%),
-    radial-gradient(circle at right, rgba(var(--rgb-emerald), 0.14), transparent 28%),
-    linear-gradient(160deg, var(--bg-1) 0%, var(--bg-2) 42%, var(--bg-3) 100%);
+  background: var(--bg);
   color: var(--text);
   font-family: "Segoe UI", sans-serif;
 }
@@ -129,7 +125,7 @@ button, input, select, textarea { font-family: inherit; }
 .orb-left { width: 220px; height: 220px; top: -150px; left: -150px; background: radial-gradient(circle, rgba(var(--rgb-emerald-soft), 0.22), rgba(var(--rgb-emerald-soft), 0)); }
 .orb-right { width: 240px; height: 240px; right: -180px; bottom: -180px; background: radial-gradient(circle, rgba(var(--rgb-blue), 0.18), rgba(var(--rgb-blue), 0)); }
 
-.glass { background: var(--panel); border: 1px solid var(--stroke); box-shadow: var(--shadow); backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur)); }
+.glass { background: var(--panel); border: 1px solid var(--stroke); }
 .panel, .badge, .login-screen, .topbar { border-radius: 28px; }
 .panel { padding: 22px; }
 .panel-kicker, .eyebrow {
@@ -213,13 +209,6 @@ code {
   margin-top: 4px;
   font-size: 17px;
 }
-#logout-button {
-  min-height: 72px;
-  padding: 0 22px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
 
 .tabs, .layout, .archive-layout, .settings-layout { position: relative; z-index: 1; }
 .tabs { display: flex; gap: 10px; margin-bottom: 4px; }
@@ -232,9 +221,9 @@ code {
   cursor: pointer;
 }
 .tab-button.active {
-  background: linear-gradient(135deg, rgba(var(--rgb-accent), 0.18), rgba(var(--rgb-emerald-soft), 0.26));
-  border-color: rgba(var(--rgb-accent), 0.34);
-  color: var(--text-success);
+  background: rgba(var(--rgb-accent), 0.16);
+  border-color: rgba(var(--rgb-accent), 0.38);
+  color: var(--accent);
 }
 .ghost-button { padding: 8px 12px; font-size: 13px; }
 #reset-weights-button { border-radius: 14px; padding: 10px 12px; min-width: 92px; line-height: 1.15; }
@@ -248,7 +237,7 @@ button { transition: transform 180ms ease, opacity 180ms ease; }
 button:hover:not(:disabled) { transform: translateY(-1px); }
 .primary {
   color: var(--text-on-accent);
-  background: linear-gradient(135deg, var(--text-accent-soft) 0%, var(--accent-strong) 100%);
+  background: var(--accent-strong);
   border-radius: 16px;
   padding: 13px 18px;
   font-weight: 800;
@@ -859,7 +848,6 @@ tbody td:nth-child(2) strong { white-space: normal; overflow-wrap: anywhere; }
   .actions, .tabs, .topbar, .topbar-actions { flex-direction: column; align-items: stretch; }
   .service-card-top, .history-card-top, .archive-actions, .exact-inline, .settings-item { flex-direction: column; align-items: flex-start; }
   .session-chip { min-width: 0; width: 100%; }
-  #logout-button, #settings-button { width: 100%; min-height: 56px; }
 }
 
 
@@ -1187,10 +1175,6 @@ tbody td:nth-child(2) strong { white-space: normal; overflow-wrap: anywhere; }
     min-height: 64px;
   }
 
-  #logout-button,
-  #settings-button {
-    min-height: 64px;
-  }
 
   .panel-head,
   .service-list-head,
@@ -1930,16 +1914,6 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%230f172a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2' ry='2'/%3E%3Cline x1='16' y1='2' x2='16' y2='6'/%3E%3Cline x1='8' y1='2' x2='8' y2='6'/%3E%3Cline x1='3' y1='10' x2='21' y2='10'/%3E%3C/svg%3E");
 }
 
-#settings-button {
-  min-height: 72px;
-  width: 72px;
-  padding: 0;
-  font-size: 22px;
-  line-height: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
 
 /* Sits above .confirm-modal (30) but well below the date popover (2000), which
    must stay clickable while the contract date is being filled in. */
@@ -2017,10 +1991,6 @@ input[type="date"]::-webkit-datetime-edit-year-field {
 :root[data-density="compact"] .app-shell { gap: 12px; }
 :root[data-density="compact"] .panel { padding: 14px; }
 :root[data-density="compact"] .topbar { padding: 12px 16px; }
-:root[data-density="compact"] .session-chip,
-:root[data-density="compact"] #logout-button,
-:root[data-density="compact"] #settings-button { min-height: 56px; }
-:root[data-density="compact"] #settings-button { width: 56px; }
 :root[data-density="compact"] .field { margin-bottom: 10px; }
 :root[data-density="compact"] .field input,
 :root[data-density="compact"] .input-select { padding: 10px 12px; }
@@ -2031,3 +2001,222 @@ input[type="date"]::-webkit-datetime-edit-year-field {
 :root[data-density="compact"] .mini-card { padding: 8px 10px; }
 :root[data-density="compact"] .message { min-height: 0; margin-top: 10px; }
 :root[data-density="compact"] .empty-state { padding: 12px; }
+
+
+/* ---------------------------------------------------------------------------
+   Cold minimal: flat surfaces, tighter radii, one-line topbar, dense weight rows.
+   Appended last so it wins over the historical media-query blocks.
+   --------------------------------------------------------------------------- */
+
+/* No decorative blur blobs in a minimal skin. */
+.orb { display: none; }
+
+.panel, .badge, .login-screen, .topbar { border-radius: var(--radius-panel); }
+.confirm-dialog,
+.settings-dialog,
+.contract-dialog { border-radius: var(--radius-panel); }
+.mini-card,
+.service-card,
+.history-card,
+.settings-item,
+.editor-card,
+.session-chip,
+.exact-inline,
+.contract-choice-card,
+.empty-state,
+.table-wrap,
+.message { border-radius: var(--radius-card); }
+.primary,
+.secondary,
+.tab-button,
+.ghost-button,
+.danger-button,
+.total-pill,
+.field input,
+.input-select,
+#reset-weights-button { border-radius: var(--radius-control); }
+.category-pill,
+.radio-inline input { border-radius: 999px; }
+
+/* ---- Topbar: brand, tabs and controls on a single ~56px line ---- */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 8px 12px 8px 18px;
+  min-height: 56px;
+}
+.topbar-brand {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  flex: 0 0 auto;
+}
+.topbar .tabs { margin-bottom: 0; flex: 1 1 auto; }
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+.session-chip {
+  min-width: 0;
+  min-height: 0;
+  padding: 4px 12px;
+  border: none;
+  background: none;
+  text-align: right;
+  gap: 0;
+}
+.session-chip span { font-size: 11px; line-height: 1.2; }
+.session-chip strong { margin-top: 0; font-size: 13px; line-height: 1.25; font-weight: 600; }
+
+/* Both trailing controls share one square silhouette, so the row reads symmetric. */
+.topbar-icon-button {
+  width: 38px;
+  height: 38px;
+  min-height: 0;
+  padding: 0;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  line-height: 1;
+  border-radius: var(--radius-control);
+  border: 1px solid rgba(var(--rgb-slate), 0.18);
+  background: rgba(var(--rgb-slate), 0.1);
+  color: var(--text);
+  cursor: pointer;
+}
+.topbar-icon-button:hover:not(:disabled) { background: rgba(var(--rgb-slate), 0.18); }
+.tab-button { padding: 8px 14px; font-size: 14px; }
+
+/* ---- Single status strip replacing three stacked message blocks ---- */
+.status-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--stroke);
+  background: rgba(var(--rgb-white), 0.02);
+  font-size: 13px;
+}
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex: 0 0 auto;
+  background: var(--muted);
+}
+.status-strip.is-ready .status-dot { background: var(--accent); }
+.status-strip.is-error .status-dot { background: var(--danger); }
+.status-strip-text { color: var(--muted); flex: 1 1 160px; min-width: 0; line-height: 1.4; }
+.status-strip-exact { color: var(--text); font-weight: 600; flex: 0 0 auto; }
+#contract-details-summary {
+  cursor: pointer;
+  margin: 0;
+  min-height: 0;
+  padding: 8px 12px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+#contract-details-summary:hover { border-color: rgba(var(--rgb-accent), 0.45); }
+
+/* ---- Weights: one dense row per service instead of a two-column card grid ---- */
+.service-grid { display: block; margin-top: 10px; }
+.weight-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 10px;
+  border-bottom: 1px solid rgba(var(--rgb-slate), 0.1);
+}
+.weight-row:last-child { border-bottom: none; }
+.weight-row-main { flex: 1 1 auto; min-width: 0; }
+.weight-row-name {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.weight-row-meta {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.3;
+  margin-top: 1px;
+}
+.weight-stepper {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  border: 1px solid rgba(var(--rgb-slate), 0.18);
+  border-radius: var(--radius-control);
+  overflow: hidden;
+}
+.weight-stepper button {
+  width: 26px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  background: rgba(var(--rgb-slate), 0.08);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+.weight-stepper button:hover:not(:disabled) { background: rgba(var(--rgb-slate), 0.2); transform: none; }
+.weight-stepper input {
+  width: 38px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-left: 1px solid rgba(var(--rgb-slate), 0.18);
+  border-right: 1px solid rgba(var(--rgb-slate), 0.18);
+  background: none;
+  color: var(--text);
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+}
+.weight-stepper input:focus { outline: none; background: rgba(var(--rgb-accent), 0.1); }
+.weight-stepper input.weight-positive { color: var(--accent); }
+.weight-stepper input.weight-negative { color: var(--danger); }
+
+/* The percentage explainer is a details/summary now, closed by default. */
+.weights-help { margin-top: 6px; }
+.weights-help summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 12px;
+  list-style: none;
+}
+.weights-help summary::-webkit-details-marker { display: none; }
+.weights-help summary::before { content: "? "; font-weight: 700; }
+.weights-help summary:hover { color: var(--accent); }
+.weights-help .legend { margin-top: 6px; }
+
+/* ---- Compact summary row ---- */
+.summary-grid { margin-top: 14px; gap: 8px; }
+.mini-card { padding: 8px 10px; }
+.mini-card span { margin-bottom: 2px; font-size: 11px; }
+.mini-card strong { font-size: 17px; }
+
+:root[data-density="compact"] .topbar { padding: 6px 10px 6px 14px; min-height: 48px; }
+:root[data-density="compact"] .topbar-icon-button,
+:root[data-density="compact"] .topbar-icon-button { width: 32px; height: 32px; }
+:root[data-density="compact"] .weight-row { padding: 5px 8px; }
+
+.contract-dialog { width: min(100%, 620px); }
+.contract-choice-card > span { min-height: 0; font-size: 12px; line-height: 1.35; }
+.contract-choice-grid { gap: 10px; margin-bottom: 10px; }
+.radio-inline { font-size: 12px; min-height: 0; margin-top: 10px; }

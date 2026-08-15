@@ -958,9 +958,41 @@ contractSave?.addEventListener("click", () => {
 
 });
 
+contractCancel?.addEventListener("click", () => {
+
+  closeContractModal();
+
+});
+
+contractBackdrop?.addEventListener("click", () => {
+
+  closeContractModal();
+
+});
+
+// The status line on the calculator is the entry point into the contract form now,
+// so the whole strip is clickable rather than carrying a separate button.
+contractDetailsSummary?.addEventListener("click", () => {
+
+  openContractModal();
+
+});
+
+contractDetailsSummary?.addEventListener("keydown", (event) => {
+
+  if (event.key === "Enter" || event.key === " ") {
+
+    event.preventDefault();
+
+    openContractModal();
+
+  }
+
+});
+
 settingsButton?.addEventListener("click", () => {
 
-  openSettingsModal("profile");
+  openSettingsModal("appearance");
 
 });
 
@@ -1019,6 +1051,14 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !confirmModal.classList.contains("hidden")) {
 
     closeConfirmModal(false);
+
+    return;
+
+  }
+
+  if (event.key === "Escape" && contractModal && !contractModal.classList.contains("hidden")) {
+
+    closeContractModal();
 
     return;
 
