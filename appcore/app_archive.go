@@ -268,7 +268,18 @@ func (a *App) ListCalculations() ([]SavedCalculation, error) {
 	if err != nil {
 		return []SavedCalculation{}, nil
 	}
-	rows, err := a.db.Query(`SELECT c.id, c.title, c.target_amount, c.total_amount, c.items_json, c.created_at, c.created_by, c.created_role FROM calculations c ORDER BY c.id DESC`)
+	// The visibility rules are pushed into SQL so the database skips rows this actor
+	// may not read, instead of every archive row (items_json included) being loaded
+	// and then discarded. canViewArchiveRole below stays as a second line of defence:
+	// if the predicate is ever too permissive, the row is still dropped here.
+	query := `SELECT c.id, c.title, c.target_amount, c.total_amount, c.items_json, c.created_at, c.created_by, c.created_role FROM calculations c`
+	where, args := archiveVisibilityFilter(user)
+	if where != "" {
+		query += ` WHERE ` + where
+	}
+	query += ` ORDER BY c.id DESC`
+
+	rows, err := a.db.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("list calculations: %w", err)
 	}
