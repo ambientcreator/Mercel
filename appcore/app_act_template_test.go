@@ -284,7 +284,7 @@ func TestMigrationRewritesLegacyActTemplateIDs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewApp() error = %v", err)
 	}
-	if _, err := app.Login(LoginRequest{Username: "admin", Password: "siuW*R%wWkQS"}); err != nil {
+	if _, err := app.Login(LoginRequest{Username: "admin", Password: testAdminPassword}); err != nil {
 		t.Fatalf("Login() error = %v", err)
 	}
 	created, err := app.CreateUser(UserWithPassword{Username: "legacyblank", Password: "Str0ng!Passw0rd", Role: RoleTechnicalEmployee})
@@ -333,7 +333,7 @@ func TestMigrationRewritesLegacyActTemplateIDs(t *testing.T) {
 		t.Fatalf("expected the replaced \"blank5\" to become %q, got %q", ActTemplateTypewriter, replaced.ActTemplate)
 	}
 
-	if _, err := reopened.Login(LoginRequest{Username: "admin", Password: "siuW*R%wWkQS"}); err != nil {
+	if _, err := reopened.Login(LoginRequest{Username: "admin", Password: testAdminPassword}); err != nil {
 		t.Fatalf("Login() after migration error = %v", err)
 	}
 	session := reopened.GetSession()

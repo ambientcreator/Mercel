@@ -538,10 +538,19 @@ func (a *App) seedDefaultData() error {
 const AdminPasswordEnvVar = "MERCEL_ADMIN_PASSWORD"
 
 // defaultAdminPasswordHash is the bcrypt hash of the built-in administrator
-// password. The plaintext is deliberately NOT stored in source: even with full
-// access to this repository the password cannot be recovered from this hash.
-// To rotate it, set AdminPasswordEnvVar at runtime, or regenerate this hash from
-// a new secret with bcrypt.GenerateFromPassword.
+// password, used when AdminPasswordEnvVar is not set.
+//
+// This hash is a fallback, not a security boundary. It ships in every binary and
+// is identical across all installations, so anyone holding a copy of the release
+// can attack it offline at their leisure — and the account it protects is the one
+// that can read every archive. Treat the built-in password as public and set
+// AdminPasswordEnvVar per deployment; rotating it here only changes the value that
+// everyone shares.
+//
+// To rotate: set AdminPasswordEnvVar at runtime, or regenerate this hash from a new
+// secret with bcrypt.GenerateFromPassword. Do not write the plaintext into the
+// repository — the tests deliberately supply their own through the environment
+// variable rather than hardcoding the shipped one.
 const defaultAdminPasswordHash = "$2a$10$ljd4EP7tOwTKc40TO3X2sOwHMQ1R3USKVLl9zfoonZXNl3kDzrIl."
 
 // adminSeedPasswordHash returns the bcrypt hash that should be applied to the

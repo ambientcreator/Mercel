@@ -153,7 +153,7 @@ func TestNewDatabasePathCopiesLegacyData(t *testing.T) {
 			t.Fatalf("create legacy schema: %v", err)
 		}
 	}
-	if _, err := db.Exec(`INSERT INTO users(username, password_hash, role, created_at) VALUES(?, ?, ?, ?)`, "admin", HashPasswordForTest("#@7pcehQCSpR"), RoleAdmin, "2026-03-27T00:00:00Z"); err != nil {
+	if _, err := db.Exec(`INSERT INTO users(username, password_hash, role, created_at) VALUES(?, ?, ?, ?)`, "admin", HashPasswordForTest(legacyFixturePassword), RoleAdmin, "2026-03-27T00:00:00Z"); err != nil {
 		t.Fatalf("insert admin: %v", err)
 	}
 	if _, err := db.Exec(`INSERT INTO users(username, password_hash, role, created_at) VALUES(?, ?, ?, ?)`, "dima", HashPasswordForTest("secret"), RoleEmployee, "2026-03-27T00:01:00Z"); err != nil {
@@ -231,7 +231,7 @@ func TestExistingFreshMercelDatabaseIsRecoveredFromLegacy(t *testing.T) {
 			t.Fatalf("create fresh new schema: %v", err)
 		}
 	}
-	if _, err := newDB.Exec(`INSERT INTO users(username, password_hash, role, created_at) VALUES(?, ?, ?, ?)`, "admin", HashPasswordForTest("#@7pcehQCSpR"), RoleAdmin, "2026-03-28T00:56:47+03:00"); err != nil {
+	if _, err := newDB.Exec(`INSERT INTO users(username, password_hash, role, created_at) VALUES(?, ?, ?, ?)`, "admin", HashPasswordForTest(legacyFixturePassword), RoleAdmin, "2026-03-28T00:56:47+03:00"); err != nil {
 		t.Fatalf("insert fresh admin: %v", err)
 	}
 	for idx := 0; idx < 8; idx++ {
@@ -253,7 +253,7 @@ func TestExistingFreshMercelDatabaseIsRecoveredFromLegacy(t *testing.T) {
 			t.Fatalf("create legacy schema: %v", err)
 		}
 	}
-	if _, err := legacyDB.Exec(`INSERT INTO users(username, password_hash, role, created_at) VALUES(?, ?, ?, ?)`, "admin", HashPasswordForTest("#@7pcehQCSpR"), RoleAdmin, "2026-03-27T20:55:29+03:00"); err != nil {
+	if _, err := legacyDB.Exec(`INSERT INTO users(username, password_hash, role, created_at) VALUES(?, ?, ?, ?)`, "admin", HashPasswordForTest(legacyFixturePassword), RoleAdmin, "2026-03-27T20:55:29+03:00"); err != nil {
 		t.Fatalf("insert legacy admin: %v", err)
 	}
 	if _, err := legacyDB.Exec(`INSERT INTO users(username, password_hash, role, created_at) VALUES(?, ?, ?, ?)`, "dima", HashPasswordForTest("secret"), RoleEmployee, "2026-03-27T21:02:07+03:00"); err != nil {
@@ -323,7 +323,7 @@ func TestExistingFreshStableStorageRecoversFromPreviousMercelPath(t *testing.T) 
 			t.Fatalf("create previous Mercel schema: %v", err)
 		}
 	}
-	if _, err := db.Exec(`INSERT INTO users(username, password_hash, role, created_at) VALUES(?, ?, ?, ?)`, "admin", HashPasswordForTest("#@7pcehQCSpR"), RoleAdmin, "2026-03-27T00:00:00Z"); err != nil {
+	if _, err := db.Exec(`INSERT INTO users(username, password_hash, role, created_at) VALUES(?, ?, ?, ?)`, "admin", HashPasswordForTest(legacyFixturePassword), RoleAdmin, "2026-03-27T00:00:00Z"); err != nil {
 		t.Fatalf("insert admin: %v", err)
 	}
 	if _, err := db.Exec(`INSERT INTO users(username, password_hash, role, created_at) VALUES(?, ?, ?, ?)`, "tech_user", HashPasswordForTest("secret"), RoleTechnicalEmployee, "2026-03-27T00:01:00Z"); err != nil {
