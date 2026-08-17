@@ -330,6 +330,35 @@ func (a *App) initDatabase() error {
 	if err := a.migrateDatabase(); err != nil {
 		return err
 	}
+	if err := a.ensureIndexes(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// EN: Method `ensureIndexes`.
+//
+// EN: What it does: ensureIndexes creates the lookup indexes the archive and service reads depend on.
+//
+// EN: Key points: it runs after migrateDatabase, not alongside the table DDL, because it indexes columns that older
+// EN: databases only gain during migration — indexing created_role before the migration adds it fails outright.
+// EN: CREATE INDEX IF NOT EXISTS is idempotent, so this is safe to repeat on every startup.
+func (a *App) ensureIndexes() error {
+	// The archive is read through archiveVisibilityFilter, which narrows rows by
+	// created_by and created_role; services are always looked up by their owner.
+	queries := []string{
+		`CREATE INDEX IF NOT EXISTS idx_calculations_created_by_created_at
+			ON calculations (created_by, created_at DESC);`,
+		`CREATE INDEX IF NOT EXISTS idx_calculations_created_role
+			ON calculations (created_role);`,
+		`CREATE INDEX IF NOT EXISTS idx_services_created_by
+			ON services (created_by);`,
+	}
+	for _, query := range queries {
+		if _, err := a.db.Exec(query); err != nil {
+			return fmt.Errorf("ensure indexes: %w", err)
+		}
+	}
 	return nil
 }
 

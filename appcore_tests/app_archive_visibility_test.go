@@ -1,6 +1,7 @@
 package appcore_test
 
 import (
+	"strings"
 	"testing"
 
 	. "statistic/appcore"
@@ -49,6 +50,56 @@ func archiveIDs(t *testing.T, app *App) map[int64]bool {
 		ids[item.ID] = true
 	}
 	return ids
+}
+
+// EN: Test `TestArchiveLookupIndexesExist`.
+//
+// EN: What it does: it asserts the indexes the archive and service lookups rely on are created on a fresh database,
+// EN: and that the archive query reaches rows through them instead of scanning the table.
+//
+// EN: Key points: archiveVisibilityFilter narrows rows by created_by and created_role, so losing either index turns
+// EN: every archive read back into a full scan without any test failing on behaviour alone.
+func TestArchiveLookupIndexesExist(t *testing.T) {
+	app := withTempDB(t)
+	loginAsAdmin(t, app)
+
+	wanted := []string{
+		"idx_calculations_created_by_created_at",
+		"idx_calculations_created_role",
+		"idx_services_created_by",
+	}
+	for _, name := range wanted {
+		var found string
+		err := app.DBForTest().QueryRow(`SELECT name FROM sqlite_master WHERE type = 'index' AND name = ?`, name).Scan(&found)
+		if err != nil {
+			t.Fatalf("index %q missing from a freshly initialised database: %v", name, err)
+		}
+	}
+
+	// The shape below mirrors what archiveVisibilityFilter builds for a non-admin.
+	rows, err := app.DBForTest().Query(`EXPLAIN QUERY PLAN SELECT c.id FROM calculations c WHERE (c.created_by = 'someone' OR c.created_role IN ('support_employee'))`)
+	if err != nil {
+		t.Fatalf("EXPLAIN QUERY PLAN error = %v", err)
+	}
+	defer rows.Close()
+
+	sawScan := false
+	for rows.Next() {
+		var id, parent, notUsed int
+		var detail string
+		if err := rows.Scan(&id, &parent, &notUsed, &detail); err != nil {
+			t.Fatalf("scan query plan error = %v", err)
+		}
+		if strings.Contains(detail, "SCAN c") {
+			sawScan = true
+		}
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("query plan rows error = %v", err)
+	}
+	if sawScan {
+		t.Fatal("archive visibility query falls back to a full table scan")
+	}
 }
 
 // EN: Test `TestArchiveVisibilitySurvivesNonCanonicalStoredRoles`.
