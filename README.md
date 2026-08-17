@@ -144,29 +144,32 @@ Mercel — desktop-приложение на Wails и Go для расчёта �
 - Копировать услуги из архивного расчёта к себе могут `admin` и директора — каждый в пределах видимых ему архивов. Свой список услуг при этом заменяется списком из выбранного расчёта.
 - Архив сохраняется даже после удаления пользователя, который его создал.
 
-## Учётные записи по умолчанию
+## Учётная запись администратора
 
 ### Защищённая системная учётная запись
 
 - Логин: `admin`
-- Пароль: `#@7pcehQCSpR`
 
 Особенности:
 
 - скрыта из обычного списка пользователей;
 - неудаляемая;
-- не понижается и не редактируется как обычная учётка.
+- не понижается и не редактируется как обычная учётка;
+- пароль восстанавливается при каждом запуске, поэтому сменить его через интерфейс нельзя.
 
-### Тестовый администратор
+### Пароль
 
-- Логин: `admin1`
-- Пароль: `admin1`
+Пароль задаётся переменной окружения `MERCEL_ADMIN_PASSWORD` — она читается при
+старте, и её значение применяется к учётной записи `admin`.
 
-Особенности:
+Если переменная не задана, используется встроенный запасной пароль. **Он одинаков
+во всех сборках и не является защитой:** его хеш лежит в каждом бинарнике, поэтому
+любой, у кого есть копия приложения, может подобрать его офлайн, а защищает он
+учётку, которая видит все архивы. Для рабочей установки задавайте
+`MERCEL_ADMIN_PASSWORD` своим значением.
 
-- обычная admin-учётка для тестирования интерфейса;
-- видна в интерфейсе;
-- может быть удалена защищённым `admin`.
+Тестовый администратор `admin1` больше не существует: учётная запись и её услуги
+удаляются при каждом старте.
 
 ## Архив
 
@@ -190,15 +193,17 @@ Mercel — desktop-приложение на Wails и Go для расчёта �
 
 ### Backend
 
+Весь backend живёт в пакете `appcore`; в корне остаётся только точка входа.
+
 - [main.go](./main.go) — запуск Wails, окно приложения, embed frontend и стабильный путь WebView2.
-- [app_types.go](./app_types.go) — модели данных, константы, роли и отделы.
-- [app_storage.go](./app_storage.go) — SQLite, миграции, сидирование и восстановление базы.
-- [app_security.go](./app_security.go) — валидация, права доступа, роли и работа с паролями.
-- [app_session.go](./app_session.go) — сессия, авторизация и bootstrap.
-- [app_services.go](./app_services.go) — работа с услугами.
-- [app_users.go](./app_users.go) — пользователи, смена ролей и смена паролей.
-- [app_calculation.go](./app_calculation.go) — логика расчёта и распределения.
-- [app_archive.go](./app_archive.go) — архив, сохранение расчётов и копирование услуг из архива.
+- [appcore/app_types.go](./appcore/app_types.go) — модели данных, константы, роли и отделы.
+- [appcore/app_storage.go](./appcore/app_storage.go) — SQLite, версионированные миграции, сидирование и восстановление базы.
+- [appcore/app_security.go](./appcore/app_security.go) — валидация, права доступа, роли и работа с паролями.
+- [appcore/app_session.go](./appcore/app_session.go) — сессия, авторизация и bootstrap.
+- [appcore/app_services.go](./appcore/app_services.go) — работа с услугами.
+- [appcore/app_users.go](./appcore/app_users.go) — пользователи, смена ролей и смена паролей.
+- [appcore/app_calculation.go](./appcore/app_calculation.go) — логика расчёта и распределения.
+- [appcore/app_archive.go](./appcore/app_archive.go) — архив, сохранение расчётов и копирование услуг из архива.
 - [appcore/app_act_template.go](./appcore/app_act_template.go) — бланки акта, случайное назначение и миграция старых учёток.
 - [appcore/app_export.go](./appcore/app_export.go) — выгрузка акта в PDF, подбор шрифтов и стандартный бланк.
 - [appcore/app_export_formal.go](./appcore/app_export_formal.go) — типовой бланк №1.
@@ -208,17 +213,29 @@ Mercel — desktop-приложение на Wails и Go для расчёта �
 
 ### Тесты
 
-- [test_helpers_test.go](./test_helpers_test.go) — тестовые helper-функции.
-- [app_core_test.go](./app_core_test.go) — базовые backend-сценарии.
-- [app_storage_test.go](./app_storage_test.go) — SQLite, миграции и восстановление данных.
-- [app_roles_test.go](./app_roles_test.go) — роли, доступы и видимость архивов.
-- [app_frontend_test.go](./app_frontend_test.go) — регрессионные проверки frontend-строк и ключевых UI-функций.
-- [appcore_tests/app_act_template_test.go](./appcore_tests/app_act_template_test.go) — назначение бланков и проверка, что каждый бланк укладывается в один лист.
+Тесты лежат рядом с кодом, в пакете `appcore_test` внутри каталога `appcore/`.
+
+- [appcore/test_helpers_test.go](./appcore/test_helpers_test.go) — тестовые helper-функции.
+- [appcore/export_test.go](./appcore/export_test.go) — доступ к внутренним функциям для тестов. Файл заканчивается на `_test.go`, поэтому он компилируется только при `go test` и не попадает в релизную сборку.
+- [appcore/app_core_test.go](./appcore/app_core_test.go) — базовые backend-сценарии.
+- [appcore/app_storage_test.go](./appcore/app_storage_test.go) — SQLite, версионирование схемы, миграции и восстановление данных.
+- [appcore/app_roles_test.go](./appcore/app_roles_test.go) — роли, доступы и видимость архивов.
+- [appcore/app_archive_visibility_test.go](./appcore/app_archive_visibility_test.go) — SQL-фильтр видимости архива и индексы под него.
+- [appcore/app_archive_edit_test.go](./appcore/app_archive_edit_test.go) — правка архива, правило одной записи в день и атомарность копирования услуг.
+- [appcore/app_frontend_test.go](./appcore/app_frontend_test.go) — регрессионные проверки frontend-строк и ключевых UI-функций.
+- [appcore/app_act_template_test.go](./appcore/app_act_template_test.go) — назначение бланков и проверка, что каждый бланк укладывается в один лист.
 
 ### Frontend
 
+Интерфейс написан без сборщика: скрипты подключаются пятью отдельными тегами
+`<script>`, а каталог `dist` коммитится как есть.
+
 - [frontend/dist/index.html](./frontend/dist/index.html) — разметка интерфейса.
-- [frontend/dist/assets/app.js](./frontend/dist/assets/app.js) — логика интерфейса.
+- [frontend/dist/assets/app_state.js](./frontend/dist/assets/app_state.js) — состояние и обращения к backend.
+- [frontend/dist/assets/app_bootstrap.js](./frontend/dist/assets/app_bootstrap.js) — инициализация и обработчики.
+- [frontend/dist/assets/app_render.js](./frontend/dist/assets/app_render.js) — отрисовка экранов.
+- [frontend/dist/assets/app_archive.js](./frontend/dist/assets/app_archive.js) — экран архива.
+- [frontend/dist/assets/app_utils.js](./frontend/dist/assets/app_utils.js) — вспомогательные функции.
 - [frontend/dist/assets/app.css](./frontend/dist/assets/app.css) — стили интерфейса.
 
 ## Требования
@@ -254,14 +271,20 @@ wails build
 Backend-тесты:
 
 ```powershell
+go vet ./...
 go test ./...
 ```
 
-Проверка frontend-скрипта:
+Проверка frontend-скриптов (сборки нет, поэтому доступна только проверка синтаксиса):
 
 ```powershell
-node --check frontend/dist/assets/app.js
+Get-ChildItem frontend/dist/assets/*.js | ForEach-Object { node --check $_.FullName }
 ```
+
+### CI
+
+- [.github/workflows/ci.yml](./.github/workflows/ci.yml) — `go vet`, `go test` и проверка синтаксиса frontend на каждый push и pull request; сборки под Windows и macOS на pull request.
+- [.github/workflows/release.yml](./.github/workflows/release.yml) — сборка `.exe` и подписанного `.app` по тегу `v*` или вручную.
 
 ## Хранение данных
 
@@ -274,6 +297,19 @@ node --check frontend/dist/assets/app.js
 Поддерживается восстановление данных из старого пути:
 
 - `C:\Users\<username>\AppData\Roaming\Statistic\statistic.sqlite`
+
+### Версия схемы
+
+Схема обновляется именованными миграциями, а применённые записываются в таблицу
+`schema_migrations`. Каждая миграция выполняется не более одного раза, поэтому
+запуск не прогоняет обновления заново на уже актуальной базе.
+
+База, созданная до появления этой таблицы, записей не имеет: миграции применяются
+к ней один раз и после этого фиксируются. Это безопасно, потому что каждый шаг
+идемпотентен — повторное применение ничего не меняет.
+
+Чтобы узнать состояние базы, есть метод `SchemaVersion()`: он возвращает имя
+последней применённой миграции.
 
 ### WebView2
 
