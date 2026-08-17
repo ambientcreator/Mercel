@@ -33,13 +33,22 @@ func (a *App) SaveCalculation(req SaveCalculationRequest) (SavedCalculation, err
 	}
 	createdAt := now.Format(time.RFC3339)
 
+	// One archive row per author per day. The day is taken from created_at rather
+	// than from the title: the title is caller-supplied, so keying on it let any
+	// request that sent a different title store a second row for the same day.
+	//
+	// created_at is written as RFC3339 in local time, so its first ten characters
+	// are the local calendar date exactly as the author saw it. Comparing that
+	// prefix keeps the grouping local, which date() would not — date() shifts a
+	// timestamp carrying an offset to UTC and would move late-evening rows a day
+	// back.
 	var existingID int64
-	err = a.db.QueryRow(`SELECT id FROM calculations WHERE created_by = ? AND title = ? LIMIT 1`, user.Username, title).Scan(&existingID)
+	err = a.db.QueryRow(`SELECT id FROM calculations WHERE created_by = ? AND substr(created_at, 1, 10) = ? LIMIT 1`, user.Username, now.Format("2006-01-02")).Scan(&existingID)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return SavedCalculation{}, fmt.Errorf("find daily calculation: %w", err)
 	}
 	if err == nil {
-		_, err = a.db.Exec(`UPDATE calculations SET target_amount = ?, total_amount = ?, items_json = ?, created_at = ?, created_role = ? WHERE id = ?`, req.TargetAmount, total, string(payload), createdAt, user.Role, existingID)
+		_, err = a.db.Exec(`UPDATE calculations SET title = ?, target_amount = ?, total_amount = ?, items_json = ?, created_at = ?, created_role = ? WHERE id = ?`, title, req.TargetAmount, total, string(payload), createdAt, user.Role, existingID)
 		if err != nil {
 			return SavedCalculation{}, fmt.Errorf("update daily calculation: %w", err)
 		}

@@ -87,6 +87,64 @@ func TestAdminCanUpdateArchivedCalculation(t *testing.T) {
 	}
 }
 
+// EN: Test `TestSaveCalculationKeepsOneRowPerAuthorPerDay`.
+//
+// EN: What it does: it saves twice on the same day under different titles and requires the second save to replace the
+// EN: first instead of adding a row.
+//
+// EN: Key points: the day is keyed off created_at, not off the caller-supplied title, so a request sending its own
+// EN: title can no longer store a second archive row for a day that is meant to hold one.
+func TestSaveCalculationKeepsOneRowPerAuthorPerDay(t *testing.T) {
+	app := withTempDB(t)
+	loginAsAdmin(t, app)
+
+	first, err := app.SaveCalculation(SaveCalculationRequest{
+		Title:        "утренний расчёт",
+		TargetAmount: 500,
+		Items: []CalculationItem{
+			{ServiceCode: "svc-1", Name: "Услуга", Unit: "ч.", Rate: 100, Quantity: 5, LineTotal: 500, Category: CategoryPrimary},
+		},
+	})
+	if err != nil {
+		t.Fatalf("SaveCalculation() first error = %v", err)
+	}
+
+	second, err := app.SaveCalculation(SaveCalculationRequest{
+		Title:        "вечерний расчёт",
+		TargetAmount: 700,
+		Items: []CalculationItem{
+			{ServiceCode: "svc-1", Name: "Услуга", Unit: "ч.", Rate: 100, Quantity: 7, LineTotal: 700, Category: CategoryPrimary},
+		},
+	})
+	if err != nil {
+		t.Fatalf("SaveCalculation() second error = %v", err)
+	}
+
+	if second.ID != first.ID {
+		t.Fatalf("second save created row %d instead of replacing row %d", second.ID, first.ID)
+	}
+
+	list, err := app.ListCalculations()
+	if err != nil {
+		t.Fatalf("ListCalculations() error = %v", err)
+	}
+	own := 0
+	for _, item := range list {
+		if item.CreatedBy == "admin" {
+			own++
+		}
+	}
+	if own != 1 {
+		t.Fatalf("admin archive holds %d rows for today, want 1", own)
+	}
+	if list[0].TotalAmount != 700 {
+		t.Fatalf("stored TotalAmount = %d, want the later 700", list[0].TotalAmount)
+	}
+	if list[0].Title != "вечерний расчёт" {
+		t.Fatalf("stored Title = %q, want the later title", list[0].Title)
+	}
+}
+
 func TestArchiveDeleteHonorsOwnershipAndRoles(t *testing.T) {
 	app := withTempDB(t)
 
