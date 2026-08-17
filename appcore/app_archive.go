@@ -170,11 +170,14 @@ func (a *App) UpdateCalculationAsAdmin(req UpdateSavedCalculationRequest) (Saved
 	if err != nil {
 		return SavedCalculation{}, fmt.Errorf("marshal updated archive items: %w", err)
 	}
-	if _, err := a.db.Exec(`UPDATE calculations SET target_amount = ?, total_amount = ?, items_json = ? WHERE id = ?`, total, total, string(encoded), req.ID); err != nil {
+	// target_amount records what the author originally asked for; only total_amount
+	// follows the edited items. Writing the recomputed total into both would erase
+	// the request the archive exists to document, and the gap between the two is
+	// exactly what makes an edited row recognisable afterwards.
+	if _, err := a.db.Exec(`UPDATE calculations SET total_amount = ?, items_json = ? WHERE id = ?`, total, string(encoded), req.ID); err != nil {
 		return SavedCalculation{}, fmt.Errorf("update archived calculation: %w", err)
 	}
 
-	current.TargetAmount = total
 	current.TotalAmount = total
 	current.Items = items
 	current.CreatedRole = normalizeRole(current.CreatedRole)

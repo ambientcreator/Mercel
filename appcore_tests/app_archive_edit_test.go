@@ -47,8 +47,10 @@ func TestAdminCanUpdateArchivedCalculation(t *testing.T) {
 	if updated.TotalAmount != 520 {
 		t.Fatalf("updated.TotalAmount = %d, want 520", updated.TotalAmount)
 	}
-	if updated.TargetAmount != 520 {
-		t.Fatalf("updated.TargetAmount = %d, want 520", updated.TargetAmount)
+	// The edit changes what was delivered, not what was originally asked for, so the
+	// target the author saved with has to survive it.
+	if updated.TargetAmount != 550 {
+		t.Fatalf("updated.TargetAmount = %d, want the original 550 preserved", updated.TargetAmount)
 	}
 	if len(updated.Items) != 2 {
 		t.Fatalf("len(updated.Items) = %d, want 2", len(updated.Items))
@@ -79,6 +81,9 @@ func TestAdminCanUpdateArchivedCalculation(t *testing.T) {
 	}
 	if found.TotalAmount != 520 {
 		t.Fatalf("found.TotalAmount = %d, want 520", found.TotalAmount)
+	}
+	if found.TargetAmount != 550 {
+		t.Fatalf("found.TargetAmount = %d, want the original 550 persisted", found.TargetAmount)
 	}
 }
 
