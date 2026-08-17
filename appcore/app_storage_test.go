@@ -153,7 +153,7 @@ func TestNewDatabasePathCopiesLegacyData(t *testing.T) {
 			t.Fatalf("create legacy schema: %v", err)
 		}
 	}
-	if _, err := db.Exec(`INSERT INTO users(username, password_hash, role, created_at) VALUES(?, ?, ?, ?)`, "admin", HashPasswordForTest("#@7pcehQCSpR"), RoleAdmin, "2026-03-27T00:00:00Z"); err != nil {
+	if _, err := db.Exec(`INSERT INTO users(username, password_hash, role, created_at) VALUES(?, ?, ?, ?)`, "admin", HashPasswordForTest(legacyFixturePassword), RoleAdmin, "2026-03-27T00:00:00Z"); err != nil {
 		t.Fatalf("insert admin: %v", err)
 	}
 	if _, err := db.Exec(`INSERT INTO users(username, password_hash, role, created_at) VALUES(?, ?, ?, ?)`, "dima", HashPasswordForTest("secret"), RoleEmployee, "2026-03-27T00:01:00Z"); err != nil {
@@ -231,7 +231,7 @@ func TestExistingFreshMercelDatabaseIsRecoveredFromLegacy(t *testing.T) {
 			t.Fatalf("create fresh new schema: %v", err)
 		}
 	}
-	if _, err := newDB.Exec(`INSERT INTO users(username, password_hash, role, created_at) VALUES(?, ?, ?, ?)`, "admin", HashPasswordForTest("#@7pcehQCSpR"), RoleAdmin, "2026-03-28T00:56:47+03:00"); err != nil {
+	if _, err := newDB.Exec(`INSERT INTO users(username, password_hash, role, created_at) VALUES(?, ?, ?, ?)`, "admin", HashPasswordForTest(legacyFixturePassword), RoleAdmin, "2026-03-28T00:56:47+03:00"); err != nil {
 		t.Fatalf("insert fresh admin: %v", err)
 	}
 	for idx := 0; idx < 8; idx++ {
@@ -253,7 +253,7 @@ func TestExistingFreshMercelDatabaseIsRecoveredFromLegacy(t *testing.T) {
 			t.Fatalf("create legacy schema: %v", err)
 		}
 	}
-	if _, err := legacyDB.Exec(`INSERT INTO users(username, password_hash, role, created_at) VALUES(?, ?, ?, ?)`, "admin", HashPasswordForTest("#@7pcehQCSpR"), RoleAdmin, "2026-03-27T20:55:29+03:00"); err != nil {
+	if _, err := legacyDB.Exec(`INSERT INTO users(username, password_hash, role, created_at) VALUES(?, ?, ?, ?)`, "admin", HashPasswordForTest(legacyFixturePassword), RoleAdmin, "2026-03-27T20:55:29+03:00"); err != nil {
 		t.Fatalf("insert legacy admin: %v", err)
 	}
 	if _, err := legacyDB.Exec(`INSERT INTO users(username, password_hash, role, created_at) VALUES(?, ?, ?, ?)`, "dima", HashPasswordForTest("secret"), RoleEmployee, "2026-03-27T21:02:07+03:00"); err != nil {
@@ -323,7 +323,7 @@ func TestExistingFreshStableStorageRecoversFromPreviousMercelPath(t *testing.T) 
 			t.Fatalf("create previous Mercel schema: %v", err)
 		}
 	}
-	if _, err := db.Exec(`INSERT INTO users(username, password_hash, role, created_at) VALUES(?, ?, ?, ?)`, "admin", HashPasswordForTest("#@7pcehQCSpR"), RoleAdmin, "2026-03-27T00:00:00Z"); err != nil {
+	if _, err := db.Exec(`INSERT INTO users(username, password_hash, role, created_at) VALUES(?, ?, ?, ?)`, "admin", HashPasswordForTest(legacyFixturePassword), RoleAdmin, "2026-03-27T00:00:00Z"); err != nil {
 		t.Fatalf("insert admin: %v", err)
 	}
 	if _, err := db.Exec(`INSERT INTO users(username, password_hash, role, created_at) VALUES(?, ?, ?, ?)`, "tech_user", HashPasswordForTest("secret"), RoleTechnicalEmployee, "2026-03-27T00:01:00Z"); err != nil {
@@ -476,3 +476,138 @@ func TestBuildServiceTargetsNegativeWeightRemovesShareWithinGroup(t *testing.T) 
 // EN: What it does: TestSeniorSpecialistCanDeleteEmployeeOnly enforces deletion boundaries for the senior specialist role.
 //
 // EN: Key points: runs in an isolated scenario; protects against regressions; documents the expected behavior of the feature or rule.
+
+// EN: Test `TestMigrationsAreRecordedAndRunOnce`.
+//
+// EN: What it does: it opens a database twice and checks that every migration is recorded on the first start and that
+// EN: none of them runs again on the second.
+//
+// EN: Key points: re-running the role rewrites on every startup was the old behaviour; the record is what stops it,
+// EN: and it is also what lets support ask a database which upgrades it has had.
+func TestMigrationsAreRecordedAndRunOnce(t *testing.T) {
+	tempDir := t.TempDir()
+	dbPath := filepath.Join(tempDir, "versioned.sqlite")
+	usePathResolvers(t, dbPath, filepath.Join(tempDir, "missing-legacy.sqlite"), "")
+
+	app, err := NewApp()
+	if err != nil {
+		t.Fatalf("NewApp() error = %v", err)
+	}
+
+	var applied int
+	if err := app.DBForTest().QueryRow(`SELECT COUNT(*) FROM schema_migrations`).Scan(&applied); err != nil {
+		t.Fatalf("count applied migrations: %v", err)
+	}
+	if applied == 0 {
+		t.Fatal("a freshly created database recorded no migrations")
+	}
+
+	version, err := app.SchemaVersion()
+	if err != nil {
+		t.Fatalf("SchemaVersion() error = %v", err)
+	}
+	if version == "" {
+		t.Fatal("SchemaVersion() is empty on a migrated database")
+	}
+
+	// Stamp the recorded rows so a re-run would be visible as a changed timestamp.
+	if _, err := app.DBForTest().Exec(`UPDATE schema_migrations SET applied_at = 'sentinel'`); err != nil {
+		t.Fatalf("stamp migrations: %v", err)
+	}
+	if err := app.Close(); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+
+	reopened, err := NewApp()
+	if err != nil {
+		t.Fatalf("NewApp() reopen error = %v", err)
+	}
+	t.Cleanup(func() {
+		_ = reopened.Close()
+	})
+
+	var reapplied int
+	if err := reopened.DBForTest().QueryRow(`SELECT COUNT(*) FROM schema_migrations WHERE applied_at <> 'sentinel'`).Scan(&reapplied); err != nil {
+		t.Fatalf("count re-applied migrations: %v", err)
+	}
+	if reapplied != 0 {
+		t.Fatalf("%d migrations ran again on an already migrated database", reapplied)
+	}
+
+	reopenedVersion, err := reopened.SchemaVersion()
+	if err != nil {
+		t.Fatalf("SchemaVersion() after reopen error = %v", err)
+	}
+	if reopenedVersion != version {
+		t.Fatalf("schema version drifted across a reopen: %q then %q", version, reopenedVersion)
+	}
+}
+
+// EN: Test `TestMigrationsAreIdempotentOnAnUntrackedDatabase`.
+//
+// EN: What it does: it drops the bookkeeping table and reopens, so every migration runs a second time against data
+// EN: that already has them applied, and checks the result is unchanged.
+//
+// EN: Key points: this is the upgrade path for every database written before migrations were tracked, so the steps
+// EN: have to stay safe to replay — that property is what makes recording them after the fact possible at all.
+func TestMigrationsAreIdempotentOnAnUntrackedDatabase(t *testing.T) {
+	tempDir := t.TempDir()
+	dbPath := filepath.Join(tempDir, "replay.sqlite")
+	usePathResolvers(t, dbPath, filepath.Join(tempDir, "missing-legacy.sqlite"), "")
+
+	app, err := NewApp()
+	if err != nil {
+		t.Fatalf("NewApp() error = %v", err)
+	}
+	if _, err := app.Login(LoginRequest{Username: "admin", Password: testAdminPassword}); err != nil {
+		t.Fatalf("Login() error = %v", err)
+	}
+	if _, err := app.CreateUser(UserWithPassword{Username: "replayuser", Password: "Str0ng!Passw0rd", Role: RoleTechnicalEmployee}); err != nil {
+		t.Fatalf("CreateUser() error = %v", err)
+	}
+
+	snapshot := func(a *App) []string {
+		t.Helper()
+		rows, err := a.DBForTest().Query(`SELECT username, role, act_template, preferred_contract_code, last_act_number FROM users ORDER BY username`)
+		if err != nil {
+			t.Fatalf("snapshot users: %v", err)
+		}
+		defer rows.Close()
+		var out []string
+		for rows.Next() {
+			var username, role, template, contract string
+			var actNumber int
+			if err := rows.Scan(&username, &role, &template, &contract, &actNumber); err != nil {
+				t.Fatalf("scan snapshot: %v", err)
+			}
+			out = append(out, fmt.Sprintf("%s|%s|%s|%s|%d", username, role, template, contract, actNumber))
+		}
+		return out
+	}
+
+	before := snapshot(app)
+	if _, err := app.DBForTest().Exec(`DROP TABLE schema_migrations`); err != nil {
+		t.Fatalf("drop migration bookkeeping: %v", err)
+	}
+	if err := app.Close(); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+
+	reopened, err := NewApp()
+	if err != nil {
+		t.Fatalf("NewApp() replay error = %v", err)
+	}
+	t.Cleanup(func() {
+		_ = reopened.Close()
+	})
+
+	after := snapshot(reopened)
+	if len(before) != len(after) {
+		t.Fatalf("replaying migrations changed the user count: %d then %d", len(before), len(after))
+	}
+	for i := range before {
+		if before[i] != after[i] {
+			t.Fatalf("replaying migrations changed a row:\n before %s\n  after %s", before[i], after[i])
+		}
+	}
+}

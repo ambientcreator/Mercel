@@ -89,7 +89,7 @@ type contractActLayout struct {
 
 // EN: Function `renderContractAct`.
 //
-// EN: What it does: renderContractAct fits blank №4 to one page and draws it, returning the bottom edge.
+// EN: What it does: renderContractAct fits the contract blank to one page and draws it, returning the bottom edge.
 //
 // EN: Key points: mirrors the other renderers so the shared page checks in renderActPDF apply here too.
 func renderContractAct(pdf *gofpdf.Fpdf, data actPDFData) (float64, error) {
@@ -103,7 +103,7 @@ func renderContractAct(pdf *gofpdf.Fpdf, data actPDFData) (float64, error) {
 
 // EN: Function `fitContractActLayout`.
 //
-// EN: What it does: fitContractActLayout picks the largest scale that keeps blank №4 on a single sheet.
+// EN: What it does: fitContractActLayout picks the largest scale that keeps the contract blank on a single sheet.
 //
 // EN: Key points: this blank carries the most content of all five, so it is allowed to shrink the furthest before
 // EN: the export is refused.
@@ -120,7 +120,7 @@ func fitContractActLayout(pdf *gofpdf.Fpdf, data actPDFData) (contractActLayout,
 
 // EN: Function `newContractActLayout`.
 //
-// EN: What it does: newContractActLayout converts the Word measurements of blank №4 into millimetres for one scale.
+// EN: What it does: newContractActLayout converts the Word measurements of the contract blank into millimetres for one scale.
 //
 // EN: Key points: sizes come from the source document at scale 1.0 (10 pt clauses, 22 mm side margins); margins
 // EN: shrink with the content but never below the ones used by the standard blank.
@@ -218,7 +218,7 @@ func newContractActLayout(pdf *gofpdf.Fpdf, scale float64) contractActLayout {
 
 // EN: Function `layoutContractAct`.
 //
-// EN: What it does: layoutContractAct walks blank №4 once and either measures it or draws it.
+// EN: What it does: layoutContractAct walks the contract blank once and either measures it or draws it.
 //
 // EN: Key points: measuring and drawing share this walk, so the fitted scale always matches what ends up on the
 // EN: page; the function returns the y coordinate right below the last element.
@@ -304,7 +304,7 @@ func drawContractPartyColumn(pdf *gofpdf.Fpdf, layout contractActLayout, x float
 
 // EN: Function `drawContractActTable`.
 //
-// EN: What it does: drawContractActTable renders the five column price list of blank №4.
+// EN: What it does: drawContractActTable renders the five column price list of the contract blank.
 //
 // EN: Key points: the table is framed by double rules on top and around the total, with hairlines between the rows
 // EN: and no vertical lines at all, exactly like the source blank.
@@ -403,7 +403,7 @@ func drawDoubleRule(pdf *gofpdf.Fpdf, left float64, right float64, y float64, wi
 
 // EN: Function `drawContractSignatures`.
 //
-// EN: What it does: drawContractSignatures renders the two signature columns closing blank №4.
+// EN: What it does: drawContractSignatures renders the two signature columns closing the contract blank.
 //
 // EN: Key points: both columns are the same height, so the returned bottom edge is what the fit check compares
 // EN: against the printable area.
@@ -453,7 +453,7 @@ func drawContractSignatureColumn(pdf *gofpdf.Fpdf, layout contractActLayout, x f
 
 // EN: Function `contractActClause1`.
 //
-// EN: What it does: contractActClause1 builds the opening numbered clause of blank №4.
+// EN: What it does: contractActClause1 builds the opening numbered clause of the contract blank.
 //
 // EN: Key points: this blank states the scope through numbered clauses instead of one long preamble.
 func contractActClause1(data actPDFData) string {
@@ -466,21 +466,21 @@ func contractActClause1(data actPDFData) string {
 
 // EN: Function `contractActClause2`.
 //
-// EN: What it does: contractActClause2 spells out the total of blank №4.
+// EN: What it does: contractActClause2 spells out the total of the contract blank.
 func contractActClause2(data actPDFData) string {
 	return fmt.Sprintf("2.  Общая стоимость оказанных услуг составила %s %s 00 копеек, без НДС.", data.TotalWords, data.TotalCurrency)
 }
 
 // EN: Function `contractActClause3`.
 //
-// EN: What it does: contractActClause3 returns the no-claims clause of blank №4.
+// EN: What it does: contractActClause3 returns the no-claims clause of the contract blank.
 func contractActClause3() string {
 	return "3.  Услуги оказаны полностью и в срок. Заказчик претензий по объёму, качеству и срокам оказания услуг не имеет."
 }
 
 // EN: Function `contractActClause4`.
 //
-// EN: What it does: contractActClause4 returns the two-copies clause that closes blank №4.
+// EN: What it does: contractActClause4 returns the two-copies clause that closes the contract blank.
 func contractActClause4() string {
 	return "4.  Настоящий акт составлен в двух экземплярах, имеющих равную юридическую силу, по одному для каждой из Сторон."
 }

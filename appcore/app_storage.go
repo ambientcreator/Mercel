@@ -330,6 +330,35 @@ func (a *App) initDatabase() error {
 	if err := a.migrateDatabase(); err != nil {
 		return err
 	}
+	if err := a.ensureIndexes(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// EN: Method `ensureIndexes`.
+//
+// EN: What it does: ensureIndexes creates the lookup indexes the archive and service reads depend on.
+//
+// EN: Key points: it runs after migrateDatabase, not alongside the table DDL, because it indexes columns that older
+// EN: databases only gain during migration — indexing created_role before the migration adds it fails outright.
+// EN: CREATE INDEX IF NOT EXISTS is idempotent, so this is safe to repeat on every startup.
+func (a *App) ensureIndexes() error {
+	// The archive is read through archiveVisibilityFilter, which narrows rows by
+	// created_by and created_role; services are always looked up by their owner.
+	queries := []string{
+		`CREATE INDEX IF NOT EXISTS idx_calculations_created_by_created_at
+			ON calculations (created_by, created_at DESC);`,
+		`CREATE INDEX IF NOT EXISTS idx_calculations_created_role
+			ON calculations (created_role);`,
+		`CREATE INDEX IF NOT EXISTS idx_services_created_by
+			ON services (created_by);`,
+	}
+	for _, query := range queries {
+		if _, err := a.db.Exec(query); err != nil {
+			return fmt.Errorf("ensure indexes: %w", err)
+		}
+	}
 	return nil
 }
 
@@ -338,122 +367,217 @@ func (a *App) initDatabase() error {
 // EN: What it does: migrateDatabase upgrades older SQLite files by adding missing columns required by newer builds.
 //
 // EN: Key points: supports consistency and readability of the project; may be reused by several code paths; changes should be made deliberately.
+// EN: Data type `schemaMigration`.
+//
+// EN: What it does: schemaMigration is one named upgrade step, applied at most once per database.
+//
+// EN: Key points: the name is recorded in schema_migrations after the step succeeds, so a database carries a readable
+// EN: record of how far it has been upgraded — which is what makes "which version is this file" answerable during
+// EN: support instead of something to infer from the set of columns present.
+type schemaMigration struct {
+	Name  string
+	Apply func(a *App) error
+}
+
+// EN: Variable `schemaMigrations`.
+//
+// EN: What it does: schemaMigrations lists every upgrade step in the order it must run.
+//
+// EN: Key points: order is load-bearing — a step that backfills a column has to come after the step that adds it.
+// EN: Steps stay individually idempotent, because a database that predates the schema_migrations table has already
+// EN: had all of them applied by the previous startup-time upgrade and will run them once more before being recorded.
+// EN: Never edit or reorder a released step; add a new one instead.
+var schemaMigrations = []schemaMigration{
+	{Name: "001_user_profile_columns", Apply: (*App).migrateUserProfileColumns},
+	{Name: "002_archive_author_columns", Apply: (*App).migrateArchiveAuthorColumns},
+	{Name: "003_service_owner_column", Apply: (*App).migrateServiceOwnerColumn},
+	{Name: "004_legacy_role_identifiers", Apply: (*App).migrateLegacyRoleIdentifiers},
+	{Name: "005_user_column_defaults", Apply: (*App).migrateUserColumnDefaults},
+	{Name: "006_act_template_identifiers", Apply: (*App).migrateActTemplateIdentifiers},
+	{Name: "007_named_act_template_identifiers", Apply: (*App).migrateNamedActTemplateIdentifiers},
+}
+
+// EN: Method `migrateDatabase`.
+//
+// EN: What it does: migrateDatabase applies every upgrade step this database has not recorded yet.
+//
+// EN: Key points: steps are not wrapped in one transaction, because the act-template step reads counts back as it
+// EN: writes. A step that fails is simply not recorded and runs again next start, which is safe precisely because
+// EN: every step is idempotent.
 func (a *App) migrateDatabase() error {
-	if err := ensureColumnExists(a.db, "users", "full_name", `ALTER TABLE users ADD COLUMN full_name TEXT NOT NULL DEFAULT ''`); err != nil {
-		return fmt.Errorf("migrate users.full_name: %w", err)
+	if _, err := a.db.Exec(`CREATE TABLE IF NOT EXISTS schema_migrations (
+		name TEXT PRIMARY KEY,
+		applied_at TEXT NOT NULL
+	);`); err != nil {
+		return fmt.Errorf("create schema_migrations: %w", err)
 	}
-	if err := ensureColumnExists(a.db, "users", "last_act_number", `ALTER TABLE users ADD COLUMN last_act_number INTEGER NOT NULL DEFAULT 1`); err != nil {
-		return fmt.Errorf("migrate users.last_act_number: %w", err)
+
+	applied, err := a.appliedMigrations()
+	if err != nil {
+		return err
 	}
-	if err := ensureColumnExists(a.db, "users", "preferred_contract_code", `ALTER TABLE users ADD COLUMN preferred_contract_code TEXT NOT NULL DEFAULT '1'`); err != nil {
-		return fmt.Errorf("migrate users.preferred_contract_code: %w", err)
+
+	for _, migration := range schemaMigrations {
+		if applied[migration.Name] {
+			continue
+		}
+		if err := migration.Apply(a); err != nil {
+			return fmt.Errorf("migration %s: %w", migration.Name, err)
+		}
+		if _, err := a.db.Exec(`INSERT OR REPLACE INTO schema_migrations(name, applied_at) VALUES(?, ?)`, migration.Name, time.Now().Format(time.RFC3339)); err != nil {
+			return fmt.Errorf("record migration %s: %w", migration.Name, err)
+		}
 	}
-	if err := ensureColumnExists(a.db, "users", "contract_spbks_number", `ALTER TABLE users ADD COLUMN contract_spbks_number TEXT NOT NULL DEFAULT ''`); err != nil {
-		return fmt.Errorf("migrate users.contract_spbks_number: %w", err)
+	return nil
+}
+
+// EN: Method `appliedMigrations`.
+//
+// EN: What it does: appliedMigrations reads the set of migration names this database has already recorded.
+func (a *App) appliedMigrations() (map[string]bool, error) {
+	rows, err := a.db.Query(`SELECT name FROM schema_migrations`)
+	if err != nil {
+		return nil, fmt.Errorf("read schema_migrations: %w", err)
 	}
-	if err := ensureColumnExists(a.db, "users", "contract_grizabl_number", `ALTER TABLE users ADD COLUMN contract_grizabl_number TEXT NOT NULL DEFAULT ''`); err != nil {
-		return fmt.Errorf("migrate users.contract_grizabl_number: %w", err)
+	defer rows.Close()
+
+	applied := make(map[string]bool)
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, fmt.Errorf("scan schema_migrations: %w", err)
+		}
+		applied[name] = true
 	}
-	if err := ensureColumnExists(a.db, "users", "contract_signed_at", `ALTER TABLE users ADD COLUMN contract_signed_at TEXT NOT NULL DEFAULT ''`); err != nil {
-		return fmt.Errorf("migrate users.contract_signed_at: %w", err)
+	return applied, rows.Err()
+}
+
+// EN: Method `SchemaVersion`.
+//
+// EN: What it does: SchemaVersion reports the name of the newest applied migration, or an empty string on a database
+// EN: that has none.
+//
+// EN: Key points: exposed so the About panel and support conversations can state the schema state outright rather
+// EN: than guessing it from which columns happen to exist.
+func (a *App) SchemaVersion() (string, error) {
+	applied, err := a.appliedMigrations()
+	if err != nil {
+		return "", err
 	}
-	if err := ensureColumnExists(a.db, "users", "act_template", `ALTER TABLE users ADD COLUMN act_template TEXT NOT NULL DEFAULT ''`); err != nil {
-		return fmt.Errorf("migrate users.act_template: %w", err)
+	newest := ""
+	for _, migration := range schemaMigrations {
+		if applied[migration.Name] {
+			newest = migration.Name
+		}
 	}
+	return newest, nil
+}
+
+func (a *App) migrateUserProfileColumns() error {
+	columns := []struct{ name, alter string }{
+		{"full_name", `ALTER TABLE users ADD COLUMN full_name TEXT NOT NULL DEFAULT ''`},
+		{"last_act_number", `ALTER TABLE users ADD COLUMN last_act_number INTEGER NOT NULL DEFAULT 1`},
+		{"preferred_contract_code", `ALTER TABLE users ADD COLUMN preferred_contract_code TEXT NOT NULL DEFAULT '1'`},
+		{"contract_spbks_number", `ALTER TABLE users ADD COLUMN contract_spbks_number TEXT NOT NULL DEFAULT ''`},
+		{"contract_grizabl_number", `ALTER TABLE users ADD COLUMN contract_grizabl_number TEXT NOT NULL DEFAULT ''`},
+		{"contract_signed_at", `ALTER TABLE users ADD COLUMN contract_signed_at TEXT NOT NULL DEFAULT ''`},
+		{"act_template", `ALTER TABLE users ADD COLUMN act_template TEXT NOT NULL DEFAULT ''`},
+	}
+	for _, column := range columns {
+		if err := ensureColumnExists(a.db, "users", column.name, column.alter); err != nil {
+			return fmt.Errorf("users.%s: %w", column.name, err)
+		}
+	}
+	return nil
+}
+
+func (a *App) migrateArchiveAuthorColumns() error {
 	if err := ensureColumnExists(a.db, "calculations", "created_by", `ALTER TABLE calculations ADD COLUMN created_by TEXT NOT NULL DEFAULT ''`); err != nil {
-		return fmt.Errorf("migrate calculations.created_by: %w", err)
+		return fmt.Errorf("calculations.created_by: %w", err)
 	}
 	if err := ensureColumnExists(a.db, "calculations", "created_role", `ALTER TABLE calculations ADD COLUMN created_role TEXT NOT NULL DEFAULT ''`); err != nil {
-		return fmt.Errorf("migrate calculations.created_role: %w", err)
+		return fmt.Errorf("calculations.created_role: %w", err)
 	}
+	// Rows written before the author was recorded take it from the user who owns them.
+	if _, err := a.db.Exec(`UPDATE calculations SET created_role = COALESCE((SELECT role FROM users WHERE username = calculations.created_by), created_role, '') WHERE created_role = '' OR created_role IS NULL`); err != nil {
+		return fmt.Errorf("backfill calculations.created_role: %w", err)
+	}
+	return nil
+}
+
+func (a *App) migrateServiceOwnerColumn() error {
 	if err := ensureColumnExists(a.db, "services", "created_by", `ALTER TABLE services ADD COLUMN created_by TEXT NOT NULL DEFAULT 'admin'`); err != nil {
-		return fmt.Errorf("migrate services.created_by: %w", err)
+		return fmt.Errorf("services.created_by: %w", err)
 	}
 	if _, err := a.db.Exec(`UPDATE services SET created_by = 'admin' WHERE created_by = '' OR created_by IS NULL`); err != nil {
 		return fmt.Errorf("backfill services.created_by: %w", err)
 	}
-	if _, err := a.db.Exec(`UPDATE users SET role = ? WHERE role = 'manager'`, RoleSupportManager); err != nil {
-		return fmt.Errorf("normalize users.manager role: %w", err)
+	return nil
+}
+
+// migrateLegacyRoleIdentifiers rewrites the role identifiers older builds wrote.
+//
+// The mapping is legacyRoleAliases — the same table normalizeRole reads — so the
+// stored data and the in-memory canonicalization cannot drift apart. Every alias
+// maps to a canonical identifier that is not itself an alias, so the order the map
+// is walked in does not matter.
+func (a *App) migrateLegacyRoleIdentifiers() error {
+	for alias, canonical := range legacyRoleAliases {
+		if alias == canonical {
+			continue
+		}
+		if _, err := a.db.Exec(`UPDATE users SET role = ? WHERE role = ?`, canonical, alias); err != nil {
+			return fmt.Errorf("users.role %s: %w", alias, err)
+		}
+		if _, err := a.db.Exec(`UPDATE calculations SET created_role = ? WHERE created_role = ?`, canonical, alias); err != nil {
+			return fmt.Errorf("calculations.created_role %s: %w", alias, err)
+		}
 	}
-	if _, err := a.db.Exec(`UPDATE users SET role = ? WHERE role = 'senior_specialist'`, RoleSupportSeniorSpecialist); err != nil {
-		return fmt.Errorf("normalize users.senior_specialist role: %w", err)
-	}
-	if _, err := a.db.Exec(`UPDATE users SET role = ? WHERE role = 'employee'`, RoleSupportEmployee); err != nil {
-		return fmt.Errorf("normalize users.employee role: %w", err)
-	}
-	if _, err := a.db.Exec(`UPDATE calculations SET created_role = COALESCE((SELECT role FROM users WHERE username = calculations.created_by), created_role, '') WHERE created_role = '' OR created_role IS NULL`); err != nil {
-		return fmt.Errorf("backfill calculations.created_role: %w", err)
-	}
-	if _, err := a.db.Exec(`UPDATE calculations SET created_role = ? WHERE created_role = 'manager'`, RoleSupportManager); err != nil {
-		return fmt.Errorf("normalize calculations.manager role: %w", err)
-	}
-	if _, err := a.db.Exec(`UPDATE calculations SET created_role = ? WHERE created_role = 'senior_specialist'`, RoleSupportSeniorSpecialist); err != nil {
-		return fmt.Errorf("normalize calculations.senior_specialist role: %w", err)
-	}
-	if _, err := a.db.Exec(`UPDATE calculations SET created_role = ? WHERE created_role = 'employee'`, RoleSupportEmployee); err != nil {
-		return fmt.Errorf("normalize calculations.employee role: %w", err)
-	}
-	if _, err := a.db.Exec(`UPDATE users SET role = ? WHERE role = 'support_manager'`, RoleSupportHead); err != nil {
-		return fmt.Errorf("normalize users.support_manager role: %w", err)
-	}
-	if _, err := a.db.Exec(`UPDATE users SET role = ? WHERE role = 'support_senior_specialist'`, RoleSupportSenior); err != nil {
-		return fmt.Errorf("normalize users.support_senior_specialist role: %w", err)
-	}
-	if _, err := a.db.Exec(`UPDATE users SET role = ? WHERE role = 'tech_manager'`, RoleTechnicalHead); err != nil {
-		return fmt.Errorf("normalize users.tech_manager role: %w", err)
-	}
-	if _, err := a.db.Exec(`UPDATE users SET role = ? WHERE role = 'senior_technician'`, RoleTechnicalSenior); err != nil {
-		return fmt.Errorf("normalize users.senior_technician role: %w", err)
-	}
-	if _, err := a.db.Exec(`UPDATE users SET role = ? WHERE role = 'technician'`, RoleTechnicalEmployee); err != nil {
-		return fmt.Errorf("normalize users.technician role: %w", err)
-	}
-	if _, err := a.db.Exec(`UPDATE users SET role = ? WHERE role = 'mrk_manager'`, RoleCommercialSubscriberHead); err != nil {
-		return fmt.Errorf("normalize users.mrk_manager role: %w", err)
-	}
-	if _, err := a.db.Exec(`UPDATE users SET role = ? WHERE role = 'senior_mrk'`, RoleCommercialSeniorMRK); err != nil {
-		return fmt.Errorf("normalize users.senior_mrk role: %w", err)
-	}
-	if _, err := a.db.Exec(`UPDATE users SET role = ? WHERE role = 'mrk_employee'`, RoleCommercialEmployeeMRK); err != nil {
-		return fmt.Errorf("normalize users.mrk_employee role: %w", err)
-	}
+	return nil
+}
+
+func (a *App) migrateUserColumnDefaults() error {
 	if _, err := a.db.Exec(`UPDATE users SET last_act_number = 1 WHERE last_act_number IS NULL OR last_act_number <= 0`); err != nil {
 		return fmt.Errorf("backfill users.last_act_number: %w", err)
 	}
 	if _, err := a.db.Exec(`UPDATE users SET preferred_contract_code = '1' WHERE preferred_contract_code IS NULL OR TRIM(preferred_contract_code) = '' OR preferred_contract_code NOT IN ('1', '2')`); err != nil {
 		return fmt.Errorf("backfill users.preferred_contract_code: %w", err)
 	}
-	for legacy, current := range legacyActTemplateIDs {
-		if _, err := a.db.Exec(`UPDATE users SET act_template = ? WHERE act_template = ?`, current, legacy); err != nil {
-			return fmt.Errorf("normalize users.act_template %s: %w", legacy, err)
-		}
+	return nil
+}
+
+func (a *App) migrateActTemplateIdentifiers() error {
+	if err := a.rewriteLegacyActTemplates(); err != nil {
+		return err
 	}
 	if err := a.backfillActTemplates(); err != nil {
 		return fmt.Errorf("backfill users.act_template: %w", err)
 	}
-	if _, err := a.db.Exec(`UPDATE calculations SET created_role = ? WHERE created_role = 'support_manager'`, RoleSupportHead); err != nil {
-		return fmt.Errorf("normalize calculations.support_manager role: %w", err)
-	}
-	if _, err := a.db.Exec(`UPDATE calculations SET created_role = ? WHERE created_role = 'support_senior_specialist'`, RoleSupportSenior); err != nil {
-		return fmt.Errorf("normalize calculations.support_senior_specialist role: %w", err)
-	}
-	if _, err := a.db.Exec(`UPDATE calculations SET created_role = ? WHERE created_role = 'tech_manager'`, RoleTechnicalHead); err != nil {
-		return fmt.Errorf("normalize calculations.tech_manager role: %w", err)
-	}
-	if _, err := a.db.Exec(`UPDATE calculations SET created_role = ? WHERE created_role = 'senior_technician'`, RoleTechnicalSenior); err != nil {
-		return fmt.Errorf("normalize calculations.senior_technician role: %w", err)
-	}
-	if _, err := a.db.Exec(`UPDATE calculations SET created_role = ? WHERE created_role = 'technician'`, RoleTechnicalEmployee); err != nil {
-		return fmt.Errorf("normalize calculations.technician role: %w", err)
-	}
-	if _, err := a.db.Exec(`UPDATE calculations SET created_role = ? WHERE created_role = 'mrk_manager'`, RoleCommercialSubscriberHead); err != nil {
-		return fmt.Errorf("normalize calculations.mrk_manager role: %w", err)
-	}
-	if _, err := a.db.Exec(`UPDATE calculations SET created_role = ? WHERE created_role = 'senior_mrk'`, RoleCommercialSeniorMRK); err != nil {
-		return fmt.Errorf("normalize calculations.senior_mrk role: %w", err)
-	}
-	if _, err := a.db.Exec(`UPDATE calculations SET created_role = ? WHERE created_role = 'mrk_employee'`, RoleCommercialEmployeeMRK); err != nil {
-		return fmt.Errorf("normalize calculations.mrk_employee role: %w", err)
+	return nil
+}
+
+// EN: Method `migrateNamedActTemplateIdentifiers`.
+//
+// EN: What it does: rewrites the "blankN" act template identifiers into the names that replaced them.
+//
+// EN: Key points: a separate step rather than an edit to 006, because a database upgraded by a build that shipped
+// EN: 006 has already recorded it and would never see the new mapping. The rewrite is the same loop over
+// EN: legacyActTemplateIDs, which by now covers both generations; running it twice changes nothing.
+func (a *App) migrateNamedActTemplateIdentifiers() error {
+	return a.rewriteLegacyActTemplates()
+}
+
+// EN: Method `rewriteLegacyActTemplates`.
+//
+// EN: What it does: replaces every stored act template identifier that is known to be an old spelling.
+//
+// EN: Key points: reads the same mapping normalizeActTemplate uses at runtime, so a value the application would
+// EN: silently accept cannot be one the database keeps in its outdated form.
+func (a *App) rewriteLegacyActTemplates() error {
+	for legacy, current := range legacyActTemplateIDs {
+		if _, err := a.db.Exec(`UPDATE users SET act_template = ? WHERE act_template = ?`, current, legacy); err != nil {
+			return fmt.Errorf("users.act_template %s: %w", legacy, err)
+		}
 	}
 	return nil
 }
@@ -509,10 +633,19 @@ func (a *App) seedDefaultData() error {
 const AdminPasswordEnvVar = "MERCEL_ADMIN_PASSWORD"
 
 // defaultAdminPasswordHash is the bcrypt hash of the built-in administrator
-// password. The plaintext is deliberately NOT stored in source: even with full
-// access to this repository the password cannot be recovered from this hash.
-// To rotate it, set AdminPasswordEnvVar at runtime, or regenerate this hash from
-// a new secret with bcrypt.GenerateFromPassword.
+// password, used when AdminPasswordEnvVar is not set.
+//
+// This hash is a fallback, not a security boundary. It ships in every binary and
+// is identical across all installations, so anyone holding a copy of the release
+// can attack it offline at their leisure — and the account it protects is the one
+// that can read every archive. Treat the built-in password as public and set
+// AdminPasswordEnvVar per deployment; rotating it here only changes the value that
+// everyone shares.
+//
+// To rotate: set AdminPasswordEnvVar at runtime, or regenerate this hash from a new
+// secret with bcrypt.GenerateFromPassword. Do not write the plaintext into the
+// repository — the tests deliberately supply their own through the environment
+// variable rather than hardcoding the shipped one.
 const defaultAdminPasswordHash = "$2a$10$ljd4EP7tOwTKc40TO3X2sOwHMQ1R3USKVLl9zfoonZXNl3kDzrIl."
 
 // adminSeedPasswordHash returns the bcrypt hash that should be applied to the

@@ -1,5 +1,4 @@
-# .github/workflows/build-macos.yml
-name: Build macOS
+name: Release
 
 on:
   workflow_dispatch:      # запуск вручную из вкладки Actions
@@ -8,7 +7,8 @@ on:
       - 'v*'              # или автоматически при пуше тега вида v1.0
 
 jobs:
-  build:
+  macos:
+    name: macOS universal
     runs-on: macos-latest
     steps:
       - name: Checkout
@@ -42,4 +42,32 @@ jobs:
         with:
           name: Mercel-macos
           path: Mercel-macos-universal.zip
+          retention-days: 14
+
+  windows:
+    name: Windows amd64
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.1'
+          cache: true
+
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.11.0
+
+      - name: Build .exe
+        run: wails build -platform windows/amd64 -clean
+
+      # Windows is the primary target, so the release carries the .exe directly —
+      # upload-artifact zips it on the way out.
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mercel-windows
+          path: build/bin/Mercel.exe
           retention-days: 14

@@ -75,7 +75,7 @@ type formalActLayout struct {
 
 // EN: Function `renderFormalAct`.
 //
-// EN: What it does: renderFormalAct fits blank №1 to one page and draws it, returning the bottom edge.
+// EN: What it does: renderFormalAct fits the formal blank to one page and draws it, returning the bottom edge.
 //
 // EN: Key points: mirrors the other renderers so the shared page checks in renderActPDF apply here too.
 func renderFormalAct(pdf *gofpdf.Fpdf, data actPDFData) (float64, error) {
@@ -89,7 +89,7 @@ func renderFormalAct(pdf *gofpdf.Fpdf, data actPDFData) (float64, error) {
 
 // EN: Function `fitFormalActLayout`.
 //
-// EN: What it does: fitFormalActLayout picks the largest scale that keeps blank №1 on a single sheet.
+// EN: What it does: fitFormalActLayout picks the largest scale that keeps the formal blank on a single sheet.
 //
 // EN: Key points: refuses the export with the shared hint when even the smallest scale overflows.
 func fitFormalActLayout(pdf *gofpdf.Fpdf, data actPDFData) (formalActLayout, error) {
@@ -105,7 +105,7 @@ func fitFormalActLayout(pdf *gofpdf.Fpdf, data actPDFData) (formalActLayout, err
 
 // EN: Function `newFormalActLayout`.
 //
-// EN: What it does: newFormalActLayout converts the Word measurements of blank №1 into millimetres for one scale.
+// EN: What it does: newFormalActLayout converts the Word measurements of the formal blank into millimetres for one scale.
 //
 // EN: Key points: sizes come from the source document at scale 1.0 (11 pt body, 20 mm margins, 470 twip rows);
 // EN: margins shrink with the content but never below the ones used by the standard blank.
@@ -187,7 +187,7 @@ func newFormalActLayout(pdf *gofpdf.Fpdf, scale float64) formalActLayout {
 
 // EN: Function `layoutFormalAct`.
 //
-// EN: What it does: layoutFormalAct walks blank №1 once and either measures it or draws it.
+// EN: What it does: layoutFormalAct walks the formal blank once and either measures it or draws it.
 //
 // EN: Key points: measuring and drawing share this walk, so the fitted scale always matches what ends up on the
 // EN: page; the function returns the y coordinate right below the last element.
@@ -225,7 +225,7 @@ func layoutFormalAct(pdf *gofpdf.Fpdf, data actPDFData, layout formalActLayout, 
 
 // EN: Function `drawFormalActTable`.
 //
-// EN: What it does: drawFormalActTable renders the fully framed four column table of blank №1.
+// EN: What it does: drawFormalActTable renders the fully framed four column table of the formal blank.
 //
 // EN: Key points: every cell is boxed, and the total row leaves the first two columns empty with only a rule on
 // EN: top, exactly like the source blank.
@@ -295,7 +295,7 @@ func drawFormalActTable(pdf *gofpdf.Fpdf, layout formalActLayout, data actPDFDat
 
 // EN: Function `drawFormalSignatures`.
 //
-// EN: What it does: drawFormalSignatures renders the two signature columns closing blank №1.
+// EN: What it does: drawFormalSignatures renders the two signature columns closing the formal blank.
 //
 // EN: Key points: the second column starts at the tab stop of the source document, and the short name goes into the
 // EN: slashes next to the signature line, which is where a signed copy carries it.
@@ -325,7 +325,7 @@ func drawFormalSignatures(pdf *gofpdf.Fpdf, layout formalActLayout, data actPDFD
 
 // EN: Function `formalSignatureLine`.
 //
-// EN: What it does: formalSignatureLine builds the "signature line / name" pair used by blank №1.
+// EN: What it does: formalSignatureLine builds the "signature line / name" pair used by the formal blank.
 //
 // EN: Key points: keeps the underscores of the source blank for the handwritten signature and fills in the printed
 // EN: name after them.
@@ -335,7 +335,7 @@ func formalSignatureLine(name string) string {
 
 // EN: Function `formalActIntro`.
 //
-// EN: What it does: formalActIntro builds the opening paragraph of blank №1 from the calculation data.
+// EN: What it does: formalActIntro builds the opening paragraph of the formal blank from the calculation data.
 //
 // EN: Key points: keeps the wording of the source blank, which unlike the standard one names the basis the customer
 // EN: director acts on and refers to the contract by number only.
@@ -352,7 +352,7 @@ func formalActIntro(data actPDFData) string {
 
 // EN: Function `formalActTotalText`.
 //
-// EN: What it does: formalActTotalText spells out the total the way blank №1 does.
+// EN: What it does: formalActTotalText spells out the total the way the formal blank does.
 //
 // EN: Key points: differs from the standard blank by the comma before «без НДС», as in the source document.
 func formalActTotalText(data actPDFData) string {
@@ -361,7 +361,7 @@ func formalActTotalText(data actPDFData) string {
 
 // EN: Function `formalContractDate`.
 //
-// EN: What it does: formalContractDate formats the contract date in the «дд» месяц гггг г. form of blank №1.
+// EN: What it does: formalContractDate formats the contract date in the «дд» месяц гггг г. form of the formal blank.
 //
 // EN: Key points: the standard blank writes «года» in full, this one abbreviates it to «г.».
 func formalContractDate(value time.Time) string {

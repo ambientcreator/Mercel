@@ -309,7 +309,7 @@ func TestAdminAccountIsRestoredAndHiddenFromUserList(t *testing.T) {
 	}
 	defer app.Close()
 
-	state, err := app.Login(LoginRequest{Username: "admin", Password: "siuW*R%wWkQS"})
+	state, err := app.Login(LoginRequest{Username: "admin", Password: testAdminPassword})
 	if err != nil {
 		t.Fatalf("Login() error = %v", err)
 	}

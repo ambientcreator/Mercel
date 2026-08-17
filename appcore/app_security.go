@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 
 	"golang.org/x/crypto/bcrypt"
@@ -193,41 +194,57 @@ func userSortPriority(role string) int {
 	}
 }
 
+// EN: Variable `legacyRoleAliases`.
+//
+// EN: What it does: legacyRoleAliases maps role identifiers written by older builds onto their current equivalents.
+//
+// EN: Key points: it is the single source of truth for what an old stored role means, shared by normalizeRole and by
+// EN: the archive SQL filter; migrations rewrite these values in place, but rows written before a migration ran may
+// EN: still carry them, so both readers must agree on the mapping.
+var legacyRoleAliases = map[string]string{
+	"manager":                   RoleSupportHead,
+	"support_manager":           RoleSupportHead,
+	"senior_specialist":         RoleSupportSenior,
+	"support_senior_specialist": RoleSupportSenior,
+	"employee":                  RoleSupportEmployee,
+	"tech_manager":              RoleTechnicalHead,
+	"senior_technician":         RoleTechnicalSenior,
+	"technician":                RoleTechnicalEmployee,
+	"mrk_manager":               RoleCommercialSubscriberHead,
+	"senior_mrk":                RoleCommercialSeniorMRK,
+	"mrk_employee":              RoleCommercialEmployeeMRK,
+}
+
 func normalizeRole(role string) string {
-	switch strings.TrimSpace(role) {
-	case "manager", "support_manager":
-		return RoleSupportHead
-	case "senior_specialist", "support_senior_specialist":
-		return RoleSupportSenior
-	case "employee", "support_employee":
-		return RoleSupportEmployee
-	case "tech_manager":
-		return RoleTechnicalHead
-	case "senior_technician":
-		return RoleTechnicalSenior
-	case "technician":
-		return RoleTechnicalEmployee
-	case "mrk_manager":
-		return RoleCommercialSubscriberHead
-	case "senior_mrk":
-		return RoleCommercialSeniorMRK
-	case "mrk_employee":
-		return RoleCommercialEmployeeMRK
-	case RoleAdmin, RoleGlobalDirector, RoleExecutiveDirector, RoleTechnicalDirector,
-		RoleSupportHead, RoleSupportSenior, RoleSupportSysadmin,
-		RoleTechnicalHead, RoleTechnicalSenior, RoleTechnicalEmployee,
-		RoleTelecomDirector, RoleTelecomHead, RoleTelecomSeniorVOLS, RoleTelecomSeniorLVS, RoleTelecomEmployeeVOLS, RoleTelecomEmployeeLVS,
-		RoleSKUDHead, RoleSKUDProjectManager, RoleSKUDSeniorService, RoleSKUDSeniorInstaller, RoleSKUDServiceEngineer, RoleSKUDInstaller,
-		RoleApprovalHead, RoleApprovalSenior, RoleApprovalEmployee,
-		RoleMarketingHead, RoleMarketingCourier,
-		RoleCommercialDirector, RoleCommercialSubscriberHead, RoleCommercialActiveSalesHead, RoleCommercialSeniorMRK, RoleCommercialSeniorMRYU, RoleCommercialEmployeeMRK, RoleCommercialEmployeeMRYU,
-		RoleFinanceHead, RoleFinanceEmployee,
-		RoleLegalEmployee,
-		RoleDevelopmentHead, RoleDevelopmentSenior, RoleDevelopmentEmployee:
-		return strings.TrimSpace(role)
-	default:
-		return RoleSupportEmployee
+	role = strings.TrimSpace(role)
+	if canonical, ok := legacyRoleAliases[role]; ok {
+		return canonical
 	}
+	if _, ok := roleCatalog[role]; ok {
+		return role
+	}
+	return RoleSupportEmployee
+}
+
+// EN: Function `recognizedStoredRoles`.
+//
+// EN: What it does: recognizedStoredRoles lists every raw string normalizeRole recognises — the canonical identifiers
+// EN: plus the legacy aliases — in a stable order.
+//
+// EN: Key points: anything outside this set normalizes to RoleSupportEmployee, which is why the archive filter needs
+// EN: the list: it turns "unrecognized" into an expressible SQL condition instead of a silent bucket.
+func recognizedStoredRoles() []string {
+	values := make([]string, 0, len(roleCatalog)+len(legacyRoleAliases))
+	for role := range roleCatalog {
+		values = append(values, role)
+	}
+	for alias := range legacyRoleAliases {
+		if _, canonical := roleCatalog[alias]; !canonical {
+			values = append(values, alias)
+		}
+	}
+	sort.Strings(values)
+	return values
 }
 
 func normalizeAssignableRole(role string) string {
@@ -375,6 +392,72 @@ func canViewArchiveRole(actor *User, authorRole string, authorUsername string) b
 	default:
 		return false
 	}
+}
+
+// EN: Constant `unrecognizedRoleProbe`.
+//
+// EN: What it does: unrecognizedRoleProbe is a role string that can never be a real identifier, used to ask
+// EN: canViewArchiveRole how it treats roles it does not recognise.
+//
+// EN: Key points: it contains a NUL byte, so no stored role and no validated input can collide with it.
+const unrecognizedRoleProbe = "\x00unrecognized-role"
+
+// EN: Function `sqlPlaceholders`.
+//
+// EN: What it does: sqlPlaceholders renders `?, ?, ?` for a bound list of the given length.
+//
+// EN: Key points: returns an empty string for non-positive counts so callers can skip the clause entirely.
+func sqlPlaceholders(count int) string {
+	if count <= 0 {
+		return ""
+	}
+	return strings.TrimSuffix(strings.Repeat("?, ", count), ", ")
+}
+
+// EN: Function `archiveVisibilityFilter`.
+//
+// EN: What it does: archiveVisibilityFilter renders canViewArchiveRole as a SQL predicate over
+// EN: calculations.created_by and calculations.created_role, so the database returns only the rows the actor may
+// EN: read instead of the caller reading every archive row and discarding most of them in Go.
+//
+// EN: Key points: canViewArchiveRole stays the single source of truth — every recognised role identifier is asked,
+// EN: and the answers become an IN list, so the rules are never restated in SQL by hand. Rows whose stored role is
+// EN: unrecognised normalize to RoleSupportEmployee, so they are admitted by a NOT IN clause exactly when that role
+// EN: is visible. An empty predicate means "no restriction" and is only returned for the admin.
+func archiveVisibilityFilter(actor *User) (string, []any) {
+	if actor == nil || actor.Username == "" {
+		return "0 = 1", nil
+	}
+	if normalizeRole(actor.Role) == RoleAdmin {
+		return "", nil
+	}
+
+	recognized := recognizedStoredRoles()
+	visible := make([]string, 0, len(recognized))
+	for _, role := range recognized {
+		if canViewArchiveRole(actor, role, "") {
+			visible = append(visible, role)
+		}
+	}
+
+	// Authors always reach their own archive, whatever role was recorded on the row.
+	clauses := []string{"c.created_by = ?"}
+	args := []any{actor.Username}
+
+	if len(visible) > 0 {
+		clauses = append(clauses, "c.created_role IN ("+sqlPlaceholders(len(visible))+")")
+		for _, role := range visible {
+			args = append(args, role)
+		}
+	}
+	if canViewArchiveRole(actor, unrecognizedRoleProbe, "") {
+		clauses = append(clauses, "c.created_role NOT IN ("+sqlPlaceholders(len(recognized))+")")
+		for _, role := range recognized {
+			args = append(args, role)
+		}
+	}
+
+	return "(" + strings.Join(clauses, " OR ") + ")", args
 }
 
 // EN: Function `canCopyArchiveServices`.

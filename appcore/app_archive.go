@@ -33,13 +33,22 @@ func (a *App) SaveCalculation(req SaveCalculationRequest) (SavedCalculation, err
 	}
 	createdAt := now.Format(time.RFC3339)
 
+	// One archive row per author per day. The day is taken from created_at rather
+	// than from the title: the title is caller-supplied, so keying on it let any
+	// request that sent a different title store a second row for the same day.
+	//
+	// created_at is written as RFC3339 in local time, so its first ten characters
+	// are the local calendar date exactly as the author saw it. Comparing that
+	// prefix keeps the grouping local, which date() would not — date() shifts a
+	// timestamp carrying an offset to UTC and would move late-evening rows a day
+	// back.
 	var existingID int64
-	err = a.db.QueryRow(`SELECT id FROM calculations WHERE created_by = ? AND title = ? LIMIT 1`, user.Username, title).Scan(&existingID)
+	err = a.db.QueryRow(`SELECT id FROM calculations WHERE created_by = ? AND substr(created_at, 1, 10) = ? LIMIT 1`, user.Username, now.Format("2006-01-02")).Scan(&existingID)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return SavedCalculation{}, fmt.Errorf("find daily calculation: %w", err)
 	}
 	if err == nil {
-		_, err = a.db.Exec(`UPDATE calculations SET target_amount = ?, total_amount = ?, items_json = ?, created_at = ?, created_role = ? WHERE id = ?`, req.TargetAmount, total, string(payload), createdAt, user.Role, existingID)
+		_, err = a.db.Exec(`UPDATE calculations SET title = ?, target_amount = ?, total_amount = ?, items_json = ?, created_at = ?, created_role = ? WHERE id = ?`, title, req.TargetAmount, total, string(payload), createdAt, user.Role, existingID)
 		if err != nil {
 			return SavedCalculation{}, fmt.Errorf("update daily calculation: %w", err)
 		}
@@ -170,11 +179,14 @@ func (a *App) UpdateCalculationAsAdmin(req UpdateSavedCalculationRequest) (Saved
 	if err != nil {
 		return SavedCalculation{}, fmt.Errorf("marshal updated archive items: %w", err)
 	}
-	if _, err := a.db.Exec(`UPDATE calculations SET target_amount = ?, total_amount = ?, items_json = ? WHERE id = ?`, total, total, string(encoded), req.ID); err != nil {
+	// target_amount records what the author originally asked for; only total_amount
+	// follows the edited items. Writing the recomputed total into both would erase
+	// the request the archive exists to document, and the gap between the two is
+	// exactly what makes an edited row recognisable afterwards.
+	if _, err := a.db.Exec(`UPDATE calculations SET total_amount = ?, items_json = ? WHERE id = ?`, total, string(encoded), req.ID); err != nil {
 		return SavedCalculation{}, fmt.Errorf("update archived calculation: %w", err)
 	}
 
-	current.TargetAmount = total
 	current.TotalAmount = total
 	current.Items = items
 	current.CreatedRole = normalizeRole(current.CreatedRole)
@@ -246,14 +258,39 @@ func (a *App) CopyArchiveServicesToAdmin(calculationID int64) (CopyArchiveServic
 	if len(requests) == 0 {
 		return CopyArchiveServicesResult{}, errors.New("В архивном расчёте нет подходящих услуг для копирования.")
 	}
-	if _, err := a.db.Exec(`DELETE FROM services WHERE created_by = ?`, actor.Username); err != nil {
+
+	// This import replaces the caller's whole service list, so it must not be able
+	// to stop half way. Every row is validated before anything is deleted, and the
+	// delete and the inserts share one transaction: a failure now leaves the
+	// existing list untouched instead of wiping it and then failing to refill it.
+	services := make([]normalizedService, 0, len(requests))
+	for _, req := range requests {
+		service, err := normalizeServiceForOwner(req, actor.Username)
+		if err != nil {
+			return CopyArchiveServicesResult{}, fmt.Errorf("Услуга %q из архива не подходит для копирования: %w", req.Name, err)
+		}
+		services = append(services, service)
+	}
+
+	tx, err := a.db.Begin()
+	if err != nil {
+		return CopyArchiveServicesResult{}, fmt.Errorf("begin archive service copy: %w", err)
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	if _, err := tx.Exec(`DELETE FROM services WHERE created_by = ?`, actor.Username); err != nil {
 		return CopyArchiveServicesResult{}, fmt.Errorf("clear own services before copy: %w", err)
 	}
-	for _, req := range requests {
-		if _, err := a.saveServiceForOwner(req, actor.Username); err != nil {
-			return CopyArchiveServicesResult{}, fmt.Errorf("copy archive service %q: %w", req.Name, err)
+	for _, service := range services {
+		if _, err := insertServiceForOwner(tx, service, actor.Username); err != nil {
+			return CopyArchiveServicesResult{}, fmt.Errorf("copy archive service %q: %w", service.Name, err)
 		}
 		result.Created++
+	}
+	if err := tx.Commit(); err != nil {
+		return CopyArchiveServicesResult{}, fmt.Errorf("commit archive service copy: %w", err)
 	}
 	return result, nil
 }
@@ -268,7 +305,18 @@ func (a *App) ListCalculations() ([]SavedCalculation, error) {
 	if err != nil {
 		return []SavedCalculation{}, nil
 	}
-	rows, err := a.db.Query(`SELECT c.id, c.title, c.target_amount, c.total_amount, c.items_json, c.created_at, c.created_by, c.created_role FROM calculations c ORDER BY c.id DESC`)
+	// The visibility rules are pushed into SQL so the database skips rows this actor
+	// may not read, instead of every archive row (items_json included) being loaded
+	// and then discarded. canViewArchiveRole below stays as a second line of defence:
+	// if the predicate is ever too permissive, the row is still dropped here.
+	query := `SELECT c.id, c.title, c.target_amount, c.total_amount, c.items_json, c.created_at, c.created_by, c.created_role FROM calculations c`
+	where, args := archiveVisibilityFilter(user)
+	if where != "" {
+		query += ` WHERE ` + where
+	}
+	query += ` ORDER BY c.id DESC`
+
+	rows, err := a.db.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("list calculations: %w", err)
 	}
