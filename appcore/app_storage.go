@@ -394,6 +394,7 @@ var schemaMigrations = []schemaMigration{
 	{Name: "004_legacy_role_identifiers", Apply: (*App).migrateLegacyRoleIdentifiers},
 	{Name: "005_user_column_defaults", Apply: (*App).migrateUserColumnDefaults},
 	{Name: "006_act_template_identifiers", Apply: (*App).migrateActTemplateIdentifiers},
+	{Name: "007_named_act_template_identifiers", Apply: (*App).migrateNamedActTemplateIdentifiers},
 }
 
 // EN: Method `migrateDatabase`.
@@ -546,13 +547,37 @@ func (a *App) migrateUserColumnDefaults() error {
 }
 
 func (a *App) migrateActTemplateIdentifiers() error {
+	if err := a.rewriteLegacyActTemplates(); err != nil {
+		return err
+	}
+	if err := a.backfillActTemplates(); err != nil {
+		return fmt.Errorf("backfill users.act_template: %w", err)
+	}
+	return nil
+}
+
+// EN: Method `migrateNamedActTemplateIdentifiers`.
+//
+// EN: What it does: rewrites the "blankN" act template identifiers into the names that replaced them.
+//
+// EN: Key points: a separate step rather than an edit to 006, because a database upgraded by a build that shipped
+// EN: 006 has already recorded it and would never see the new mapping. The rewrite is the same loop over
+// EN: legacyActTemplateIDs, which by now covers both generations; running it twice changes nothing.
+func (a *App) migrateNamedActTemplateIdentifiers() error {
+	return a.rewriteLegacyActTemplates()
+}
+
+// EN: Method `rewriteLegacyActTemplates`.
+//
+// EN: What it does: replaces every stored act template identifier that is known to be an old spelling.
+//
+// EN: Key points: reads the same mapping normalizeActTemplate uses at runtime, so a value the application would
+// EN: silently accept cannot be one the database keeps in its outdated form.
+func (a *App) rewriteLegacyActTemplates() error {
 	for legacy, current := range legacyActTemplateIDs {
 		if _, err := a.db.Exec(`UPDATE users SET act_template = ? WHERE act_template = ?`, current, legacy); err != nil {
 			return fmt.Errorf("users.act_template %s: %w", legacy, err)
 		}
-	}
-	if err := a.backfillActTemplates(); err != nil {
-		return fmt.Errorf("backfill users.act_template: %w", err)
 	}
 	return nil
 }

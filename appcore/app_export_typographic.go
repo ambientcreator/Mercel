@@ -98,7 +98,7 @@ type typoActLayout struct {
 
 // EN: Function `renderTypographicAct`.
 //
-// EN: What it does: renderTypographicAct fits blank №3 to one page and draws it, returning the bottom edge.
+// EN: What it does: renderTypographicAct fits the typographic blank to one page and draws it, returning the bottom edge.
 //
 // EN: Key points: mirrors renderClassicAct so the shared page checks in renderActPDF apply to both blanks.
 func renderTypographicAct(pdf *gofpdf.Fpdf, data actPDFData) (float64, error) {
@@ -129,7 +129,7 @@ func fitTypoActLayout(pdf *gofpdf.Fpdf, data actPDFData) (typoActLayout, error) 
 
 // EN: Function `newTypoActLayout`.
 //
-// EN: What it does: newTypoActLayout converts the Word measurements of blank №3 into millimetres for one scale.
+// EN: What it does: newTypoActLayout converts the Word measurements of the typographic blank into millimetres for one scale.
 //
 // EN: Key points: font sizes, spacing and rules come from the source document at scale 1.0; page margins shrink
 // EN: together with the content but never below the margins used by the classic blank.
@@ -301,7 +301,7 @@ func layoutTypographicAct(pdf *gofpdf.Fpdf, data actPDFData, layout typoActLayou
 
 // EN: Function `drawTypoSection`.
 //
-// EN: What it does: drawTypoSection prints one of the small letter-spaced section labels of blank №3.
+// EN: What it does: drawTypoSection prints one of the small letter-spaced section labels of the typographic blank.
 //
 // EN: Key points: returns the y coordinate of the next element, including the spacing below the label.
 func drawTypoSection(pdf *gofpdf.Fpdf, layout typoActLayout, y float64, title string, render bool) float64 {
@@ -394,7 +394,7 @@ func drawTypoActTable(pdf *gofpdf.Fpdf, layout typoActLayout, data actPDFData, y
 
 // EN: Function `drawTypoSignatures`.
 //
-// EN: What it does: drawTypoSignatures renders the two signature columns closing blank №3.
+// EN: What it does: drawTypoSignatures renders the two signature columns closing the typographic blank.
 //
 // EN: Key points: both columns are the same height, so the returned bottom edge is what the fit check compares
 // EN: against the printable area.
@@ -452,7 +452,7 @@ func drawTypoSignatureColumn(pdf *gofpdf.Fpdf, layout typoActLayout, x float64, 
 //
 // EN: What it does: drawTrackedText prints text rune by rune with extra letter spacing.
 //
-// EN: Key points: gofpdf has no character spacing option, and blank №3 relies on tracked capitals for its title,
+// EN: Key points: gofpdf has no character spacing option, and the typographic blank relies on tracked capitals for its title,
 // EN: section labels and table headings.
 func drawTrackedText(pdf *gofpdf.Fpdf, x float64, y float64, height float64, text string, tracking float64) float64 {
 	cursor := x
@@ -470,7 +470,7 @@ func drawTrackedText(pdf *gofpdf.Fpdf, x float64, y float64, height float64, tex
 //
 // EN: What it does: drawTypoTrackedRight prints tracked text ending exactly at the given right edge.
 //
-// EN: Key points: the numeric columns of blank №3 are right aligned, headers included.
+// EN: Key points: the numeric columns of the typographic blank are right aligned, headers included.
 func drawTypoTrackedRight(pdf *gofpdf.Fpdf, right float64, y float64, height float64, text string, tracking float64) {
 	drawTrackedText(pdf, right-trackedTextWidth(pdf, text, tracking), y, height, text, tracking)
 }
@@ -490,7 +490,7 @@ func trackedTextWidth(pdf *gofpdf.Fpdf, text string, tracking float64) float64 {
 
 // EN: Function `typoPartyParagraphs`.
 //
-// EN: What it does: typoPartyParagraphs builds the "Стороны" block of blank №3 from the calculation data.
+// EN: What it does: typoPartyParagraphs builds the "Стороны" block of the typographic blank from the calculation data.
 //
 // EN: Key points: keeps the wording of the source blank; the customer director acts on the basis of the company
 // EN: charter, which is the standard basis for a general director of an ООО.
@@ -504,7 +504,7 @@ func typoPartyParagraphs(data actPDFData) []string {
 
 // EN: Function `typoClosingText`.
 //
-// EN: What it does: typoClosingText returns the closing statement wording used by blank №3.
+// EN: What it does: typoClosingText returns the closing statement wording used by the typographic blank.
 //
 // EN: Key points: shorter than the classic wording, matching the source document.
 func typoClosingText() string {

@@ -82,7 +82,7 @@ type typewriterActLayout struct {
 
 // EN: Function `renderTypewriterAct`.
 //
-// EN: What it does: renderTypewriterAct fits blank №10 to one page and draws it, returning the bottom edge.
+// EN: What it does: renderTypewriterAct fits the typewriter blank to one page and draws it, returning the bottom edge.
 //
 // EN: Key points: mirrors the other renderers so the shared page checks in renderActPDF apply here too.
 func renderTypewriterAct(pdf *gofpdf.Fpdf, data actPDFData) (float64, error) {
@@ -96,7 +96,7 @@ func renderTypewriterAct(pdf *gofpdf.Fpdf, data actPDFData) (float64, error) {
 
 // EN: Function `fitTypewriterActLayout`.
 //
-// EN: What it does: fitTypewriterActLayout picks the largest scale that keeps blank №10 on a single sheet.
+// EN: What it does: fitTypewriterActLayout picks the largest scale that keeps the typewriter blank on a single sheet.
 //
 // EN: Key points: Courier is a wide face, so this blank needs the most head room of all five before the export is
 // EN: refused with the shared hint.
@@ -113,7 +113,7 @@ func fitTypewriterActLayout(pdf *gofpdf.Fpdf, data actPDFData) (typewriterActLay
 
 // EN: Function `newTypewriterActLayout`.
 //
-// EN: What it does: newTypewriterActLayout converts the Word measurements of blank №10 into millimetres for one scale.
+// EN: What it does: newTypewriterActLayout converts the Word measurements of the typewriter blank into millimetres for one scale.
 //
 // EN: Key points: sizes come from the source document at scale 1.0 (8.5 pt body, 20 mm side margins, a 5.3 mm
 // EN: padded box); margins shrink with the content but never below the ones used by the standard blank.
@@ -203,7 +203,7 @@ func newTypewriterActLayout(pdf *gofpdf.Fpdf, scale float64) typewriterActLayout
 
 // EN: Function `layoutTypewriterAct`.
 //
-// EN: What it does: layoutTypewriterAct walks blank №10 once and either measures it or draws it.
+// EN: What it does: layoutTypewriterAct walks the typewriter blank once and either measures it or draws it.
 //
 // EN: Key points: measuring and drawing share this walk, so the fitted scale always matches what ends up on the
 // EN: page; the function returns the y coordinate right below the last element.
@@ -286,7 +286,7 @@ func drawTypewriterHeaderBox(pdf *gofpdf.Fpdf, layout typewriterActLayout, data 
 
 // EN: Function `drawTypewriterTable`.
 //
-// EN: What it does: drawTypewriterTable renders the fully gridded five column price list of blank №10.
+// EN: What it does: drawTypewriterTable renders the fully gridded five column price list of the typewriter blank.
 //
 // EN: Key points: every cell is boxed, and the total row merges the first three columns exactly like the source.
 func drawTypewriterTable(pdf *gofpdf.Fpdf, layout typewriterActLayout, data actPDFData, y float64, render bool) float64 {
@@ -359,7 +359,7 @@ func drawTypewriterTable(pdf *gofpdf.Fpdf, layout typewriterActLayout, data actP
 
 // EN: Function `drawTypewriterSignatures`.
 //
-// EN: What it does: drawTypewriterSignatures renders the two signature columns closing blank №10.
+// EN: What it does: drawTypewriterSignatures renders the two signature columns closing the typewriter blank.
 //
 // EN: Key points: the signature line keeps the underscores of the source blank and carries the printed name in
 // EN: slashes, which is how a typewritten act is signed.
@@ -389,7 +389,7 @@ func drawTypewriterSignatures(pdf *gofpdf.Fpdf, layout typewriterActLayout, data
 
 // EN: Function `typewriterSignatureLine`.
 //
-// EN: What it does: typewriterSignatureLine builds the "signature line / name" pair of blank №10.
+// EN: What it does: typewriterSignatureLine builds the "signature line / name" pair of the typewriter blank.
 func typewriterSignatureLine(name string) string {
 	return fmt.Sprintf("______________________ /%s/", strings.TrimSpace(name))
 }
@@ -410,7 +410,7 @@ func typewriterActIntro(data actPDFData) string {
 
 // EN: Function `typewriterActWords`.
 //
-// EN: What it does: typewriterActWords spells out the total for blank №10.
+// EN: What it does: typewriterActWords spells out the total for the typewriter blank.
 func typewriterActWords(data actPDFData) string {
 	return fmt.Sprintf("СУММА ПРОПИСЬЮ: %s %s 00 копеек, без НДС.", data.TotalWords, data.TotalCurrency)
 }

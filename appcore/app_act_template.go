@@ -12,28 +12,36 @@ import (
 // EN: What it does: every employee is permanently bound to one of the printable act blanks, so two employees
 // EN: from the same department hand in visually different documents for the very same calculation.
 //
-// EN: Key points: "standard" is the blank Mercel shipped from the start, the numbered ones repeat the source file
-// EN: numbering (Акт_бланк_1, Акт_бланк_3); values are stored in users.act_template and must stay stable, because
-// EN: changing them would silently reassign existing employees.
+// EN: Key points: each value names what the blank looks like, because that is the only property anyone choosing
+// EN: one cares about. They were once "blank1", "blank3", "blank4" and "blank10" after the source files the
+// EN: designs came from (Акт_бланк_1 and so on); that numbering said nothing to a reader and is gone, kept only
+// EN: in legacyActTemplateIDs so existing accounts survive. Values are stored in users.act_template, so a change
+// EN: here needs a migration or it silently reassigns every employee.
 const (
 	ActTemplateStandard    = "standard"
-	ActTemplateFormal      = "blank1"
-	ActTemplateTypographic = "blank3"
-	ActTemplateContract    = "blank4"
-	ActTemplateTypewriter  = "blank10"
+	ActTemplateFormal      = "formal"
+	ActTemplateTypographic = "typographic"
+	ActTemplateContract    = "contract"
+	ActTemplateTypewriter  = "typewriter"
 )
 
 // EN: Variable `legacyActTemplateIDs`.
 //
-// EN: What it does: legacyActTemplateIDs maps the first generation of identifiers onto the current ones.
+// EN: What it does: legacyActTemplateIDs maps every identifier ever written into users.act_template onto the
+// EN: current one.
 //
-// EN: Key points: the very first version stored "1" for the standard blank and "3" for the typographic one, and
-// EN: "blank5" was the tabular blank later replaced by the typewritten one; those rows are rewritten by the
-// EN: migration, and the mapping here keeps any stale value working in the meantime.
+// EN: Key points: three generations are covered — the very first version stored "1" for the standard blank and
+// EN: "3" for the typographic one; "blank5" was the tabular blank later replaced by the typewritten one; and the
+// EN: "blankN" names came from the source file numbering. Stored rows are rewritten by the migrations, and this
+// EN: mapping keeps a stale value working on a database that has not been upgraded yet.
 var legacyActTemplateIDs = map[string]string{
-	"1":      ActTemplateStandard,
-	"3":      ActTemplateTypographic,
-	"blank5": ActTemplateTypewriter,
+	"1":       ActTemplateStandard,
+	"3":       ActTemplateTypographic,
+	"blank1":  ActTemplateFormal,
+	"blank3":  ActTemplateTypographic,
+	"blank4":  ActTemplateContract,
+	"blank5":  ActTemplateTypewriter,
+	"blank10": ActTemplateTypewriter,
 }
 
 // EN: Variable `actTemplateIDs`.
@@ -48,19 +56,23 @@ var actTemplateIDs = []string{ActTemplateStandard, ActTemplateFormal, ActTemplat
 //
 // EN: What it does: actTemplateLabel returns the human readable name of a blank for the UI and error messages.
 //
-// EN: Key points: unknown identifiers fall back to the classic label, so the caller never renders an empty string.
+// EN: Key points: the label is the name plus the one feature that identifies the blank at a glance, because the
+// EN: settings screen offers no preview — a bare name would leave an administrator guessing which is which. It
+// EN: stays short on purpose: the picker is a select of width 100%, so a longer line would be clipped in the
+// EN: closed state. Unknown identifiers fall back to the standard label, so the caller never renders an empty
+// EN: string.
 func actTemplateLabel(id string) string {
 	switch normalizeActTemplate(id) {
 	case ActTemplateFormal:
-		return "Бланк №1 — типовой"
+		return "Типовой — Times New Roman"
 	case ActTemplateTypographic:
-		return "Бланк №3 — типографский"
+		return "Типографский — заголовок вразрядку"
 	case ActTemplateContract:
-		return "Бланк №4 — договорный"
+		return "Договорный — Georgia"
 	case ActTemplateTypewriter:
-		return "Бланк №10 — машинописный"
+		return "Машинописный — Courier"
 	default:
-		return "Стандартный бланк"
+		return "Стандартный — шрифт без засечек"
 	}
 }
 

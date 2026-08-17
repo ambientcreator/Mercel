@@ -350,6 +350,68 @@ func TestMigrationRewritesLegacyActTemplateIDs(t *testing.T) {
 	}
 }
 
+// EN: A database upgraded by the build that shipped migration 006 has that step recorded and will never run it
+// EN: again, so the "blankN" spellings it left behind can only be fixed by a later step. This is the fixture the
+// EN: rename actually has to survive: the bookkeeping table stays in place, only the newest step is missing.
+func TestNamedActTemplateMigrationRewritesNumberedIdentifiers(t *testing.T) {
+	tempDir := t.TempDir()
+	dbPath := filepath.Join(tempDir, "numbered-blanks.sqlite")
+	usePathResolvers(t, dbPath, filepath.Join(tempDir, "missing-numbered.sqlite"), "")
+
+	app, err := NewApp()
+	if err != nil {
+		t.Fatalf("NewApp() error = %v", err)
+	}
+	if _, err := app.Login(LoginRequest{Username: "admin", Password: testAdminPassword}); err != nil {
+		t.Fatalf("Login() error = %v", err)
+	}
+
+	numbered := map[string]string{
+		"blank1":  ActTemplateFormal,
+		"blank3":  ActTemplateTypographic,
+		"blank4":  ActTemplateContract,
+		"blank10": ActTemplateTypewriter,
+	}
+	ids := make(map[string]int64, len(numbered))
+	for legacy := range numbered {
+		created, err := app.CreateUser(UserWithPassword{Username: "numbered" + legacy, Password: "Str0ng!Passw0rd", Role: RoleTechnicalEmployee})
+		if err != nil {
+			t.Fatalf("CreateUser() error = %v", err)
+		}
+		if _, err := app.DBForTest().Exec(`UPDATE users SET act_template = ? WHERE id = ?`, legacy, created.ID); err != nil {
+			t.Fatalf("write numbered act template %q: %v", legacy, err)
+		}
+		ids[legacy] = created.ID
+	}
+	// Exactly what the previous build left behind: every step up to 006 recorded, 007 unknown.
+	if _, err := app.DBForTest().Exec(`DELETE FROM schema_migrations WHERE name = '007_named_act_template_identifiers'`); err != nil {
+		t.Fatalf("forget the newest migration: %v", err)
+	}
+	if err := app.Close(); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+
+	reopened, err := NewApp()
+	if err != nil {
+		t.Fatalf("NewApp() after migration error = %v", err)
+	}
+	t.Cleanup(func() {
+		_ = reopened.Close()
+	})
+
+	for legacy, want := range numbered {
+		// Read the raw column: normalizeActTemplate maps the old spellings on the way out,
+		// so going through the accessors would pass even if the migration did nothing.
+		var stored string
+		if err := reopened.DBForTest().QueryRow(`SELECT act_template FROM users WHERE id = ?`, ids[legacy]).Scan(&stored); err != nil {
+			t.Fatalf("read migrated act template for %q: %v", legacy, err)
+		}
+		if stored != want {
+			t.Fatalf("expected stored %q to become %q, got %q", legacy, want, stored)
+		}
+	}
+}
+
 func TestNormalizeActTemplateRejectsUnknownValues(t *testing.T) {
 	for _, id := range ActTemplateIDsForTest() {
 		if NormalizeActTemplateForTest(id) != id {
@@ -359,7 +421,9 @@ func TestNormalizeActTemplateRejectsUnknownValues(t *testing.T) {
 			t.Fatalf("expected a label for blank %q", id)
 		}
 	}
-	for _, value := range []string{"", " ", "0", "2", "typographic", "blank2"} {
+	// "monospace" and "blank2" read like blank identifiers without being any of them —
+	// the rename made "typographic", the value this list used to guard with, a real one.
+	for _, value := range []string{"", " ", "0", "2", "monospace", "blank2"} {
 		if NormalizeActTemplateForTest(value) != "" {
 			t.Fatalf("expected %q to be rejected", value)
 		}
@@ -416,10 +480,10 @@ func TestActTemplateFontsAreDistinctPerBlank(t *testing.T) {
 		fonts[template] = ActTemplateFontForTest(template)
 	}
 	if fonts[ActTemplateStandard] == fonts[ActTemplateFormal] {
-		t.Fatalf("the standard blank and blank №1 must not share a font family, both use %q", fonts[ActTemplateStandard])
+		t.Fatalf("the standard blank and the formal blank must not share a font family, both use %q", fonts[ActTemplateStandard])
 	}
 	if fonts[ActTemplateContract] == fonts[ActTemplateFormal] {
-		t.Fatalf("blank №4 and blank №1 must not share a font family, both use %q", fonts[ActTemplateContract])
+		t.Fatalf("the contract blank and the formal blank must not share a font family, both use %q", fonts[ActTemplateContract])
 	}
 	for template, family := range fonts {
 		if strings.TrimSpace(family) == "" {
