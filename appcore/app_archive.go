@@ -258,14 +258,39 @@ func (a *App) CopyArchiveServicesToAdmin(calculationID int64) (CopyArchiveServic
 	if len(requests) == 0 {
 		return CopyArchiveServicesResult{}, errors.New("В архивном расчёте нет подходящих услуг для копирования.")
 	}
-	if _, err := a.db.Exec(`DELETE FROM services WHERE created_by = ?`, actor.Username); err != nil {
+
+	// This import replaces the caller's whole service list, so it must not be able
+	// to stop half way. Every row is validated before anything is deleted, and the
+	// delete and the inserts share one transaction: a failure now leaves the
+	// existing list untouched instead of wiping it and then failing to refill it.
+	services := make([]normalizedService, 0, len(requests))
+	for _, req := range requests {
+		service, err := normalizeServiceForOwner(req, actor.Username)
+		if err != nil {
+			return CopyArchiveServicesResult{}, fmt.Errorf("Услуга %q из архива не подходит для копирования: %w", req.Name, err)
+		}
+		services = append(services, service)
+	}
+
+	tx, err := a.db.Begin()
+	if err != nil {
+		return CopyArchiveServicesResult{}, fmt.Errorf("begin archive service copy: %w", err)
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	if _, err := tx.Exec(`DELETE FROM services WHERE created_by = ?`, actor.Username); err != nil {
 		return CopyArchiveServicesResult{}, fmt.Errorf("clear own services before copy: %w", err)
 	}
-	for _, req := range requests {
-		if _, err := a.saveServiceForOwner(req, actor.Username); err != nil {
-			return CopyArchiveServicesResult{}, fmt.Errorf("copy archive service %q: %w", req.Name, err)
+	for _, service := range services {
+		if _, err := insertServiceForOwner(tx, service, actor.Username); err != nil {
+			return CopyArchiveServicesResult{}, fmt.Errorf("copy archive service %q: %w", service.Name, err)
 		}
 		result.Created++
+	}
+	if err := tx.Commit(); err != nil {
+		return CopyArchiveServicesResult{}, fmt.Errorf("commit archive service copy: %w", err)
 	}
 	return result, nil
 }

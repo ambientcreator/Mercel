@@ -145,6 +145,51 @@ func TestSaveCalculationKeepsOneRowPerAuthorPerDay(t *testing.T) {
 	}
 }
 
+// EN: Test `TestCopyArchiveServicesLeavesOwnListIntactWhenImportFails`.
+//
+// EN: What it does: it copies an archive holding a service the importer must reject and requires the caller to keep
+// EN: every service they already had.
+//
+// EN: Key points: the import replaces the caller's whole list, so it deletes before it inserts; without validating
+// EN: the batch up front and writing under one transaction, a rejected row left the caller with no services at all.
+func TestCopyArchiveServicesLeavesOwnListIntactWhenImportFails(t *testing.T) {
+	app := withTempDB(t)
+	loginAsAdmin(t, app)
+
+	before, err := app.GetServices()
+	if err != nil {
+		t.Fatalf("GetServices() before error = %v", err)
+	}
+	if len(before) == 0 {
+		t.Fatal("expected the admin to start with seeded services")
+	}
+
+	// "километр" is not a unit the app supports, so the import has to reject this row.
+	saved, err := app.SaveCalculation(SaveCalculationRequest{
+		Title:        "архив с плохой единицей",
+		TargetAmount: 300,
+		Items: []CalculationItem{
+			{ServiceCode: "svc-ok", Name: "Нормальная услуга", Unit: "ч.", Rate: 100, Quantity: 2, LineTotal: 200, Category: CategoryPrimary},
+			{ServiceCode: "svc-bad", Name: "Кривая услуга", Unit: "километр", Rate: 100, Quantity: 1, LineTotal: 100, Category: CategoryPrimary},
+		},
+	})
+	if err != nil {
+		t.Fatalf("SaveCalculation() error = %v", err)
+	}
+
+	if _, err := app.CopyArchiveServicesToAdmin(saved.ID); err == nil {
+		t.Fatal("CopyArchiveServicesToAdmin() accepted an archive with an unsupported unit")
+	}
+
+	after, err := app.GetServices()
+	if err != nil {
+		t.Fatalf("GetServices() after error = %v", err)
+	}
+	if len(after) != len(before) {
+		t.Fatalf("failed import changed the service list: had %d services, now %d", len(before), len(after))
+	}
+}
+
 func TestArchiveDeleteHonorsOwnershipAndRoles(t *testing.T) {
 	app := withTempDB(t)
 
