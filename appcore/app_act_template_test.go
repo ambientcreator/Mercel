@@ -305,6 +305,14 @@ func TestMigrationRewritesLegacyActTemplateIDs(t *testing.T) {
 	if _, err := app.DBForTest().Exec(`UPDATE users SET act_template = '1' WHERE username = 'admin'`); err != nil {
 		t.Fatalf("write legacy admin act template: %v", err)
 	}
+	// Migrations are recorded and run once, so a database that already has the
+	// bookkeeping table has, by definition, been upgraded. Dropping it is what makes
+	// this fixture a genuinely old file — which is the only way legacy blank ids
+	// reach a new build in the first place, whether the file was carried over from an
+	// old install or recovered from one of the legacy paths.
+	if _, err := app.DBForTest().Exec(`DROP TABLE schema_migrations`); err != nil {
+		t.Fatalf("drop migration bookkeeping: %v", err)
+	}
 	if err := app.Close(); err != nil {
 		t.Fatalf("Close() error = %v", err)
 	}
